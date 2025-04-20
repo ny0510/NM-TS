@@ -1,0 +1,31 @@
+{
+  "name": "nm",
+  "module": "src/index.ts",
+  "description": "",
+  "type": "module",
+  "private": true,
+  "version": "0.0.1",
+  "scripts": {
+    "lint": "eslint . --ext .ts",
+    "start": "NODE_ENV=production bun src/index.ts",
+    "dev": "NODE_ENV=development bun --watch --install=auto --no-clear-screen src/index.ts"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@types/bun": "latest",
+    "@types/get-image-colors": "^4.0.5",
+    "eslint": "^9.24.0",
+    "prettier": "^3.5.3"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@types/luxon": "^3.6.2",
+    "discord.js": "^14.18.0",
+    "get-image-colors": "^4.0.1",
+    "luxon": "^3.6.1",
+    "magmastream": "^2.8.6",
+    "moonlink.js": "https://github.com/Ecliptia/moonlink.js.git#dev"
+  }
+}
