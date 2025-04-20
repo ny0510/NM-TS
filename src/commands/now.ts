@@ -4,7 +4,7 @@ import getColors from 'get-image-colors';
 import type {Command} from '@/interfaces/Command';
 import type {NMClient} from '@/structs/Client';
 import {msToTime, truncateWithEllipsis} from '@/utils/format';
-import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/playerUtils';
+import {createProgressBar, ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/playerUtils';
 import {safeReply} from '@/utils/safeReply';
 
 export default {
@@ -22,11 +22,12 @@ export default {
     const track = player.queue.current!;
     const colors = await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1});
     const repeatState = player.queueRepeat ? '대기열 반복 중' : player.trackRepeat ? '현재 음악 반복 중' : '반복 중이 아님';
+    const progressBar = createProgressBar(player);
 
     return await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()
-          .setDescription(`${player.playing ? '▶️' : '⏸️'} ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}`)
+          .setDescription(`${player.playing ? '▶️' : '⏸️'} ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}${!track.isStream ? `\n\n${progressBar}` : ''}`)
           .setThumbnail(track.artworkUrl)
           .setFields([
             {

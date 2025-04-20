@@ -175,3 +175,24 @@ export const getRelatedTracks = async (client: NMClient, track: Track, limit: nu
     throw new Error(`Error fetching related tracks: ${error}`);
   }
 };
+
+export const createProgressBar = (
+  player: Player,
+  options?: {
+    barChar?: string;
+    indicator?: string;
+    barLength?: number;
+  },
+): string => {
+  const track = player.queue.current;
+  if (!track || track.isStream) return '';
+  const total = track.duration;
+  const current = player.position;
+  const barLength = options?.barLength ?? 25;
+  const barChar = options?.barChar ?? '▬';
+  const indicator = options?.indicator ?? '🔘';
+
+  const progress = Math.round((current / total) * barLength);
+  const bar = barChar.repeat(barLength);
+  return `${msToTime(current)} ${bar.substring(0, progress)}${indicator}${bar.substring(progress + 1)} ${msToTime(total)}`;
+};
