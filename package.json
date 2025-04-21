@@ -1,7 +1,7 @@
 {
   "name": "nm",
   "module": "src/index.ts",
-  "description": "",
+  "description": "고음질 무료 음악 봇, NM",
   "type": "module",
   "private": true,
   "version": "0.0.1",
