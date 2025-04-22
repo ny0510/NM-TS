@@ -25,7 +25,7 @@ export default {
     return await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()
-          .setDescription(`${player.playing ? '▶️' : '⏸️'} ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}${!track.isStream ? `\n${progressBar}` : ''}`)
+          .setDescription(`${player.playing ? '▶️' : '⏸️'} ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}${!track.isStream ? `\n\n${progressBar}` : ''}`)
           .setThumbnail(track.artworkUrl)
           .setFields([
             {
