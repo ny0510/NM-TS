@@ -14,10 +14,8 @@ export default {
     const client = interaction.client as NMClient;
     const player = client.manager.players.get(interaction.guildId!);
 
-    const inVoice = await ensureVoiceChannel(interaction); // 음성 채널에 들어가 있는지 확인
-    const inSameVoice = await ensureSameVoiceChannel(interaction); // 같은 음성 채널에 있는지 확인
     const isPlaying = await ensurePlaying(interaction); // 음악이 재생중인지 확인
-    if (!inVoice || !inSameVoice || !isPlaying || !player) return;
+    if (!isPlaying || !player) return;
 
     const track = player.queue.current!;
     const colors = await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1});
@@ -27,7 +25,7 @@ export default {
     return await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()
-          .setDescription(`${player.playing ? '▶️' : '⏸️'} ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}${!track.isStream ? `\n\n${progressBar}` : ''}`)
+          .setDescription(`${player.playing ? '▶️' : '⏸️'} ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}${!track.isStream ? `\n${progressBar}` : ''}`)
           .setThumbnail(track.artworkUrl)
           .setFields([
             {
