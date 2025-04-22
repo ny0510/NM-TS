@@ -114,7 +114,7 @@ export default {
       return true;
     };
 
-    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60_0000});
+    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000});
     const followUp = await interaction.fetchReply();
     if (!collector || !followUp) return;
 

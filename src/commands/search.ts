@@ -81,7 +81,7 @@ export default {
       return true;
     };
 
-    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60_000, componentType: ComponentType.StringSelect});
+    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000, componentType: ComponentType.StringSelect});
     const followUp = await interaction.fetchReply();
     if (!collector || !followUp) return;
 
