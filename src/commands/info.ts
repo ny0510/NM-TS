@@ -24,7 +24,7 @@ export default {
       {name: '서버 수', value: `📊 ${guilds.size}개`, inline: true},
       {name: '사용자 수', value: `👥 ${guilds.reduce((a, g) => a + g.memberCount, 0)}명`, inline: true},
       {name: '현재 재생중인 서버 수', value: `🎵 ${client.manager.players.size}개`, inline: true},
-      {name: '음악 서버 상태', value: `🎛 CPU ${cpu} | 🛢️ RAM ${memory} | 🕒 업타임 ${uptime !== null ? time(uptime, 'R') : 'N/A'}`},
+      {name: '음악 서버 상태', value: `🎛 CPU ${cpu}% | 🛢️ RAM ${memory}MB | 🕒 업타임 ${uptime !== null ? time(uptime, 'R') : 'N/A'}`},
     ];
 
     return safeReply(interaction, {
