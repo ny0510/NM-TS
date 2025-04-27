@@ -26,8 +26,9 @@ export const registerLavalinkEvents = (client: NMClient) => {
 
     const trackMeta = await getEmbedMeta(track, false, player, 'play');
     const footerText = trackMeta.footerText;
+    const isRepeating = player.queueRepeat || player.trackRepeat;
 
-    if (channel?.isSendable())
+    if (channel?.isSendable() && !isRepeating)
       await channel.send({
         embeds: [
           new EmbedBuilder()
