@@ -39,7 +39,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
   });
 
   client.manager.on(ManagerEventTypes.TrackError, async (player, track, error) => {
-    logger.error(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track error. Track: ${track.title} Error: ${error}`);
+    logger.error(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track error. Track: ${track.title} Error: ${error.exception?.message}`);
     const channel = client.channels.cache.get(player.textChannelId || '');
     if (!channel?.isSendable()) return;
 
