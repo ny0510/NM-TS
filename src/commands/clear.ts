@@ -14,7 +14,6 @@ export default {
 
     if (!(await ensureVoiceChannel(interaction))) return; // 음성 채널에 들어가 있는지 확인
     if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
-    if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
     if (!player) return;
 
     player.queue.clear();
