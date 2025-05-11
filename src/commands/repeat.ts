@@ -18,10 +18,10 @@ export default {
     const client = interaction.client as NMClient;
     const player = client.manager.players.get(interaction.guildId!);
 
-    const inVoice = await ensureVoiceChannel(interaction);
-    const inSameVoice = await ensureSameVoiceChannel(interaction);
-    const isPlaying = await ensurePlaying(interaction);
-    if (!inVoice || !inSameVoice || !isPlaying || !player) return;
+    if (!(await ensureVoiceChannel(interaction))) return; // 음성 채널에 들어가 있는지 확인
+    if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
+    if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
+    if (!player) return;
 
     if (subcommand === 'track') {
       const enabled = !player.trackRepeat;

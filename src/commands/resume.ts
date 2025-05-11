@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBui
 
 import type {Command} from '@/interfaces/Command';
 import type {NMClient} from '@/structs/Client';
-import {ensurePlaying, ensureResumed, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/playerUtils';
+import {ensureResumed, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/playerUtils';
 import {safeReply} from '@/utils/safeReply';
 
 export default {

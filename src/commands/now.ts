@@ -14,8 +14,8 @@ export default {
     const client = interaction.client as NMClient;
     const player = client.manager.players.get(interaction.guildId!);
 
-    const isPlaying = await ensurePlaying(interaction); // 음악이 재생중인지 확인
-    if (!isPlaying || !player) return;
+    if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
+    if (!player) return;
 
     const track = player.queue.current!;
     const colors = await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1});

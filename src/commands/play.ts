@@ -24,9 +24,8 @@ export default {
 
     let player = client.manager.get(interaction.guildId!);
 
-    const inVoice = await ensureVoiceChannel(interaction); // 음성 채널에 들어가 있는지 확인
-    const inSameVoice = await ensureSameVoiceChannel(interaction); // 같은 음성 채널에 있는지 확인
-    if (!inVoice || !inSameVoice) return;
+    if (!(await ensureVoiceChannel(interaction))) return; // 음성 채널에 들어가 있는지 확인
+    if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
 
     await interaction.deferReply();
 
