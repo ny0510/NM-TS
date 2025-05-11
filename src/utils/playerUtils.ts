@@ -31,8 +31,8 @@ export const ensureSameVoiceChannel = async (interaction: ChatInputCommandIntera
     await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()
-          .setTitle('음악을 재생하기 위해서는 같은 음성 채널에 있어야 해요.')
-          .setDescription(`${channelMention(member.voice.channel?.id || '')} 음성 채널에 들어가 주세요.`)
+          .setTitle('해당 명령어를 실행하기 위해서는 같은 음성 채널에 있어야 해요.')
+          .setDescription(`${channelMention(player.voiceChannelId || '')} 음성 채널에 들어가 주세요.`)
           .setColor(client.config.EMBED_COLOR_ERROR),
       ],
       flags: MessageFlags.Ephemeral,
