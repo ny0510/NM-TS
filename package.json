@@ -4,7 +4,7 @@
   "description": "고음질 무료 음악 봇, NM",
   "type": "module",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.1.1",
   "scripts": {
     "lint": "eslint . --ext .ts",
     "start": "NODE_ENV=production bun src/index.ts",
