@@ -5,7 +5,7 @@
       "name": "nm",
       "dependencies": {
         "@types/luxon": "^3.6.2",
-        "discord.js": "^14.19.3",
+        "discord.js": "^14.20.0",
         "get-image-colors": "^4.0.1",
         "luxon": "^3.6.1",
         "magmastream": "^2.8.7",
@@ -14,8 +14,8 @@
         "@trivago/prettier-plugin-sort-imports": "^5.2.2",
         "@types/bun": "latest",
         "@types/get-image-colors": "^4.0.5",
-        "eslint": "^9.28.0",
-        "prettier": "^3.5.3",
+        "eslint": "^9.29.0",
+        "prettier": "^3.6.0",
       },
       "peerDependencies": {
         "typescript": "^5.8.3",
