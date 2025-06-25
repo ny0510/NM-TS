@@ -1,18 +1,23 @@
 import chalk from 'chalk';
 import {DateTime} from 'luxon';
 
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
 export interface ILogger {
-  info(message: string): void | Promise<void>;
-  warn(message: string): void | Promise<void>;
-  error(error: unknown): void | Promise<void>;
-  debug(message: string): void | Promise<void>;
+  info(message: string): void;
+  warn(message: string): void;
+  error(error: unknown): void;
+  debug(message: string): void;
+  setLevel(level: LogLevel): void;
 }
 
 export class Logger implements ILogger {
   private readonly _prefix?: string;
+  private _level: LogLevel = 'info';
 
-  public constructor(prefix: string) {
+  public constructor(prefix: string, level: LogLevel = 'info') {
     this._prefix = chalk.yellowBright(`(${prefix})`);
+    this._level = level;
   }
 
   private get currentDateTime() {
@@ -27,26 +32,44 @@ export class Logger implements ILogger {
     }
   }
 
-  public info(message: string) {
-    console.log(`${this.prefix} ${message}`);
+  private shouldLog(level: LogLevel): boolean {
+    const levels = ['debug', 'info', 'warn', 'error'];
+    const currentLevelIndex = levels.indexOf(this._level);
+    const messageLevelIndex = levels.indexOf(level);
+    return messageLevelIndex >= currentLevelIndex;
   }
 
-  public warn(message: string) {
-    console.warn(`${this.prefix} ${chalk.yellowBright(message)}`);
+  public setLevel(level: LogLevel): void {
+    this._level = level;
   }
 
-  public error(error: unknown): void {
-    const message = error instanceof Error ? error.message : 'An error occurred';
-    if (typeof Bun !== 'undefined') {
-      console.error(`${this.prefix} ${chalk.redBright(message)} > ${Bun.inspect(error, {colors: true, sorted: true})}`);
-    } else {
-      console.error(`${this.prefix} ${chalk.redBright(message)}`);
-      console.error(error);
+  public info(message: string): void {
+    if (this.shouldLog('info')) {
+      console.log(`${this.prefix} ${message}`);
     }
   }
 
-  public debug(message: string): void | Promise<void> {
-    if (process.env.NODE_ENV === 'production') return;
-    console.debug(`${this.prefix} ${chalk.gray(message)}`);
+  public warn(message: string): void {
+    if (this.shouldLog('warn')) {
+      console.warn(`${this.prefix} ${chalk.yellowBright('WARN')} ${chalk.yellowBright(message)}`);
+    }
+  }
+
+  public error(error: unknown): void {
+    if (this.shouldLog('error')) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+      if (typeof Bun !== 'undefined') {
+        console.error(`${this.prefix} ${chalk.redBright('ERROR')} ${chalk.redBright(message)} > ${Bun.inspect(error, {colors: true, sorted: true})}`);
+      } else {
+        console.error(`${this.prefix} ${chalk.redBright('ERROR')} ${chalk.redBright(message)}`);
+        console.error(error);
+      }
+    }
+  }
+
+  public debug(message: string): void {
+    if (this.shouldLog('debug')) {
+      console.debug(`${this.prefix} ${chalk.gray('DEBUG')} ${chalk.gray(message)}`);
+    }
   }
 }

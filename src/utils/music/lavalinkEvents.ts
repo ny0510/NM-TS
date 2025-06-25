@@ -2,11 +2,10 @@ import {EmbedBuilder, type HexColorString, Message, MessageFlags, codeBlock} fro
 import getColors from 'get-image-colors';
 import {ManagerEventTypes, type Track} from 'magmastream';
 
-import type {NMClient} from '@/structs/Client';
-import {msToTime, truncateWithEllipsis} from '@/utils/format';
-import {hyperlink} from '@/utils/format';
+import {addRelatedTracksToQueue, checkAndAddAutoplayTracks, createAutoplayEmbed, getEmbedMeta} from './playerUtils';
+import type {NMClient} from '@/client/Client';
+import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
-import {getEmbedMeta, getRelatedTracks} from '@/utils/playerUtils';
 
 const logger = new Logger('Lavalink');
 
@@ -37,6 +36,22 @@ export const registerLavalinkEvents = (client: NMClient) => {
             .setColor(client.config.EMBED_COLOR_NORMAL),
         ],
       });
+
+    // 자동재생 기능: 대기열이 적을 때 관련 트랙 추가
+    try {
+      const autoplayResult = await checkAndAddAutoplayTracks(client, player);
+
+      if (autoplayResult.added && autoplayResult.addedTracks.length > 0 && channel?.isSendable()) {
+        const embed = await createAutoplayEmbed(autoplayResult.addedTracks, player, client, '자동재생으로 관련 음악을 추가했어요!');
+
+        await channel.send({
+          embeds: [embed],
+        });
+      }
+    } catch (error) {
+      // 자동재생 오류는 로깅만 하고 사용자에게 표시하지 않음
+      logger.error(`Autoplay error for player ${player.guildId}: ${error}`);
+    }
   });
 
   client.manager.on(ManagerEventTypes.TrackError, async (player, track, error) => {
@@ -52,6 +67,23 @@ export const registerLavalinkEvents = (client: NMClient) => {
           .setColor(client.config.EMBED_COLOR_ERROR),
       ],
     });
+  });
+
+  client.manager.on(ManagerEventTypes.TrackStuck, async (player, track, threshold) => {
+    logger.warn(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track stuck. Track: ${track.title} Threshold: ${threshold}`);
+    const channel = client.channels.cache.get(player.textChannelId || '');
+    if (!channel?.isSendable()) return;
+
+    await channel.send({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle(`음악이 ${Number(threshold) / 1000}초 동안 재생되지 않았어요.`)
+          .setDescription('다음 음악으로 넘어갈게요.')
+          .setColor(client.config.EMBED_COLOR_ERROR),
+      ],
+    });
+
+    player.stop();
   });
 
   client.manager.on(ManagerEventTypes.QueueEnd, async player => {

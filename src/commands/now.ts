@@ -1,11 +1,11 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
 import getColors from 'get-image-colors';
 
-import type {Command} from '@/interfaces/Command';
-import type {NMClient} from '@/structs/Client';
-import {msToTime, truncateWithEllipsis} from '@/utils/format';
-import {createProgressBar, ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/playerUtils';
-import {safeReply} from '@/utils/safeReply';
+import type {NMClient} from '@/client/Client';
+import type {Command} from '@/client/types';
+import {safeReply} from '@/utils/discord/interactions';
+import {msToTime, truncateWithEllipsis} from '@/utils/formatting';
+import {createProgressBar, ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder().setName('now').setDescription('현재 재생중인 음악을 확인해요.'),
@@ -50,12 +50,12 @@ export default {
             },
             {
               name: '추천 음악 자동 재생',
-              value: inlineCode(player.isAutoplay ? '활성화 됨' : '비활성화 됨'),
+              value: inlineCode(player.get('autoplayEnabled') ? '활성화 됨' : '비활성화 됨'),
               inline: true,
             },
             {
               name: '요청자',
-              value: `${track.requester}`,
+              value: `${typeof track.requester === 'string' ? track.requester : track.requester?.id ? `<@${track.requester.id}>` : '알 수 없음'}`,
               inline: true,
             },
           ])

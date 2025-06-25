@@ -1,12 +1,12 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, MessageComponentInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, MessageComponentInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
 import type {Player} from 'magmastream';
 
-import type {Command} from '@/interfaces/Command';
-import type {NMClient} from '@/structs/Client';
-import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/format';
-import {slashCommandMention} from '@/utils/mention';
-import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/playerUtils';
-import {safeReply} from '@/utils/safeReply';
+import type {NMClient} from '@/client/Client';
+import type {Command} from '@/client/types';
+import {slashCommandMention} from '@/utils/discord';
+import {safeReply} from '@/utils/discord/interactions';
+import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
+import {ensurePlaying} from '@/utils/music';
 
 const TRACKS_PER_PAGE = 10;
 
@@ -21,7 +21,7 @@ function buildQueueEmbed(client: NMClient, player: Player, page: number) {
   const footer = totalPages > 1 ? `${page}/${totalPages} 페이지\n+${Math.max(0, totalTracks - page * TRACKS_PER_PAGE)}곡` : ' ';
   const trackList = tracks.map((track: any, i: number) => ({
     name: `${start + i + 1}. ${truncateWithEllipsis(track.title, 50)}`,
-    value: `┕ ${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)} | ${track.requester}`,
+    value: `┕ ${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)} | ${typeof track.requester === 'string' ? track.requester : track.requester?.id ? `<@${track.requester.id}>` : '알 수 없음'}`,
   }));
 
   return new EmbedBuilder()
@@ -97,48 +97,163 @@ export default {
 
     const filter = async (i: MessageComponentInteraction) => {
       if (i.user.id !== interaction.user.id) {
-        i.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setTitle('다른 사용자의 인터렉션이에요.')
-              .setDescription(`${await slashCommandMention(interaction, 'queue')} 명령어로 대기열을 확인할 수 있어요.`)
-              .setColor(client.config.EMBED_COLOR_ERROR),
-          ],
-          flags: MessageFlags.Ephemeral,
-        });
+        try {
+          // 인터랙션이 이미 응답되었는지 확인
+          if (!i.replied && !i.deferred) {
+            await i.reply({
+              embeds: [
+                new EmbedBuilder()
+                  .setTitle('다른 사용자의 인터렉션이에요.')
+                  .setDescription(`${await slashCommandMention(interaction, 'queue')} 명령어로 대기열을 확인할 수 있어요.`)
+                  .setColor(client.config.EMBED_COLOR_ERROR),
+              ],
+              flags: MessageFlags.Ephemeral,
+            });
+          }
+        } catch (error) {
+          client.logger.error(`Filter reply error: ${error}`);
+        }
         return false;
       }
 
       return true;
     };
 
-    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000});
+    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000 * 5}); // 5분으로 변경
     const followUp = await interaction.fetchReply();
-    if (!collector || !followUp) return;
+    if (!collector || !followUp) {
+      client.logger.warn('Failed to create collector or fetch reply');
+      return;
+    }
 
     const disableComponents = async () => {
-      await followUp?.edit({
-        embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'queue')} 명령어를 사용해 다시 확인해 주세요.`)],
-        components: [],
-      });
-      collector.stop();
+      try {
+        // 메시지가 여전히 존재하는지 확인
+        const message = await interaction.fetchReply().catch(() => null);
+        if (message) {
+          await message.edit({
+            embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'queue')} 명령어를 사용해 다시 확인해 주세요.`)],
+            components: [],
+          });
+        }
+      } catch (error) {
+        // 메시지가 삭제되었거나 편집할 수 없는 경우 무시
+        if (error && typeof error === 'object' && 'code' in error) {
+          const discordError = error as {code: number};
+          if (discordError.code !== 10008 && discordError.code !== 50001) {
+            // Unknown Message, Missing Access
+            client.logger.error(`Failed to edit message: ${error}`);
+          }
+        } else {
+          client.logger.error(`Failed to edit message: ${error}`);
+        }
+      } finally {
+        if (collector && !collector.ended) {
+          collector.stop();
+        }
+      }
     };
 
     collector.on('collect', async i => {
       if (!i.isButton()) return;
 
-      await i.deferUpdate();
+      try {
+        // 인터랙션이 이미 응답되었는지 확인
+        if (i.replied || i.deferred) {
+          client.logger.warn('Interaction already handled, skipping...');
+          return;
+        }
 
-      if (i.customId === 'queue_previous' && page > 1) page--;
-      else if (i.customId === 'queue_next' && page < totalPages) page++;
-      else if (i.customId === 'queue_refresh') page = Math.max(1, Math.min(page, totalPages));
+        // 플레이어가 여전히 존재하는지 확인
+        const currentPlayer = client.manager.players.get(interaction.guildId!);
+        if (!currentPlayer) {
+          await i.reply({
+            embeds: [new EmbedBuilder().setTitle('플레이어를 찾을 수 없어요.').setDescription('음악 재생이 중단되었거나 봇이 음성 채널에서 나갔어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+            flags: MessageFlags.Ephemeral,
+          });
+          collector.stop();
+          return;
+        }
 
-      await interaction.editReply({
-        embeds: [buildQueueEmbed(client, player, page)],
-        components: [buildQueueButtons(page, totalPages)],
-      });
+        await i.deferUpdate();
+
+        // 현재 대기열 상태에 맞는 총 페이지 수 계산
+        const currentTotalTracks = currentPlayer.queue.size;
+        const currentTotalPages = Math.max(1, Math.ceil(currentTotalTracks / TRACKS_PER_PAGE));
+
+        // 대기열이 비어있는 경우
+        if (currentTotalTracks === 0) {
+          await i.editReply({
+            embeds: [new EmbedBuilder().setTitle('대기열이 비어있어요.').setDescription('더 이상 재생할 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+            components: [],
+          });
+          collector.stop();
+          return;
+        }
+
+        if (i.customId === 'queue_previous' && page > 1) page--;
+        else if (i.customId === 'queue_next' && page < currentTotalPages) page++;
+        else if (i.customId === 'queue_refresh') {
+          // 새로고침 시 현재 페이지가 유효한 범위 내에 있는지 확인
+          page = Math.max(1, Math.min(page, currentTotalPages));
+        }
+
+        await i.editReply({
+          embeds: [buildQueueEmbed(client, currentPlayer, page)],
+          components: [buildQueueButtons(page, currentTotalPages)],
+        });
+      } catch (error) {
+        client.logger.error(`Error handling queue interaction: ${error}`);
+
+        if (error && typeof error === 'object' && 'code' in error) {
+          const discordError = error as {code: number};
+
+          // 알려진 Discord 에러 코드 처리
+          if (discordError.code === 10062) {
+            // Unknown interaction
+            client.logger.warn('Unknown interaction, stopping collector');
+            collector.stop();
+            return;
+          } else if (discordError.code === 40060) {
+            // Interaction has already been acknowledged
+            client.logger.warn('Interaction already acknowledged');
+            return;
+          } else if (discordError.code === 10008) {
+            // Unknown message
+            client.logger.warn('Message was deleted, stopping collector');
+            collector.stop();
+            return;
+          } else if (discordError.code === 50001) {
+            // Missing access
+            client.logger.warn('Missing access to edit message, stopping collector');
+            collector.stop();
+            return;
+          }
+        }
+
+        // 다른 에러의 경우 사용자에게 알림 (가능한 경우)
+        try {
+          if (!i.replied && !i.deferred) {
+            await i.reply({
+              embeds: [new EmbedBuilder().setTitle('오류가 발생했어요.').setDescription('잠시 후 다시 시도해 주세요.').setColor(client.config.EMBED_COLOR_ERROR)],
+              flags: MessageFlags.Ephemeral,
+            });
+          }
+        } catch (replyError) {
+          client.logger.error(`Failed to send error reply: ${replyError}`);
+        }
+      }
     });
 
-    collector.on('end', disableComponents);
+    collector.on('end', (collected, reason) => {
+      client.logger.debug(`Queue collector ended. Reason: ${reason}, Collected: ${collected.size}`);
+      disableComponents();
+    });
+
+    // 예외적인 상황에서 컬렉터 정리
+    collector.on('error', error => {
+      client.logger.error(`Queue collector error: ${error}`);
+      disableComponents();
+    });
   },
 } as Command;

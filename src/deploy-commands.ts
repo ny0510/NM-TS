@@ -1,56 +1,53 @@
 import {REST, Routes} from 'discord.js';
-import path from 'node:path';
 import process from 'node:process';
 
+import {CommandManager} from '@/managers/CommandManager';
 import {config} from '@/utils/config';
-import {readdir} from 'node:fs/promises';
+import {Logger} from '@/utils/logger';
 
-const args = process.argv.slice(2);
-const isGlobal = args.includes('--global');
-const isGuild = args.includes('--guild');
-const isDelete = args.includes('delete');
+const logger = new Logger('DEPLOY');
 
-if (!isGlobal && !isGuild) {
-  console.error(`Usage: bun deploy-commands.ts [delete] (--global | --guild)`);
-  process.exit(1);
-}
+async function deployCommands() {
+  const args = process.argv.slice(2);
+  const isGlobal = args.includes('--global');
+  const isGuild = args.includes('--guild');
+  const isDelete = args.includes('delete');
 
-const commandsPath = path.join(__dirname, 'commands');
-const commands = [];
-const commandFiles = await readdir(commandsPath).then(files => files.filter(file => file.endsWith('.ts')));
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file);
-  const commandModule = await import(filePath);
-  const command = commandModule.default || commandModule;
-  if (command.data && command.execute) {
-    commands.push(command.data.toJSON());
-  } else {
-    console.warn(`Command ${file} is missing "data" or "execute" properties.`);
+  if (!isGlobal && !isGuild) {
+    logger.error('Usage: bun deploy-commands.ts [delete] (--global | --guild)');
+    process.exit(1);
+  }
+
+  try {
+    const commandManager = new CommandManager(logger, config);
+    await commandManager.loadCommands();
+
+    const rest = new REST().setToken(config.DISCORD_TOKEN);
+    const commands = Array.from(commandManager.getCommands().values()).map(cmd => cmd.data.toJSON());
+
+    if (isDelete) {
+      logger.info('Started deleting application (/) commands.');
+      if (isGlobal) {
+        await rest.put(Routes.applicationCommands(config.DISCORD_CLIENT_ID), {body: []});
+        logger.info('Successfully deleted all global application (/) commands.');
+      } else if (isGuild) {
+        await rest.put(Routes.applicationGuildCommands(config.DISCORD_CLIENT_ID, config.DISCORD_GUILD_ID), {body: []});
+        logger.info('Successfully deleted all guild application (/) commands.');
+      }
+    } else {
+      logger.info('Started refreshing application (/) commands.');
+      if (isGlobal) {
+        await rest.put(Routes.applicationCommands(config.DISCORD_CLIENT_ID), {body: commands});
+        logger.info('Successfully reloaded global application (/) commands.');
+      } else if (isGuild) {
+        await rest.put(Routes.applicationGuildCommands(config.DISCORD_CLIENT_ID, config.DISCORD_GUILD_ID), {body: commands});
+        logger.info('Successfully reloaded guild application (/) commands.');
+      }
+    }
+  } catch (error) {
+    logger.error(`Failed to refresh/delete application (/) commands: ${error}`);
+    process.exit(1);
   }
 }
 
-const rest = new REST().setToken(config.DISCORD_TOKEN);
-
-try {
-  if (isDelete) {
-    console.log('Started deleting application (/) commands.');
-    if (isGlobal) {
-      await rest.put(Routes.applicationCommands(config.DISCORD_CLIENT_ID), {body: []});
-      console.log('Successfully deleted all global application (/) commands.');
-    } else if (isGuild) {
-      await rest.put(Routes.applicationGuildCommands(config.DISCORD_CLIENT_ID, config.DISCORD_GUILD_ID), {body: []});
-      console.log('Successfully deleted all guild application (/) commands.');
-    }
-  } else {
-    console.log('Started refreshing application (/) commands.');
-    if (isGlobal) {
-      await rest.put(Routes.applicationCommands(config.DISCORD_CLIENT_ID), {body: commands});
-      console.log('Successfully reloaded global application (/) commands.');
-    } else if (isGuild) {
-      await rest.put(Routes.applicationGuildCommands(config.DISCORD_CLIENT_ID, config.DISCORD_GUILD_ID), {body: commands});
-      console.log('Successfully reloaded guild application (/) commands.');
-    }
-  }
-} catch (e) {
-  console.error(`Failed to refresh/delete application (/) commands: ${e}`);
-}
+deployCommands();

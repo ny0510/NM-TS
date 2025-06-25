@@ -1,8 +1,8 @@
 import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 import {DateTime} from 'luxon';
 
-import type {Command} from '@/interfaces/Command';
-import type {NMClient} from '@/structs/Client';
+import type {Command} from '@/client/types';
+import type {NMClient} from '@/client/Client';
 
 export default {
   data: new SlashCommandBuilder().setName('ping').setDescription('봇의 지연시간을 확인해요.'),

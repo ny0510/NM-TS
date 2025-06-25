@@ -1,4 +1,4 @@
-import {NMClient} from '@/structs/Client';
+import {NMClient} from '@/client/Client';
 
 const client = new NMClient();
 

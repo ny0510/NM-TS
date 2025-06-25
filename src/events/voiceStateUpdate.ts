@@ -1,7 +1,7 @@
 import {ActivityType, EmbedBuilder, Events, GuildMember, type MessageCreateOptions, MessagePayload, PresenceUpdateStatus, TextChannel, VoiceState} from 'discord.js';
 
-import type {Event} from '@/interfaces/Event';
-import type {NMClient} from '@/structs/Client';
+import type {Event} from '@/client/types';
+import type {NMClient} from '@/client/Client';
 
 const activePlayers = new Map<string, NodeJS.Timeout>();
 

@@ -1,10 +1,10 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, inlineCode} from 'discord.js';
 
-import type {Command} from '@/interfaces/Command';
-import type {NMClient} from '@/structs/Client';
-import {msToTime} from '@/utils/format';
-import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/playerUtils';
-import {safeReply} from '@/utils/safeReply';
+import type {Command} from '@/client/types';
+import type {NMClient} from '@/client/Client';
+import {msToTime} from '@/utils/formatting';
+import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
+import {safeReply} from '@/utils/discord/interactions';
 
 const parseTimeToSeconds = (time: string): number | null => {
   if (/^\d+$/.test(time)) return parseInt(time, 10);

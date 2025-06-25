@@ -1,9 +1,9 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
 
-import type {Command} from '@/interfaces/Command';
-import type {NMClient} from '@/structs/Client';
-import {ensurePaused, ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/playerUtils';
-import {safeReply} from '@/utils/safeReply';
+import type {Command} from '@/client/types';
+import type {NMClient} from '@/client/Client';
+import {ensurePaused, ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
+import {safeReply} from '@/utils/discord/interactions';
 
 export default {
   data: new SlashCommandBuilder().setName('pause').setDescription('음악을 일시정지해요.'),

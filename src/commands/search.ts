@@ -1,12 +1,12 @@
 import {ActionRowBuilder, ChatInputCommandInteraction, ComponentType, EmbedBuilder, GuildMember, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction, channelMention, codeBlock, italic} from 'discord.js';
 import {LoadTypes, SearchPlatform, StateTypes, type Track} from 'magmastream';
 
-import type {Command} from '@/interfaces/Command';
-import type {NMClient} from '@/structs/Client';
-import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/format';
-import {slashCommandMention} from '@/utils/mention';
-import {createPlayer, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/playerUtils';
-import {safeReply} from '@/utils/safeReply';
+import type {Command} from '@/client/types';
+import type {NMClient} from '@/client/Client';
+import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
+import {slashCommandMention} from '@/utils/discord';
+import {createPlayer, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
+import {safeReply} from '@/utils/discord/interactions';
 
 export default {
   data: new SlashCommandBuilder()
