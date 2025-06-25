@@ -7,15 +7,11 @@ import {safeReply} from '@/utils/discord/interactions';
 import {hyperlink} from '@/utils/formatting';
 import {truncateWithEllipsis} from '@/utils/formatting';
 import {playlistPattern, videoPattern} from '@/utils/formatting';
+import {coverPattern} from '@/utils/formatting';
 import {createPlayer, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
 
-const coverKeywords = ['cover', 'covers', '커버', 'covered by', 'cover by', 'acoustic cover', 'piano cover', 'guitar cover', 'vocal cover', '어쿠스틱 커버', '피아노 커버', '기타 커버', '보컬 커버', 'remix', '리믹스', 'version', '버전', 'ver', '피처링', 'ft', 'ft.', '피쳐링'];
-
 function isCoverTrack(track: Track): boolean {
-  const title = track.title.toLowerCase();
-  const author = track.author.toLowerCase();
-
-  return coverKeywords.some(keyword => title.includes(keyword.toLowerCase()) || author.includes(keyword.toLowerCase()));
+  return coverPattern.test(track.title) || coverPattern.test(track.author);
 }
 
 export default {
