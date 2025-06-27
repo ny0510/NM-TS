@@ -2,7 +2,8 @@ import {EmbedBuilder, type HexColorString, Message, MessageFlags, codeBlock} fro
 import getColors from 'get-image-colors';
 import {ManagerEventTypes, type Track} from 'magmastream';
 
-import {addRelatedTracksToQueue, checkAndAddAutoplayTracks, createAutoplayEmbed, getEmbedMeta} from './playerUtils';
+import {createAutoplayEmbed, handleAutoplayOnTrackStart, manageTrackHistory} from './autoplay';
+import {getEmbedMeta} from './playerUtils';
 import type {NMClient} from '@/client/Client';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
@@ -16,12 +17,21 @@ export const registerLavalinkEvents = (client: NMClient) => {
   client.manager.on(ManagerEventTypes.NodeReconnect, node => logger.info(`Node ${node.options.identifier} reconnecting...`));
   client.manager.on(ManagerEventTypes.NodeDestroy, node => logger.info(`Node ${node.options.identifier} destroyed`));
   client.manager.on(ManagerEventTypes.PlayerCreate, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) created`));
-  client.manager.on(ManagerEventTypes.PlayerDestroy, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed`));
+  client.manager.on(ManagerEventTypes.PlayerDestroy, player => {
+    logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed`);
+
+    // 플레이어가 삭제될 때 히스토리 정리
+    player.set('playHistory', []);
+    player.set('autoplayHistory', []);
+  });
   client.manager.on(ManagerEventTypes.TrackEnd, async (player, track) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track end. Track: ${track.title}`));
 
   client.manager.on(ManagerEventTypes.TrackStart, async (player, track) => {
     logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track start. Track: ${track.title}`);
     const channel = client.channels.cache.get(player.textChannelId || '');
+
+    // 트랙 히스토리 관리
+    manageTrackHistory(player, track);
 
     const trackMeta = await getEmbedMeta(track, false, player, 'play');
     const footerText = trackMeta.footerText;
@@ -38,19 +48,17 @@ export const registerLavalinkEvents = (client: NMClient) => {
       });
 
     // 자동재생 기능: 대기열이 적을 때 관련 트랙 추가
-    try {
-      const autoplayResult = await checkAndAddAutoplayTracks(client, player);
+    const autoplayResult = await handleAutoplayOnTrackStart(client, player);
 
-      if (autoplayResult.added && autoplayResult.addedTracks.length > 0 && channel?.isSendable()) {
-        const embed = await createAutoplayEmbed(autoplayResult.addedTracks, player, client, '자동재생으로 관련 음악을 추가했어요!');
+    if (autoplayResult.success && autoplayResult.addedTracks.length > 0 && channel?.isSendable()) {
+      const embed = await createAutoplayEmbed(autoplayResult.addedTracks, player, client, '자동재생으로 관련 음악을 추가했어요!');
 
-        await channel.send({
-          embeds: [embed],
-        });
-      }
-    } catch (error) {
+      await channel.send({
+        embeds: [embed],
+      });
+    } else if (!autoplayResult.success) {
       // 자동재생 오류는 로깅만 하고 사용자에게 표시하지 않음
-      logger.error(`Autoplay error for player ${player.guildId}: ${error}`);
+      logger.error(`Autoplay error for player ${player.guildId}: ${autoplayResult.error}`);
     }
   });
 
