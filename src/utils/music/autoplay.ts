@@ -163,7 +163,7 @@ export const isDuplicateTrackEnhanced = (track: Track, playHistory: TrackFingerp
 };
 
 export const getRelatedTracks = async (client: NMClient, track: Track, limit: number = 10, player: Player): Promise<Track[]> => {
-  const maxLimit = 30;
+  const maxLimit = 50; // 최대 한도 증가
   if (limit > maxLimit) throw new Error(`Limit exceeds maximum value of ${maxLimit}.`);
 
   const searchQuery = `${track.author} - ${track.title}`;
@@ -188,13 +188,14 @@ export const getRelatedTracks = async (client: NMClient, track: Track, limit: nu
     const allHistory = [...playHistory, ...autoplayHistory, ...queueFingerprints];
     const historySet = new Set(allHistory.map(fp => fp.identifier));
 
-    return result.tracks
-      .slice(0, limit * 2)
-      .filter(relatedTrack => {
-        if (historySet.has(relatedTrack.identifier)) return false;
-        return !isDuplicateTrackEnhanced(relatedTrack, allHistory, [], 0.7);
-      })
-      .slice(0, limit);
+    // 처음부터 더 많은 양을 가져와서 필터링 (limit * 5 정도로 여유있게)
+    const filteredTracks = result.tracks.filter(relatedTrack => {
+      if (historySet.has(relatedTrack.identifier)) return false;
+      return !isDuplicateTrackEnhanced(relatedTrack, allHistory, [], 0.7);
+    });
+
+    // 필터링된 결과에서 필요한 만큼만 반환
+    return filteredTracks.slice(0, limit);
   } catch (error) {
     logger.error(`Error fetching related tracks: ${error}`);
     return [];
@@ -213,8 +214,9 @@ const getAdditionalRelatedTracks = async (client: NMClient, baseTrack: Track, ne
   }
 };
 
-export const addRelatedTracksToQueue = async (client: NMClient, player: Player, currentTrack: Track, count: number = 10): Promise<Track[]> => {
+export const addRelatedTracksToQueue = async (client: NMClient, player: Player, currentTrack: Track, count: number = 20): Promise<Track[]> => {
   try {
+    // 더 많은 양을 한 번에 가져오기
     const relatedTracks = await getRelatedTracks(client, currentTrack, count, player);
 
     if (relatedTracks.length > 0) {
@@ -246,7 +248,8 @@ export const initializeAutoplay = async (client: NMClient, player: Player): Prom
       return {success: false, addedTracks: [], error: '현재 재생중인 음악이 없어요.'};
     }
 
-    const addedTracks = await addRelatedTracksToQueue(client, player, currentTrack, 10);
+    // 초기화할 때 더 많은 양을 한 번에 가져오기
+    const addedTracks = await addRelatedTracksToQueue(client, player, currentTrack, 20);
     return {success: true, addedTracks};
   } catch (error) {
     return {success: false, addedTracks: [], error: error instanceof Error ? error.message : '알 수 없는 오류가 발생했어요.'};
@@ -255,14 +258,16 @@ export const initializeAutoplay = async (client: NMClient, player: Player): Prom
 
 export const checkAndAddAutoplayTracks = async (client: NMClient, player: Player): Promise<{added: boolean; addedTracks: Track[]}> => {
   try {
-    if (!player.get('autoplayEnabled') || player.queue.size > 1) {
+    // 자동재생이 비활성화되어 있거나 대기열이 충분히 많으면 추가하지 않음
+    if (!player.get('autoplayEnabled') || player.queue.size > 5) {
       return {added: false, addedTracks: []};
     }
 
     const currentTrack = player.queue.current;
     if (!currentTrack) return {added: false, addedTracks: []};
 
-    const addedTracks = await addRelatedTracksToQueue(client, player, currentTrack, 10);
+    // 대기열이 부족할 때 더 많은 양을 한 번에 가져오기
+    const addedTracks = await addRelatedTracksToQueue(client, player, currentTrack, 15);
     return {added: addedTracks.length > 0, addedTracks};
   } catch (error) {
     logger.error(`Autoplay check failed: ${error}`);

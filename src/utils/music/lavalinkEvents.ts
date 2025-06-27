@@ -56,7 +56,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
       await channel.send({
         embeds: [embed],
       });
-    } else if (!autoplayResult.success) {
+    } else if (!autoplayResult.success && autoplayResult.error) {
       // 자동재생 오류는 로깅만 하고 사용자에게 표시하지 않음
       logger.error(`Autoplay error for player ${player.guildId}: ${autoplayResult.error}`);
     }
