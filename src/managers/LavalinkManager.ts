@@ -27,7 +27,6 @@ export class LavalinkManager {
       autoPlay: true,
       defaultSearchPlatform: SearchPlatform.YouTube,
       autoPlaySearchPlatform: SearchPlatform.YouTube,
-      lastFmApiKey: 'a',
       send: (id: string, payload: Payload) => {
         const guild = client.guilds.cache.get(id);
         if (guild) guild.shard.send(payload);
