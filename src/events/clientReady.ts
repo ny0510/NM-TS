@@ -1,14 +1,14 @@
 import {ActivityType, Events, PresenceUpdateStatus} from 'discord.js';
 
-import type {Event} from '@/client/types';
 import type {NMClient} from '@/client/Client';
+import type {Event} from '@/client/types';
 
 const updatePresence = (client: NMClient) => {
   const stats = client.getStats();
   client.user?.setPresence({
     activities: [
       {
-        name: `NM | ${stats.activePlayers}개의 서버에서 음악을 재생 중!`,
+        name: `NM | ${stats.activePlayers ? `${stats.activePlayers}개의 서버에서 음악을 재생 중!` : `${stats.guilds}개의 서버에서 활동 중!`}`,
         type: ActivityType.Custom,
       },
     ],
