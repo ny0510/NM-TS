@@ -41,7 +41,16 @@ export interface AppConfig {
   IS_DEV_MODE: boolean;
 }
 
-export interface Config extends DiscordConfig, LavalinkConfig, EmbedConfig, AppConfig {}
+export interface ProgressBarConfig {
+  PROGRESS_CIRCLE_START: string;
+  PROGRESS_CIRCLE_MIDDLE: string;
+  PROGRESS_FILLED_START: string;
+  PROGRESS_UNFILLED_MIDDLE: string;
+  PROGRESS_UNFILLED_END: string;
+  PROGRESS_FILLED_MIDDLE: string;
+}
+
+export interface Config extends DiscordConfig, LavalinkConfig, EmbedConfig, AppConfig, ProgressBarConfig {}
 
 // Client 인터페이스들
 export interface ClientServices {

@@ -3,6 +3,7 @@ import getColors from 'get-image-colors';
 import {type Player, StateTypes, type Track} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
+import {config} from '@/utils/config';
 import {slashCommandMention} from '@/utils/discord';
 import {safeReply} from '@/utils/discord/interactions';
 import {msToTime} from '@/utils/formatting';
@@ -167,20 +168,49 @@ export const getEmbedMeta = async (trackOrTracks: Track | Track[], isPlaylist: b
 export const createProgressBar = (
   player: Player,
   options?: {
-    barChar?: string;
-    indicator?: string;
     barLength?: number;
+    useEmoji?: boolean;
   },
 ): string => {
   const track = player.queue.current;
   if (!track || track.isStream) return '';
   const total = track.duration;
   const current = player.position;
-  const barLength = options?.barLength ?? 25;
-  const barChar = options?.barChar ?? '▬';
-  const indicator = options?.indicator ?? '🔘';
+  const barLength = options?.barLength ?? 10;
+  const useEmoji = options?.useEmoji ?? true;
 
-  const progress = Math.round((current / total) * barLength);
-  const bar = barChar.repeat(barLength);
-  return `${msToTime(current)} ${bar.substring(0, progress)}${indicator}${bar.substring(progress + 1)} ${msToTime(total)}`;
+  if (useEmoji) {
+    const progress = Math.round((current / total) * barLength);
+    let progressBar = '';
+
+    for (let i = 0; i < barLength; i++) {
+      if (i === 0) {
+        // 시작 부분
+        progressBar += i < progress ? config.PROGRESS_FILLED_START : config.PROGRESS_CIRCLE_START;
+      } else if (i === barLength - 1) {
+        // 끝 부분
+        progressBar += i < progress ? config.PROGRESS_FILLED_MIDDLE : config.PROGRESS_UNFILLED_END;
+      } else {
+        // 중간 부분
+        if (i === progress) {
+          // 현재 위치 (원형 인디케이터)
+          progressBar += config.PROGRESS_CIRCLE_MIDDLE;
+        } else if (i < progress) {
+          // 채워진 부분
+          progressBar += config.PROGRESS_FILLED_MIDDLE;
+        } else {
+          // 비어있는 부분
+          progressBar += config.PROGRESS_UNFILLED_MIDDLE;
+        }
+      }
+    }
+
+    return `${msToTime(current)} ${progressBar} ${msToTime(total)}`;
+  } else {
+    const progress = Math.round((current / total) * barLength);
+    const barChar = '▬';
+    const indicator = '🔘';
+    const bar = barChar.repeat(barLength);
+    return `${msToTime(current)} ${bar.substring(0, progress)}${indicator}${bar.substring(progress + 1)} ${msToTime(total)}`;
+  }
 };

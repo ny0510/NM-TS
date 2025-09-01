@@ -23,4 +23,11 @@ export const config: Config = {
   DEFAULT_VOLUME: parseInt(process.env.DEFAULT_VOLUME!) || 50,
   LOG_PREFIX: process.env.LOG_PREFIX || 'NM',
   IS_DEV_MODE: process.env.NODE_ENV == 'development',
+
+  PROGRESS_CIRCLE_START: process.env.PROGRESS_CIRCLE_START || '<:progress_circle_start:1411859909842309180>',
+  PROGRESS_CIRCLE_MIDDLE: process.env.PROGRESS_CIRCLE_MIDDLE || '<:progress_circle_middle:1411859900723892305>',
+  PROGRESS_FILLED_START: process.env.PROGRESS_FILLED_START || '<:progress_filled_start:1411859892268175431>',
+  PROGRESS_UNFILLED_MIDDLE: process.env.PROGRESS_UNFILLED_MIDDLE || '<:progress_unfilled_middle:1411859885175607306>',
+  PROGRESS_UNFILLED_END: process.env.PROGRESS_UNFILLED_END || '<:progress_unfilled_end:1411859876182757527>',
+  PROGRESS_FILLED_MIDDLE: process.env.PROGRESS_FILLED_MIDDLE || '<:progress_filled_middle:1411859864921182329>',
 };
