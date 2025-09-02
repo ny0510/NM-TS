@@ -170,7 +170,7 @@ export class Logger implements ILogger {
 
       const embed = new EmbedBuilder()
         .setTimestamp()
-        .addFields({name: '서버 소유자', value: `👑 ${userMention(currentGuildOwner)} (${currentGuildOwner})`}, {name: '현재 서버 수', value: `📊 ${currentGuildCount}개 (${guildChange})`, inline: true}, {name: '현재 사용자 수', value: `👥 ${currentUserCount.toLocaleString()}개 (${userChange})`, inline: true})
+        .addFields({name: '서버 소유자', value: `👑 ${userMention(currentGuildOwner)} (${currentGuildOwner})`}, {name: '현재 서버 수', value: `📊 ${currentGuildCount}개 (${guildChange})`, inline: true}, {name: '현재 사용자 수', value: `👥 ${currentUserCount.toLocaleString()}명 (${userChange})`, inline: true})
         .setDescription(`${guildName} (${guild.id})`)
         .setColor(type === 'joined' ? client.config.EMBED_COLOR_NORMAL : client.config.EMBED_COLOR_ERROR)
         .setTitle(type === 'joined' ? '새로운 서버에 추가됨' : '서버에서 제거됨');
