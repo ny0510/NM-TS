@@ -24,7 +24,7 @@ export class NMClient extends Client {
     });
 
     this.config = config;
-    this.logger = new Logger(config.LOG_PREFIX);
+    this.logger = new Logger(config.LOG_PREFIX, 'info', config.DISCORD_LOG_WEBHOOK_URL);
 
     this.services = {
       commandManager: new CommandManager(this.logger, this.config),
@@ -59,6 +59,9 @@ export class NMClient extends Client {
     try {
       await this.login(this.config.DISCORD_TOKEN);
       this.logger.info('Successfully logged in to Discord');
+
+      // 로그인 후 logger에 클라이언트 설정
+      this.logger.setClient(this);
 
       await this.loadModules();
     } catch (error) {

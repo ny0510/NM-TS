@@ -10,6 +10,7 @@ export const config: Config = {
   DISCORD_TOKEN: process.env.DISCORD_TOKEN || '',
   DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID || '',
   DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID || '',
+  DISCORD_LOG_WEBHOOK_URL: process.env.DISCORD_LOG_WEBHOOK_URL || '',
 
   LAVALINK_IDENTIFIER: process.env.LAVALINK_IDENTIFIER || '',
   LAVALINK_HOST: process.env.LAVALINK_HOST || '',

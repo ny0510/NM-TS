@@ -1,5 +1,9 @@
 import chalk from 'chalk';
+import {EmbedBuilder, Guild, WebhookClient, type WebhookClientOptions, type WebhookCreateOptions, type WebhookEditOptions, type WebhookMessageCreateOptions, userMention} from 'discord.js';
 import {DateTime} from 'luxon';
+
+import type {NMClient} from '@/client/Client';
+import {truncateWithEllipsis} from '@/utils/formatting';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
@@ -9,15 +13,32 @@ export interface ILogger {
   error(error: unknown): void;
   debug(message: string): void;
   setLevel(level: LogLevel): void;
+  setClient(client: NMClient): void;
+  guildJoined(guild: Guild, client?: NMClient): void;
+  guildLeft(guild: Guild, client?: NMClient): void;
 }
 
 export class Logger implements ILogger {
   private readonly _prefix?: string;
   private _level: LogLevel = 'info';
+  private _webhook?: WebhookClient;
+  private _client?: NMClient;
 
-  public constructor(prefix: string, level: LogLevel = 'info') {
+  public constructor(prefix: string, level: LogLevel = 'info', webhookUrl?: string) {
     this._prefix = chalk.yellowBright(`(${prefix})`);
     this._level = level;
+
+    if (webhookUrl) {
+      try {
+        this._webhook = new WebhookClient({url: webhookUrl});
+      } catch (error) {
+        console.error('Failed to initialize Discord webhook:', error);
+      }
+    }
+  }
+
+  public setClient(client: NMClient): void {
+    this._client = client;
   }
 
   private get currentDateTime() {
@@ -37,6 +58,44 @@ export class Logger implements ILogger {
     const currentLevelIndex = levels.indexOf(this._level);
     const messageLevelIndex = levels.indexOf(level);
     return messageLevelIndex >= currentLevelIndex;
+  }
+
+  private createWebhookOptions(embeds: EmbedBuilder[]): WebhookMessageCreateOptions {
+    const options: WebhookMessageCreateOptions = {embeds};
+
+    if (this._client?.user) {
+      options.username = `${this._client.user.displayName || this._client.user.username} - Logger`;
+      options.avatarURL = this._client.user.displayAvatarURL();
+    }
+
+    return options;
+  }
+
+  private async sendErrorToDiscord(message: string, error?: unknown): Promise<void> {
+    if (!this._webhook) return;
+
+    try {
+      const embed = new EmbedBuilder().setTimestamp().setColor(this._client?.config.EMBED_COLOR_ERROR!).setTitle('An error occurred').addFields({name: 'Message', value: message});
+
+      if (error instanceof Error && error.stack) {
+        const stackLines = error.stack.split('\n');
+        const stackText = stackLines.slice(1).join('\n');
+        embed.addFields({name: 'Stack', value: `\`\`\`${stackText}\`\`\``});
+      }
+
+      if (typeof Bun !== 'undefined' && error) {
+        try {
+          const detailedError = Bun.inspect(error, {colors: false, sorted: true});
+          const truncatedError = truncateWithEllipsis(detailedError, 1024);
+          embed.addFields({name: 'Detailed Error', value: `\`\`\`${truncatedError}\`\`\``});
+        } catch (inspectError) {}
+      }
+
+      const webhookOptions = this.createWebhookOptions([embed]);
+      await this._webhook.send(webhookOptions);
+    } catch (error) {
+      console.error('Failed to send log to Discord:', error);
+    }
   }
 
   public setLevel(level: LogLevel): void {
@@ -64,12 +123,62 @@ export class Logger implements ILogger {
         console.error(`${this.prefix} ${chalk.redBright('ERROR')} ${chalk.redBright(message)}`);
         console.error(error);
       }
+      this.sendErrorToDiscord(message, error);
     }
   }
 
   public debug(message: string): void {
     if (this.shouldLog('debug')) {
       console.debug(`${this.prefix} ${chalk.gray('DEBUG')} ${chalk.gray(message)}`);
+    }
+  }
+
+  public guildJoined(guild: Guild, client?: NMClient): void {
+    if (this._webhook && client) {
+      this.sendGuildEventToDiscord('joined', guild, client);
+    }
+  }
+
+  public guildLeft(guild: Guild, client?: NMClient): void {
+    if (this._webhook && client) {
+      this.sendGuildEventToDiscord('left', guild, client);
+    }
+  }
+
+  private async sendGuildEventToDiscord(type: 'joined' | 'left', guild: Guild, client: NMClient): Promise<void> {
+    if (!this._webhook) return;
+
+    try {
+      let currentGuildCount = client.guilds.cache.size;
+      let currentUserCount = client.guilds.cache.reduce((acc: number, guild: Guild) => acc + (guild.memberCount || 0), 0);
+
+      let currentGuildOwner = '알 수 없음';
+      try {
+        if (type === 'joined' || guild.available) {
+          const owner = await guild.fetchOwner();
+          currentGuildOwner = owner.user.id;
+        } else {
+          currentGuildOwner = guild.ownerId || '알 수 없음';
+        }
+      } catch (error) {
+        currentGuildOwner = guild.ownerId || '알 수 없음';
+      }
+
+      const guildChange = type === 'joined' ? '+1' : '-1';
+      const userChange = `${type === 'joined' ? '+' : '-'}${guild.memberCount}`;
+      const guildName = truncateWithEllipsis(guild.name, 256);
+
+      const embed = new EmbedBuilder()
+        .setTimestamp()
+        .addFields({name: '서버 소유자', value: `👑 ${userMention(currentGuildOwner)} (${currentGuildOwner})`}, {name: '현재 서버 수', value: `📊 ${currentGuildCount}개 (${guildChange})`, inline: true}, {name: '현재 사용자 수', value: `👥 ${currentUserCount.toLocaleString()}개 (${userChange})`, inline: true})
+        .setDescription(`${guildName} (${guild.id})`)
+        .setColor(type === 'joined' ? client.config.EMBED_COLOR_NORMAL : client.config.EMBED_COLOR_ERROR)
+        .setTitle(type === 'joined' ? '새로운 서버에 추가됨' : '서버에서 제거됨');
+
+      const webhookOptions = this.createWebhookOptions([embed]);
+      await this._webhook.send(webhookOptions);
+    } catch (error) {
+      console.error('Failed to send guild event to Discord:', error);
     }
   }
 }
