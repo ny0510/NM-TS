@@ -14,10 +14,15 @@ export const checkPermissions = async (interaction: ChatInputCommandInteraction,
   const required = command.permissions as PermissionResolvable[];
   let missing = member.permissions.missing(required);
 
-  // 음성 채널에 있는 경우, 음성 채널의 권한도 확인
+  // 사용자가 음성 채널에 있는 경우, 해당 음성 채널에서 봇의 권한도 확인
   if (interaction.member && 'voice' in interaction.member && interaction.member.voice?.channel) {
-    const botVoicePerms = interaction.member.voice.channel.permissionsFor(member);
-    missing = [...missing, ...botVoicePerms.missing(required)];
+    const voiceChannel = interaction.member.voice.channel;
+    const botVoicePerms = voiceChannel.permissionsFor(member);
+
+    if (botVoicePerms) {
+      const voiceMissing = botVoicePerms.missing(required);
+      missing = [...missing, ...voiceMissing];
+    }
   }
 
   missing = [...new Set(missing)];

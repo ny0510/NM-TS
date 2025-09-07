@@ -99,13 +99,23 @@ export const createPlayer = async (interaction: ChatInputCommandInteraction): Pr
 
     return player;
   } catch (e) {
+    client.logger.error(`Failed to create player: ${e}`);
+
+    let errorMessage = '플레이어를 생성하는 중 오류가 발생했어요.';
+    let errorDescription = '';
+
+    if (e && typeof e === 'object' && 'message' in e) {
+      const error = e as Error;
+      if (error.message.includes('User limit')) {
+        errorMessage = '음성 채널이 가득 찼어요.';
+        errorDescription = '다른 음성 채널을 이용해 주세요.';
+      } else if (client.config.IS_DEV_MODE) {
+        errorDescription = codeBlock('js', `${error.message}`);
+      }
+    }
+
     await safeReply(interaction, {
-      embeds: [
-        new EmbedBuilder()
-          .setTitle('플레이어를 생성하는 중 오류가 발생했어요.')
-          .setDescription(codeBlock('js', `${e}`))
-          .setColor(client.config.EMBED_COLOR_ERROR),
-      ],
+      embeds: [new EmbedBuilder().setTitle(errorMessage).setDescription(errorDescription).setColor(client.config.EMBED_COLOR_ERROR)],
       flags: MessageFlags.Ephemeral,
     });
     return undefined;
