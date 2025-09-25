@@ -1,8 +1,9 @@
-import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, inlineCode} from 'discord.js';
+import {type AutocompleteInteraction, ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, inlineCode} from 'discord.js';
 import {LoadTypes, type Track} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
+import {getGoogleSuggestions} from '@/utils/autocomplete/googleSuggest';
 import {safeReply} from '@/utils/discord/interactions';
 import {hyperlink} from '@/utils/formatting';
 import {truncateWithEllipsis} from '@/utils/formatting';
@@ -15,15 +16,17 @@ function isCoverTrack(track: Track): boolean {
 }
 
 function isShortsTrack(track: Track): boolean {
-  // YouTube Shorts are typically under 60 seconds (60000 milliseconds)
-  return track.duration !== undefined && track.duration > 0 && track.duration <= 60000;
+  const isDurationShorts = track.duration !== undefined && track.duration > 0 && track.duration <= 60000;
+  const hasShortsTags = /#shorts/i.test(track.title);
+
+  return isDurationShorts || hasShortsTags;
 }
 
 export default {
   data: new SlashCommandBuilder()
     .setName('play')
     .setDescription('음악을 재생해요.')
-    .addStringOption(option => option.setName('query').setDescription('재생할 음악의 제목이나 URL을 입력해 주세요.').setRequired(true))
+    .addStringOption(option => option.setName('query').setDescription('재생할 음악의 제목이나 URL을 입력해 주세요.').setRequired(true).setAutocomplete(true))
     .addBooleanOption(option => option.setName('add_first').setDescription('대기열의 맨 앞에 음악을 추가해요.').setRequired(false))
     .addIntegerOption(option => option.setName('index').setDescription('대기열의 특정 위치에 음악을 추가해요.').setRequired(false))
     .addBooleanOption(option => option.setName('ignore_playlist').setDescription('재생목록을 무시하고 해당 음악만 추가해요.').setRequired(false))
@@ -236,6 +239,34 @@ export default {
           ],
         });
         break;
+    }
+  },
+  async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+    const focusedOption = interaction.options.getFocused(true);
+
+    if (focusedOption.name === 'query') {
+      const query = focusedOption.value;
+
+      // 빈 쿼리이거나 URL인 경우 자동완성 제안하지 않음
+      if (!query || query.trim().length === 0 || /https?:\/\//i.test(query)) {
+        await interaction.respond([]);
+        return;
+      }
+
+      try {
+        const suggestions = await getGoogleSuggestions(query);
+        const choices = suggestions.map(suggestion => ({
+          name: suggestion.length > 100 ? suggestion.substring(0, 97) + '...' : suggestion,
+          value: suggestion.length > 100 ? suggestion.substring(0, 100) : suggestion,
+        }));
+
+        await interaction.respond(choices);
+      } catch (error) {
+        console.error('Autocomplete error:', error);
+        await interaction.respond([]);
+      }
+    } else {
+      await interaction.respond([]);
     }
   },
 } as Command;
