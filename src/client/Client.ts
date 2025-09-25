@@ -53,11 +53,6 @@ export class NMClient extends Client {
     this.on(Events.Error, error => this.logger.error(`Discord client error: ${error}`));
     this.on(Events.Warn, warning => this.logger.warn(`Discord client warning: ${warning}`));
     this.on(Events.Raw, d => this.manager.updateVoiceState(d));
-
-    // Unhandled Promise Rejection 처리
-    process.on('unhandledRejection', (reason, promise) => {
-      this.logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
-    });
   }
 
   private async initialize(): Promise<void> {

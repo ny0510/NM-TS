@@ -111,7 +111,7 @@ export default {
             });
           }
         } catch (error) {
-          client.logger.error(`Filter reply error: ${error}`);
+          client.logger.warn(`Filter reply error: ${error}`);
         }
         return false;
       }
@@ -143,6 +143,9 @@ export default {
           if (discordError.code !== 10008 && discordError.code !== 50001) {
             // Unknown Message, Missing Access
             client.logger.error(`Failed to edit message: ${error}`);
+          } else {
+            // Known errors - log at debug level to reduce spam
+            client.logger.debug(`Failed to edit message (known error ${discordError.code}): ${error}`);
           }
         } else {
           client.logger.error(`Failed to edit message: ${error}`);
@@ -158,7 +161,7 @@ export default {
       if (!i.isButton()) return;
 
       try {
-        // 인터랙션이 이미 응답되었는지 확인
+        // 중복 인터랙션 처리 방지를 위한 추가 체크
         if (i.replied || i.deferred) {
           client.logger.warn('Interaction already handled, skipping...');
           return;
@@ -216,7 +219,7 @@ export default {
             return;
           } else if (discordError.code === 40060) {
             // Interaction has already been acknowledged
-            client.logger.warn('Interaction already acknowledged');
+            client.logger.debug('Interaction already acknowledged');
             return;
           } else if (discordError.code === 10008) {
             // Unknown message
@@ -225,7 +228,7 @@ export default {
             return;
           } else if (discordError.code === 50001) {
             // Missing access
-            client.logger.warn('Missing access to edit message, stopping collector');
+            client.logger.debug('Missing access to edit message, stopping collector');
             collector.stop();
             return;
           }
