@@ -1,4 +1,4 @@
-import {type ChatInputCommandInteraction, type HexColorString, PermissionsBitField, SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder, type Snowflake} from 'discord.js';
+import {type AutocompleteInteraction, type ChatInputCommandInteraction, type HexColorString, PermissionsBitField, SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder} from 'discord.js';
 
 // Command 인터페이스
 export interface Command {
@@ -6,6 +6,7 @@ export interface Command {
   permissions?: PermissionsBitField[] | bigint[];
   cooldown?: number;
   execute(interaction: ChatInputCommandInteraction): Promise<void>;
+  autocomplete?(interaction: AutocompleteInteraction): Promise<void>;
 }
 
 // Event 인터페이스

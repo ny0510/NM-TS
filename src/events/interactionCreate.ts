@@ -1,4 +1,4 @@
-import {BaseInteraction, ChatInputCommandInteraction, EmbedBuilder, Events, MessageFlags, type PermissionsString, codeBlock} from 'discord.js';
+import {type AutocompleteInteraction, BaseInteraction, ChatInputCommandInteraction, EmbedBuilder, Events, MessageFlags, type PermissionsString, codeBlock} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
@@ -12,6 +12,20 @@ export default {
   name: Events.InteractionCreate,
   async execute(interaction: BaseInteraction): Promise<void> {
     const client = interaction.client as NMClient;
+
+    // Autocomplete 인터랙션 처리
+    if (interaction.isAutocomplete()) {
+      const command = client.services.commandManager.getCommand(interaction.commandName);
+
+      if (command && command.autocomplete) {
+        try {
+          await command.autocomplete(interaction as AutocompleteInteraction);
+        } catch (error) {
+          client.logger.error(`Error executing autocomplete for ${interaction.commandName}: ${error}`);
+        }
+      }
+      return;
+    }
 
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.channel?.isSendable()) return;
