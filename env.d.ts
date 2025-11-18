@@ -15,5 +15,8 @@ declare namespace NodeJS {
 
     LOG_PREFIX: string;
     DEFAULT_VOLUME: string;
+
+    KOREANBOTS_TOKEN?: string;
+    KOREANBOTS_UPDATE_INTERVAL?: string;
   }
 }

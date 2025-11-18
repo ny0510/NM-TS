@@ -6,6 +6,10 @@ if (!process.env.DISCORD_TOKEN || !process.env.DISCORD_CLIENT_ID || !process.env
   throw new Error('Missing required environment variables. Please check your .env file.');
 }
 
+const DEFAULT_KOREANBOTS_INTERVAL = 600_000;
+const parsedKoreanbotsInterval = process.env.KOREANBOTS_UPDATE_INTERVAL ? Number.parseInt(process.env.KOREANBOTS_UPDATE_INTERVAL, 10) : Number.NaN;
+const resolvedKoreanbotsInterval = Number.isNaN(parsedKoreanbotsInterval) ? DEFAULT_KOREANBOTS_INTERVAL : parsedKoreanbotsInterval;
+
 export const config: Config = {
   DISCORD_TOKEN: process.env.DISCORD_TOKEN || '',
   DISCORD_CLIENT_ID: process.env.DISCORD_CLIENT_ID || '',
@@ -24,6 +28,9 @@ export const config: Config = {
   DEFAULT_VOLUME: parseInt(process.env.DEFAULT_VOLUME!) || 50,
   LOG_PREFIX: process.env.LOG_PREFIX || 'NM',
   IS_DEV_MODE: process.env.NODE_ENV == 'development',
+
+  KOREANBOTS_TOKEN: process.env.KOREANBOTS_TOKEN || '',
+  KOREANBOTS_UPDATE_INTERVAL: resolvedKoreanbotsInterval,
 
   PROGRESS_CIRCLE_START: process.env.PROGRESS_CIRCLE_START || '<:progress_circle_start:1411859909842309180>',
   PROGRESS_CIRCLE_MIDDLE: process.env.PROGRESS_CIRCLE_MIDDLE || '<:progress_circle_middle:1411859900723892305>',

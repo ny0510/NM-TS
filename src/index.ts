@@ -8,7 +8,7 @@ const gracefulShutdown = (signal: string) => {
   process.exit(0);
 };
 
-process.on('unhandledRejection', (reason, promise) => client.logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`));
+process.on('unhandledRejection', (reason, promise) => client.logger.error(`Unhandled Rejection at: ${JSON.stringify(promise)}, reason: ${reason}`));
 process.on('uncaughtException', e => client.logger.error(`Uncaught Exception: ${e}`));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));

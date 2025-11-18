@@ -52,7 +52,12 @@ export interface ProgressBarConfig {
   PROGRESS_FILLED_MIDDLE: string;
 }
 
-export interface Config extends DiscordConfig, LavalinkConfig, EmbedConfig, AppConfig, ProgressBarConfig {}
+export interface KoreanbotsConfig {
+  KOREANBOTS_TOKEN: string;
+  KOREANBOTS_UPDATE_INTERVAL: number;
+}
+
+export interface Config extends DiscordConfig, LavalinkConfig, EmbedConfig, AppConfig, ProgressBarConfig, KoreanbotsConfig {}
 
 // Client 인터페이스들
 export interface ClientServices {

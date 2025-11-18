@@ -1,4 +1,5 @@
 import {ActivityType, Client, Events, GatewayIntentBits, PresenceUpdateStatus} from 'discord.js';
+import {Koreanbots} from 'koreanbots';
 
 import type {ClientServices, ClientStats, Config} from './types';
 import {CommandManager} from '@/managers/CommandManager';
@@ -12,6 +13,8 @@ export class NMClient extends Client {
   public readonly logger: ILogger;
   public readonly config: Config;
   public readonly services: ClientServices;
+  private koreanbots?: Koreanbots;
+  private koreanbotsInterval?: ReturnType<typeof setInterval>;
 
   public constructor() {
     super({
@@ -34,6 +37,7 @@ export class NMClient extends Client {
     };
 
     this.setupEventHandlers();
+    this.setupKoreanbotsIntegration();
     this.initialize();
   }
 
@@ -53,6 +57,61 @@ export class NMClient extends Client {
     this.on(Events.Error, error => this.logger.error(`Discord client error: ${error}`));
     this.on(Events.Warn, warning => this.logger.warn(`Discord client warning: ${warning}`));
     this.on(Events.Raw, d => this.manager.updateVoiceState(d));
+  }
+
+  private setupKoreanbotsIntegration(): void {
+    if (!this.config.KOREANBOTS_TOKEN) {
+      this.logger.warn('Koreanbots token not provided; skipping Koreanbots stats updates.');
+      return;
+    }
+
+    try {
+      this.koreanbots = new Koreanbots({
+        clientID: this.config.DISCORD_CLIENT_ID,
+        api: {
+          token: this.config.KOREANBOTS_TOKEN,
+        },
+      });
+    } catch (error) {
+      this.logger.error(`Failed to initialize Koreanbots client: ${error}`);
+      return;
+    }
+
+    let hasLoggedSuccess = false;
+
+    const updateStats = async () => {
+      if (!this.koreanbots) {
+        return;
+      }
+
+      try {
+        const servers = this.guilds.cache.size;
+        const payload: {servers: number; shards?: number} = {servers};
+        const shardCount = this.shard?.count;
+
+        if (typeof shardCount === 'number') {
+          payload.shards = shardCount;
+        }
+
+        await this.koreanbots.mybot.update(payload);
+
+        if (!hasLoggedSuccess) {
+          const shardInfo = payload.shards ? `, shards: ${payload.shards}` : '';
+          this.logger.info(`Koreanbots stats updates enabled (servers: ${servers}${shardInfo}).`);
+          hasLoggedSuccess = true;
+        }
+      } catch (error) {
+        this.logger.error(`Failed to update Koreanbots stats: ${error}`);
+      }
+    };
+
+    this.once(Events.ClientReady, () => {
+      void updateStats();
+
+      this.koreanbotsInterval = setInterval(() => {
+        void updateStats();
+      }, this.config.KOREANBOTS_UPDATE_INTERVAL);
+    });
   }
 
   private async initialize(): Promise<void> {
@@ -106,5 +165,17 @@ export class NMClient extends Client {
       this.logger.error(`Failed to load modules: ${error}`);
       throw error;
     }
+  }
+
+  public override async destroy(): Promise<void> {
+    if (this.koreanbotsInterval) {
+      clearInterval(this.koreanbotsInterval);
+      this.koreanbotsInterval = undefined;
+    }
+
+    this.koreanbots?.destroy();
+    this.koreanbots = undefined;
+
+    await super.destroy();
   }
 }
