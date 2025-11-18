@@ -1,4 +1,4 @@
-import {type AutocompleteInteraction, ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, inlineCode} from 'discord.js';
+import {type AutocompleteInteraction, ChatInputCommandInteraction, DiscordAPIError, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, inlineCode} from 'discord.js';
 import {LoadTypes, type Track} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
@@ -244,12 +244,27 @@ export default {
   async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
     const focusedOption = interaction.options.getFocused(true);
 
+    const client = interaction.client as NMClient;
+
+    const respondSafely = async (choices: {name: string; value: string}[]) => {
+      try {
+        await interaction.respond(choices);
+      } catch (error) {
+        if (error instanceof DiscordAPIError && error.code === 10062) {
+          client.logger.debug('Autocomplete interaction expired before response could be sent.');
+          return;
+        }
+
+        client.logger.error(new Error(`Failed to respond to autocomplete interaction: ${error instanceof Error ? error.message : String(error)}`));
+      }
+    };
+
     if (focusedOption.name === 'query') {
       const query = focusedOption.value;
 
       // 빈 쿼리이거나 URL인 경우 자동완성 제안하지 않음
       if (!query || query.trim().length === 0 || /https?:\/\//i.test(query)) {
-        await interaction.respond([]);
+        await respondSafely([]);
         return;
       }
 
@@ -260,13 +275,17 @@ export default {
           value: suggestion.length > 100 ? suggestion.substring(0, 100) : suggestion,
         }));
 
-        await interaction.respond(choices);
+        await respondSafely(choices);
       } catch (error) {
-        console.error('Autocomplete error:', error);
-        await interaction.respond([]);
+        if (error instanceof Error && error.name === 'AbortError') {
+          client.logger.debug('Autocomplete suggestions request timed out; responding with empty list.');
+        } else {
+          client.logger.error(new Error(`Autocomplete error: ${error instanceof Error ? error.message : String(error)}`));
+        }
+        await respondSafely([]);
       }
     } else {
-      await interaction.respond([]);
+      await respondSafely([]);
     }
   },
 } as Command;
