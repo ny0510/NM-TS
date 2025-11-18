@@ -11,6 +11,7 @@
         "koreanbots": "^3.2.1",
         "luxon": "^3.6.1",
         "magmastream": "^2.8.7",
+        "undici": "^6.19.5",
       },
       "devDependencies": {
         "@trivago/prettier-plugin-sort-imports": "^5.2.2",

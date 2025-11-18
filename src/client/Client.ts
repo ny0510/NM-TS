@@ -1,5 +1,5 @@
 import {ActivityType, Client, Events, GatewayIntentBits, PresenceUpdateStatus} from 'discord.js';
-import {Koreanbots} from 'koreanbots';
+import {request as undiciRequest} from 'undici';
 
 import type {ClientServices, ClientStats, Config} from './types';
 import {CommandManager} from '@/managers/CommandManager';
@@ -13,8 +13,9 @@ export class NMClient extends Client {
   public readonly logger: ILogger;
   public readonly config: Config;
   public readonly services: ClientServices;
-  private koreanbots?: Koreanbots;
   private koreanbotsInterval?: ReturnType<typeof setInterval>;
+  private koreanbotsLastServers?: number;
+  private koreanbotsLastShards?: number;
 
   public constructor() {
     super({
@@ -65,35 +66,50 @@ export class NMClient extends Client {
       return;
     }
 
-    try {
-      this.koreanbots = new Koreanbots({
-        clientID: this.config.DISCORD_CLIENT_ID,
-        api: {
-          token: this.config.KOREANBOTS_TOKEN,
-        },
-      });
-    } catch (error) {
-      this.logger.error(`Failed to initialize Koreanbots client: ${error}`);
+    if (!this.config.KOREANBOTS_CLIENT_ID) {
+      this.logger.warn('Koreanbots client ID not provided; skipping Koreanbots stats updates.');
       return;
     }
 
     let hasLoggedSuccess = false;
 
     const updateStats = async () => {
-      if (!this.koreanbots) {
-        return;
-      }
-
       try {
         const servers = this.guilds.cache.size;
         const payload: {servers: number; shards?: number} = {servers};
         const shardCount = this.shard?.count;
 
+        if (this.koreanbotsLastServers === servers && this.koreanbotsLastShards === shardCount) {
+          return;
+        }
+
         if (typeof shardCount === 'number') {
           payload.shards = shardCount;
         }
 
-        await this.koreanbots.mybot.update(payload);
+        const response = await undiciRequest(`https://koreanbots.dev/api/v2/bots/${this.config.KOREANBOTS_CLIENT_ID}/stats`, {
+          method: 'POST',
+          headers: {
+            Authorization: this.config.KOREANBOTS_TOKEN,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.statusCode < 200 || response.statusCode >= 300) {
+          const rawBody = await response.body.text();
+          let message = rawBody || `Unexpected status code ${response.statusCode}`;
+
+          try {
+            const parsed = JSON.parse(rawBody);
+            message = parsed?.message ?? message;
+          } catch {}
+
+          throw new Error(message);
+        }
+
+        this.koreanbotsLastServers = servers;
+        this.koreanbotsLastShards = typeof shardCount === 'number' ? shardCount : undefined;
 
         if (!hasLoggedSuccess) {
           const shardInfo = payload.shards ? `, shards: ${payload.shards}` : '';
@@ -101,7 +117,20 @@ export class NMClient extends Client {
           hasLoggedSuccess = true;
         }
       } catch (error) {
-        this.logger.error(`Failed to update Koreanbots stats: ${error}`);
+        const message = error instanceof Error ? error.message : `${error}`;
+
+        if (message.includes('존재하지 않는 봇')) {
+          this.logger.warn('Koreanbots reported that the bot does not exist; disabling stats updates. Please verify the client ID and token.');
+          if (this.koreanbotsInterval) {
+            clearInterval(this.koreanbotsInterval);
+            this.koreanbotsInterval = undefined;
+          }
+          this.koreanbotsLastServers = undefined;
+          this.koreanbotsLastShards = undefined;
+          return;
+        }
+
+        this.logger.error(`Failed to update Koreanbots stats: ${message}`);
       }
     };
 
@@ -173,8 +202,8 @@ export class NMClient extends Client {
       this.koreanbotsInterval = undefined;
     }
 
-    this.koreanbots?.destroy();
-    this.koreanbots = undefined;
+    this.koreanbotsLastServers = undefined;
+    this.koreanbotsLastShards = undefined;
 
     await super.destroy();
   }

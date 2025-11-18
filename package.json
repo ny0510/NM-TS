@@ -26,6 +26,7 @@
     "get-image-colors": "^4.0.1",
     "koreanbots": "^3.2.1",
     "luxon": "^3.6.1",
-    "magmastream": "^2.8.7"
+    "magmastream": "^2.8.7",
+    "undici": "^6.19.5"
   }
 }

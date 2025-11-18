@@ -30,6 +30,7 @@ export const config: Config = {
   IS_DEV_MODE: process.env.NODE_ENV == 'development',
 
   KOREANBOTS_TOKEN: process.env.KOREANBOTS_TOKEN || '',
+  KOREANBOTS_CLIENT_ID: process.env.KOREANBOTS_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '',
   KOREANBOTS_UPDATE_INTERVAL: resolvedKoreanbotsInterval,
 
   PROGRESS_CIRCLE_START: process.env.PROGRESS_CIRCLE_START || '<:progress_circle_start:1411859909842309180>',

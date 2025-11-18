@@ -54,6 +54,7 @@ export interface ProgressBarConfig {
 
 export interface KoreanbotsConfig {
   KOREANBOTS_TOKEN: string;
+  KOREANBOTS_CLIENT_ID: string;
   KOREANBOTS_UPDATE_INTERVAL: number;
 }
 

@@ -17,6 +17,7 @@ declare namespace NodeJS {
     DEFAULT_VOLUME: string;
 
     KOREANBOTS_TOKEN?: string;
+    KOREANBOTS_CLIENT_ID?: string;
     KOREANBOTS_UPDATE_INTERVAL?: string;
   }
 }
