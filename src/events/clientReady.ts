@@ -2,14 +2,35 @@ import {ActivityType, Events, PresenceUpdateStatus} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
+import {truncateWithEllipsis} from '@/utils';
 
 const updatePresence = (client: NMClient) => {
   const stats = client.getStats();
+
+  let activityName = '';
+  let activityType = ActivityType.Custom;
+
+  if (stats.activePlayers) {
+    // 재생 중인 플레이어가 있으면 랜덤으로 하나 선택
+    const players = Array.from(client.manager.players.values());
+    const randomPlayer = players[Math.floor(Math.random() * players.length)];
+    const currentTrack = randomPlayer?.queue.current;
+
+    if (currentTrack) {
+      activityName = truncateWithEllipsis(currentTrack.title, 50);
+      activityType = ActivityType.Listening;
+    } else {
+      activityName = `NM | ${stats.guilds}개의 서버에서 활동 중!`;
+    }
+  } else {
+    activityName = `NM | ${stats.guilds}개의 서버에서 활동 중!`;
+  }
+
   client.user?.setPresence({
     activities: [
       {
-        name: `NM | ${stats.activePlayers ? `${stats.activePlayers}개의 서버에서 음악을 재생 중!` : `${stats.guilds}개의 서버에서 활동 중!`}`,
-        type: ActivityType.Custom,
+        name: activityName,
+        type: activityType,
       },
     ],
     status: PresenceUpdateStatus.Idle,
