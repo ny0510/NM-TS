@@ -101,6 +101,19 @@ export const registerLavalinkEvents = (client: NMClient) => {
     if (!channel?.isSendable()) return;
     if (player.get('stoppedByCommand')) return;
 
+    // 봇이 음성 채널에 연결되어 있는지 확인 (강제 퇴장 감지)
+    const guild = client.guilds.cache.get(player.guildId);
+    const botVoiceChannel = guild?.members.me?.voice?.channel;
+    if (!botVoiceChannel || botVoiceChannel.id !== player.voiceChannelId) {
+      // 봇이 음성 채널에서 나갔거나 다른 채널에 있음 (강제 퇴장 또는 이동)
+      logger.info(`Player ${guild?.name} (${player.guildId}) queue end - bot not in voice channel (kicked)`);
+      await channel.send({
+        embeds: [new EmbedBuilder().setTitle('음성 채널에서 퇴장당했어요. 음악을 정지할게요.').setColor(client.config.EMBED_COLOR_NORMAL)],
+      });
+      player.destroy();
+      return;
+    }
+
     const embed = new EmbedBuilder().setTitle('대기열에 있는 음악을 모두 재생했어요. 30초 후에 자동으로 연결을 종료해요.').setColor(client.config.EMBED_COLOR_NORMAL);
     let message: Message | undefined = await channel.send({embeds: [embed]});
 

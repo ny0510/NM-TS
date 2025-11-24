@@ -16,6 +16,34 @@ export default {
 
     if (!player) return;
 
+    const sendMessage = async (guild: VoiceState['guild'], channelId: string | undefined | null, payload: string | MessageCreateOptions) => {
+      try {
+        const textChannel = guild.channels.cache.get(channelId!) as TextChannel | undefined;
+        if (!textChannel) return;
+        return await textChannel.send(payload);
+      } catch (error) {
+        client.logger.error(`Failed to send message in voice state update: ${error}`);
+        return;
+      }
+    };
+
+    // 봇 자신의 voice state 변경인 경우 먼저 처리
+    const isBotStateChange = newState.id === client.user?.id || oldState.id === client.user?.id;
+    if (isBotStateChange) {
+      const playerVoiceChannelId = player.voiceChannelId;
+      // 봇이 음성 채널에서 나갔는지 확인 (강제 퇴장 또는 이동)
+      if (oldState.channelId === playerVoiceChannelId && newState.channelId !== playerVoiceChannelId) {
+        // 봇이 플레이어가 설정된 채널에서 나감
+        await sendMessage(guild, player.textChannelId, {embeds: [new EmbedBuilder().setTitle('음성 채널에서 퇴장당했어요. 음악을 정지할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
+        player.set('stoppedByCommand', true);
+        player.destroy();
+        activePlayers.delete(guildId);
+        return;
+      }
+      // 봇 자신의 다른 voice state 변경은 무시
+      return;
+    }
+
     // 봇이 현재 연결된 음성 채널과 플레이어의 voiceChannelId가 일치하는지 확인
     const botVoiceChannel = guild.members.me?.voice?.channel;
     const playerVoiceChannelId = player.voiceChannelId;
@@ -27,17 +55,6 @@ export default {
     }
 
     const getNonBotMembers = (voiceChannel: VoiceState['channel']) => voiceChannel?.members.filter((member: GuildMember) => !member.user.bot);
-
-    const sendMessage = async (guild: VoiceState['guild'], channelId: string | undefined, payload: string | MessageCreateOptions) => {
-      try {
-        const textChannel = guild.channels.cache.get(channelId!) as TextChannel | undefined;
-        if (!textChannel) return;
-        return await textChannel.send(payload);
-      } catch (error) {
-        client.logger.error(`Failed to send message in voice state update: ${error}`);
-        return;
-      }
-    };
 
     const handleEmptyChannel = async (guildId: string, guild: VoiceState['guild'], player: any) => {
       if (!player.paused) player.pause(true);
@@ -74,18 +91,9 @@ export default {
       }
     };
 
-    const handleBotKicked = async (guildId: string, guild: VoiceState['guild'], player: any) => {
-      if (player) {
-        await sendMessage(guild, player.textChannelId, {embeds: [new EmbedBuilder().setTitle('음성 채널에서 퇴장당했어요. 음악을 정지할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
-        player.set('stoppedByCommand', true);
-        player.destroy();
-        activePlayers.delete(guildId);
-      }
-    };
-
-    // 봇이 플레이어에 설정된 음성 채널에 없으면 봇이 퇴장당한 것으로 처리
+    // 봇이 플레이어에 설정된 음성 채널에 없으면 무시 (이미 위에서 처리됨)
     if (!botVoiceChannel || botVoiceChannel.id !== playerVoiceChannelId) {
-      return await handleBotKicked(guildId, guild, player);
+      return;
     }
 
     // 플레이어가 설정된 음성 채널의 멤버 수 확인
