@@ -1,9 +1,9 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, SlashCommandBuilder, codeBlock, hyperlink, inlineCode} from 'discord.js';
 
-import type {Command} from '@/client/types';
 import type {NMClient} from '@/client/Client';
-import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
+import type {Command} from '@/client/types';
 import {safeReply} from '@/utils/discord/interactions';
+import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder()
@@ -21,15 +21,17 @@ export default {
     if (!player) return;
 
     const index = interaction.options.getNumber('index')! - 1; // 0부터 시작하는 인덱스
+    const queueSize = await player.queue.size();
 
-    if (index < 0 || index >= player.queue.length) {
+    if (index < 0 || index >= queueSize) {
       return await safeReply(interaction, {
         embeds: [new EmbedBuilder().setTitle('유효하지 않은 인덱스에요.').setColor(client.config.EMBED_COLOR_ERROR)],
         flags: MessageFlags.Ephemeral,
       });
     }
 
-    const track = player.queue[index];
+    const tracks = await player.queue.getSlice(index, index + 1);
+    const track = tracks[0];
 
     if (!track) {
       return await safeReply(interaction, {
@@ -38,7 +40,7 @@ export default {
       });
     }
 
-    player.queue.remove(index);
+    await player.queue.remove(index);
     return await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()

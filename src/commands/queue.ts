@@ -10,13 +10,14 @@ import {ensurePlaying} from '@/utils/music';
 
 const TRACKS_PER_PAGE = 10;
 
-function buildQueueEmbed(client: NMClient, player: Player, page: number) {
+async function buildQueueEmbed(client: NMClient, player: Player, page: number) {
   const start = (page - 1) * TRACKS_PER_PAGE;
   const end = start + TRACKS_PER_PAGE;
-  const tracks = player.queue.slice(start, end);
-  const currentTrack = player.queue.current;
-  const totalTracks = player.queue.size;
+  const tracks = await player.queue.getSlice(start, end);
+  const currentTrack = await player.queue.getCurrent();
+  const totalTracks = await player.queue.size();
   const totalPages = Math.max(1, Math.ceil(totalTracks / TRACKS_PER_PAGE));
+  const queueDuration = await player.queue.duration();
 
   const footer = totalPages > 1 ? `${page}/${totalPages} 페이지\n+${Math.max(0, totalTracks - page * TRACKS_PER_PAGE)}곡` : ' ';
   const trackList = tracks.map((track: any, i: number) => ({
@@ -25,7 +26,7 @@ function buildQueueEmbed(client: NMClient, player: Player, page: number) {
   }));
 
   return new EmbedBuilder()
-    .setTitle(`📋 현재 대기열 (${msToTime(player.queue.duration)})`)
+    .setTitle(`📋 현재 대기열 (${msToTime(queueDuration)})`)
     .setDescription(currentTrack ? `🎶 ${hyperlink(truncateWithEllipsis(currentTrack.title, 50), currentTrack.uri)}` : '현재 재생중인 음악이 없어요.')
     .addFields(trackList)
     .setFooter({text: footer})
@@ -63,7 +64,7 @@ export default {
     if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
     if (!player) return;
 
-    const totalTracks = player.queue.size;
+    const totalTracks = await player.queue.size();
     const totalPages = Math.max(1, Math.ceil(totalTracks / TRACKS_PER_PAGE));
     let page = interaction.options.getNumber('page') ?? 1;
     page = Math.max(1, Math.min(page, totalPages));
@@ -87,7 +88,7 @@ export default {
     const remainingTracks = Math.max(0, totalTracks - end);
     const footer = totalPages > 1 ? `${page}/${totalPages} 페이지\n+${remainingTracks}곡` : ' ';
 
-    const embed = buildQueueEmbed(client, player, page);
+    const embed = await buildQueueEmbed(client, player, page);
     const row = buildQueueButtons(page, totalPages);
 
     await safeReply(interaction, {
@@ -119,7 +120,7 @@ export default {
       return true;
     };
 
-    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000 * 5}); // 5분으로 변경
+    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000 * 60}); // 60분
     const followUp = await interaction.fetchReply();
     if (!collector || !followUp) {
       client.logger.warn('Failed to create collector or fetch reply');
@@ -181,7 +182,7 @@ export default {
         await i.deferUpdate();
 
         // 현재 대기열 상태에 맞는 총 페이지 수 계산
-        const currentTotalTracks = currentPlayer.queue.size;
+        const currentTotalTracks = await currentPlayer.queue.size();
         const currentTotalPages = Math.max(1, Math.ceil(currentTotalTracks / TRACKS_PER_PAGE));
 
         // 대기열이 비어있는 경우
@@ -202,7 +203,7 @@ export default {
         }
 
         await i.editReply({
-          embeds: [buildQueueEmbed(client, currentPlayer, page)],
+          embeds: [await buildQueueEmbed(client, currentPlayer, page)],
           components: [buildQueueButtons(page, currentTotalPages)],
         });
       } catch (error) {

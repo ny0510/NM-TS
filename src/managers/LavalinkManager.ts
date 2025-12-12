@@ -1,5 +1,5 @@
 import type {Client} from 'discord.js';
-import {Manager, type Payload, SearchPlatform} from 'magmastream';
+import {AutoPlayPlatform, Manager, SearchPlatform, StateStorageType, TrackPartial} from 'magmastream';
 
 import type {Config} from '@/client/types';
 import type {ILogger} from '@/utils/logger';
@@ -8,11 +8,9 @@ import {registerLavalinkEvents} from '@/utils/music';
 export class LavalinkManager {
   private readonly manager: Manager;
   private readonly logger: ILogger;
-  private readonly config: Config;
 
   constructor(client: Client, logger: ILogger, config: Config) {
     this.logger = logger;
-    this.config = config;
 
     this.manager = new Manager({
       nodes: [
@@ -21,15 +19,23 @@ export class LavalinkManager {
           host: config.LAVALINK_HOST,
           port: config.LAVALINK_PORT,
           password: config.LAVALINK_PASSWORD,
-          secure: config.LAVALINK_SECURE,
+          useSSL: config.LAVALINK_SECURE,
+          // enableSessionResumeOption: config.LAVALINK_ENABLE_SESSION_RESUME,
+          // sessionTimeoutSeconds: 60 * 5,
         },
       ],
-      autoPlay: true,
+      // stateStorage: {
+      //   type: StateStorageType.JSON,
+      //   deleteInactivePlayers: true,
+      // },
+      // normalizeYouTubeTitles: true,
+      playNextOnEnd: true,
       defaultSearchPlatform: SearchPlatform.YouTube,
-      autoPlaySearchPlatform: SearchPlatform.YouTube,
-      send: (id: string, payload: Payload) => {
-        const guild = client.guilds.cache.get(id);
-        if (guild) guild.shard.send(payload);
+      autoPlaySearchPlatforms: [AutoPlayPlatform.YouTube, AutoPlayPlatform.Spotify, AutoPlayPlatform.SoundCloud],
+      trackPartial: [TrackPartial.Author, TrackPartial.ArtworkUrl, TrackPartial.Duration, TrackPartial.Identifier, TrackPartial.PluginInfo, TrackPartial.Requester, TrackPartial.SourceName, TrackPartial.Title, TrackPartial.Track, TrackPartial.Uri],
+      send: packet => {
+        const guild = client.guilds.cache.get(packet.d.guild_id);
+        if (guild) guild.shard.send(packet);
       },
     });
   }
@@ -40,7 +46,7 @@ export class LavalinkManager {
 
   public initialize(clientId: string): void {
     try {
-      this.manager.init(clientId);
+      this.manager.init({clientId});
       this.logger.debug('Lavalink manager initialized');
     } catch (error) {
       this.logger.error(`Failed to initialize Lavalink manager: ${error}`);

@@ -1,8 +1,8 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, SlashCommandBuilder, time, userMention} from 'discord.js';
 
 import {version} from '@/../package.json';
-import type {Command} from '@/client/types';
 import type {NMClient} from '@/client/Client';
+import type {Command} from '@/client/types';
 import {safeReply} from '@/utils/discord/interactions';
 
 export default {

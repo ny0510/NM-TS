@@ -1,9 +1,9 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
 
-import type {Command} from '@/client/types';
 import type {NMClient} from '@/client/Client';
-import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
+import type {Command} from '@/client/types';
 import {safeReply} from '@/utils/discord/interactions';
+import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder().setName('clear').setDescription('대기열을 비워요.'),
@@ -16,7 +16,7 @@ export default {
     if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
     if (!player) return;
 
-    player.queue.clear();
+    await player.queue.clear();
 
     return await safeReply(interaction, {
       embeds: [new EmbedBuilder().setTitle('대기열을 비웠어요.').setColor(client.config.EMBED_COLOR_NORMAL)],

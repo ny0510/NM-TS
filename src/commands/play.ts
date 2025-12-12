@@ -37,7 +37,7 @@ export default {
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = interaction.client as NMClient;
 
-    let player = client.manager.get(interaction.guildId!);
+    let player = client.manager.players.get(interaction.guildId!);
 
     if (!(await ensureVoiceChannel(interaction))) return; // 음성 채널에 들어가 있는지 확인
     if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
@@ -77,20 +77,22 @@ export default {
         flags: MessageFlags.Ephemeral,
       });
     if (index !== null) {
-      if (!player || (!player.playing && !player.paused && player.queue.size === 0)) {
+      const queueSize = player ? await player.queue.size() : 0;
+      if (!player || (!player.playing && !player.paused && queueSize === 0)) {
         return await safeReply(interaction, {
           embeds: [new EmbedBuilder().setTitle('아무것도 재생중이지 않을 때는 인덱스를 설정할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
           flags: MessageFlags.Ephemeral,
         });
       }
-      if (player && index > player.queue.size) {
+      if (player && index > queueSize) {
         return await safeReply(interaction, {
-          embeds: [new EmbedBuilder().setTitle(`대기열보다 더 큰 인덱스를 설정할 수 없어요.`).setDescription(`대기열에 ${player.queue.size}곡이 있어요.`).setColor(client.config.EMBED_COLOR_ERROR)],
+          embeds: [new EmbedBuilder().setTitle(`대기열보다 더 큰 인덱스를 설정할 수 없어요.`).setDescription(`대기열에 ${queueSize}곡이 있어요.`).setColor(client.config.EMBED_COLOR_ERROR)],
           flags: MessageFlags.Ephemeral,
         });
       }
     }
-    if (ignorePlaylist && player?.queue.current?.isStream)
+    const currentTrack = player ? await player.queue.getCurrent() : null;
+    if (ignorePlaylist && currentTrack?.isStream)
       return await safeReply(interaction, {
         embeds: [new EmbedBuilder().setTitle('스트리밍 음악인 경우에는 재생목록 무시 옵션을 사용할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
         flags: MessageFlags.Ephemeral,
@@ -105,15 +107,15 @@ export default {
       });
 
     // 필터링 옵션이 활성화된 경우 트랙 필터링
-    if ((excludeCover || excludeShorts) && res.tracks.length > 0) {
+    if ((excludeCover || excludeShorts) && 'tracks' in res && res.tracks.length > 0) {
       const originalTracksCount = res.tracks.length;
 
       if (excludeCover && excludeShorts) {
-        res.tracks = res.tracks.filter(track => !isCoverTrack(track) && !isShortsTrack(track));
+        res.tracks = res.tracks.filter((track: Track) => !isCoverTrack(track) && !isShortsTrack(track));
       } else if (excludeCover) {
-        res.tracks = res.tracks.filter(track => !isCoverTrack(track));
+        res.tracks = res.tracks.filter((track: Track) => !isCoverTrack(track));
       } else if (excludeShorts) {
-        res.tracks = res.tracks.filter(track => !isShortsTrack(track));
+        res.tracks = res.tracks.filter((track: Track) => !isShortsTrack(track));
       }
 
       // 모든 트랙이 필터링된 경우
@@ -141,11 +143,12 @@ export default {
       case LoadTypes.Track:
       case LoadTypes.Search:
         const track = res.tracks[0] as Track;
-        if (addFirst) player.queue.add(track, 0);
-        else if (index !== null) player.queue.add(track, index);
-        else player.queue.add(track);
+        if (addFirst) await player.queue.add(track, 0);
+        else if (index !== null) await player.queue.add(track, index);
+        else await player.queue.add(track);
 
-        if (!player.playing && !player.paused && !player.queue.size) await player.play();
+        const trackQueueSize = await player.queue.size();
+        if (!player.playing && !player.paused && !trackQueueSize) await player.play();
 
         const trackMeta = await getEmbedMeta(track, false, player, 'add');
         const [colors, footerText] = [trackMeta.colors, trackMeta.footerText];
@@ -204,11 +207,12 @@ export default {
           }
         }
 
-        if (addFirst) player.queue.add(res.tracks, 0);
-        else if (index !== null) player.queue.add(res.tracks, index);
-        else player.queue.add(res.tracks);
+        if (addFirst) await player.queue.add(res.tracks, 0);
+        else if (index !== null) await player.queue.add(res.tracks, index);
+        else await player.queue.add(res.tracks);
 
-        if (!player.playing && !player.paused && player.queue.size === res.tracks.length) await player.play();
+        const playlistQueueSize = await player.queue.size();
+        if (!player.playing && !player.paused && playlistQueueSize) await player.play();
 
         const playlistMeta = await getEmbedMeta(res.tracks, true, player);
         const [playlistColors, playlistFooterText] = [playlistMeta.colors, playlistMeta.footerText];

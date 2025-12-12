@@ -12,9 +12,6 @@ export default {
     const guild = newState?.guild ?? oldState?.guild;
     if (!guild) return;
     const guildId = guild.id;
-    const player = client.manager.players.get(guildId!);
-
-    if (!player) return;
 
     const sendMessage = async (guild: VoiceState['guild'], channelId: string | undefined | null, payload: string | MessageCreateOptions) => {
       try {
@@ -27,22 +24,34 @@ export default {
       }
     };
 
-    // 봇 자신의 voice state 변경인 경우 먼저 처리
+    // 봇 자신의 voice state 변경인 경우 먼저 처리 (플레이어 체크 전에!)
     const isBotStateChange = newState.id === client.user?.id || oldState.id === client.user?.id;
+
     if (isBotStateChange) {
-      const playerVoiceChannelId = player.voiceChannelId;
-      // 봇이 음성 채널에서 나갔는지 확인 (강제 퇴장 또는 이동)
-      if (oldState.channelId === playerVoiceChannelId && newState.channelId !== playerVoiceChannelId) {
-        // 봇이 플레이어가 설정된 채널에서 나감
-        await sendMessage(guild, player.textChannelId, {embeds: [new EmbedBuilder().setTitle('음성 채널에서 퇴장당했어요. 음악을 정지할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
-        player.set('stoppedByCommand', true);
-        player.destroy();
-        activePlayers.delete(guildId);
+      // 봇이 음성 채널에서 완전히 나갔는지 확인 (강제 퇴장)
+      if (oldState.channelId && !newState.channelId) {
+        const player = client.manager.players.get(guildId);
+        if (player) {
+          client.logger.info(`Bot was kicked from voice channel in guild ${guild.name} (${guildId})`);
+          const textChannelId = player.textChannelId;
+          player.set('stoppedByCommand', true);
+          try {
+            player.destroy();
+          } catch (error) {
+            client.logger.error(`Failed to destroy player on bot kick: ${error}`);
+          }
+          activePlayers.delete(guildId);
+          await sendMessage(guild, textChannelId, {embeds: [new EmbedBuilder().setTitle('음성 채널에서 퇴장당했어요. 음악을 정지할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
+        }
         return;
       }
       // 봇 자신의 다른 voice state 변경은 무시
       return;
     }
+
+    // 여기서부터는 다른 멤버의 상태 변경 처리
+    const player = client.manager.players.get(guildId);
+    if (!player) return;
 
     // 봇이 현재 연결된 음성 채널과 플레이어의 voiceChannelId가 일치하는지 확인
     const botVoiceChannel = guild.members.me?.voice?.channel;
@@ -91,7 +100,7 @@ export default {
       }
     };
 
-    // 봇이 플레이어에 설정된 음성 채널에 없으면 무시 (이미 위에서 처리됨)
+    // 봇이 플레이어에 설정된 음성 채널에 없으면 무시
     if (!botVoiceChannel || botVoiceChannel.id !== playerVoiceChannelId) {
       return;
     }

@@ -180,9 +180,11 @@ export const getRelatedTracks = async (client: NMClient, track: Track, limit: nu
 
     const playHistory: TrackFingerprint[] = player.get('playHistory') || [];
     const autoplayHistory: TrackFingerprint[] = player.get('autoplayHistory') || [];
-    const queueFingerprints = [...player.queue].map(t => createTrackFingerprint(t));
-    if (player.queue.current) {
-      queueFingerprints.push(createTrackFingerprint(player.queue.current));
+    const queueTracks = await player.queue.getTracks();
+    const queueFingerprints = queueTracks.map(t => createTrackFingerprint(t));
+    const currentTrack = await player.queue.getCurrent();
+    if (currentTrack) {
+      queueFingerprints.push(createTrackFingerprint(currentTrack));
     }
 
     const allHistory = [...playHistory, ...autoplayHistory, ...queueFingerprints];
@@ -224,7 +226,7 @@ export const addRelatedTracksToQueue = async (client: NMClient, player: Player, 
         Object.assign(track, {requester: '자동재생'});
       });
 
-      player.queue.add(relatedTracks);
+      await player.queue.add(relatedTracks);
 
       const newFingerprints = relatedTracks.map(track => createTrackFingerprint(track));
       const autoplayHistory: TrackFingerprint[] = player.get('autoplayHistory') || [];
@@ -243,7 +245,7 @@ export const addRelatedTracksToQueue = async (client: NMClient, player: Player, 
 
 export const initializeAutoplay = async (client: NMClient, player: Player): Promise<{success: boolean; addedTracks: Track[]; error?: string}> => {
   try {
-    const currentTrack = player.queue.current;
+    const currentTrack = await player.queue.getCurrent();
     if (!currentTrack) {
       return {success: false, addedTracks: [], error: '현재 재생중인 음악이 없어요.'};
     }
@@ -259,11 +261,12 @@ export const initializeAutoplay = async (client: NMClient, player: Player): Prom
 export const checkAndAddAutoplayTracks = async (client: NMClient, player: Player): Promise<{added: boolean; addedTracks: Track[]}> => {
   try {
     // 자동재생이 비활성화되어 있거나 대기열이 충분히 많으면 추가하지 않음
-    if (!player.get('autoplayEnabled') || player.queue.size > 5) {
+    const queueSize = await player.queue.size();
+    if (!player.get('autoplayEnabled') || queueSize > 5) {
       return {added: false, addedTracks: []};
     }
 
-    const currentTrack = player.queue.current;
+    const currentTrack = await player.queue.getCurrent();
     if (!currentTrack) return {added: false, addedTracks: []};
 
     // 대기열이 부족할 때 더 많은 양을 한 번에 가져오기

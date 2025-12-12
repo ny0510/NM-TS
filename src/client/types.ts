@@ -30,6 +30,7 @@ export interface LavalinkConfig {
   LAVALINK_PORT: number;
   LAVALINK_PASSWORD: string;
   LAVALINK_SECURE: boolean;
+  // LAVALINK_ENABLE_SESSION_RESUME: boolean;
 }
 
 export interface EmbedConfig {

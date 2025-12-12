@@ -1,9 +1,9 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, codeBlock} from 'discord.js';
 
-import type {Command} from '@/client/types';
 import type {NMClient} from '@/client/Client';
-import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
+import type {Command} from '@/client/types';
 import {safeReply} from '@/utils/discord/interactions';
+import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder()
@@ -21,15 +21,16 @@ export default {
     if (!player) return;
 
     const count = interaction.options.getInteger('count') ?? 1;
+    const queueSize = await player.queue.size();
 
     if (count < 1)
       return await safeReply(interaction, {
         embeds: [new EmbedBuilder().setTitle('건너뛸 음악의 개수는 1 이상이어야 해요.').setColor(client.config.EMBED_COLOR_ERROR)],
         flags: MessageFlags.Ephemeral,
       });
-    if (count > player.queue.length)
+    if (count > queueSize)
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('대기열에 있는 음악보다 더 많은 곡을 건너뛸 수 없어요.').setDescription(`대기열에 ${player.queue.length}곡이 있어요.`).setColor(client.config.EMBED_COLOR_ERROR)],
+        embeds: [new EmbedBuilder().setTitle('대기열에 있는 음악보다 더 많은 곡을 건너뛸 수 없어요.').setDescription(`대기열에 ${queueSize}곡이 있어요.`).setColor(client.config.EMBED_COLOR_ERROR)],
         flags: MessageFlags.Ephemeral,
       });
 

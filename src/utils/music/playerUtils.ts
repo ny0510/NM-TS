@@ -48,8 +48,9 @@ export const ensureSameVoiceChannel = async (interaction: ChatInputCommandIntera
 export const ensurePlaying = async (interaction: ChatInputCommandInteraction): Promise<boolean> => {
   const client = interaction.client as NMClient;
   const player = client.manager.players.get(interaction.guildId!);
+  const currentTrack = player ? await player.queue.getCurrent() : null;
 
-  if (!player || !player.playing || !player.queue.current) {
+  if (!player || !player.playing || !currentTrack) {
     await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()
@@ -162,27 +163,31 @@ export const getEmbedMeta = async (trackOrTracks: Track | Track[], isPlaylist: b
   if (isPlaylist) {
     const tracks = trackOrTracks as Track[];
     const firstTrack = tracks[0];
-    const colors = firstTrack ? await getColors(firstTrack.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
+    const colors = firstTrack?.artworkUrl ? await getColors(firstTrack.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
     const playlistDuration = tracks.reduce((acc, track) => acc + (track.duration || 0), 0);
-    const footerText = `추가된 음악 ${tracks.length}곡 (${msToTime(playlistDuration)}) | 대기열에 ${player.queue.size}곡 (${msToTime(player.queue.duration)})`;
+    const queueSize = await player.queue.size();
+    const queueDuration = await player.queue.duration();
+    const footerText = `추가된 음악 ${tracks.length}곡 (${msToTime(playlistDuration)}) | 대기열에 ${queueSize}곡 (${msToTime(queueDuration)})`;
     return {colors, footerText};
   } else {
     const track = trackOrTracks as Track;
-    const colors = await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1});
+    const colors = track.artworkUrl ? await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
     const actionText = action === 'add' ? '추가된' : '재생중인';
-    const footerText = `${actionText} 음악 (${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)}) | 대기열에 ${player.queue.size}곡 (${msToTime(player.queue.duration - track.duration)})`;
+    const queueSize = await player.queue.size();
+    const queueDuration = await player.queue.duration();
+    const footerText = `${actionText} 음악 (${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)}) | 대기열에 ${queueSize}곡 (${msToTime(queueDuration - track.duration)})`;
     return {colors, footerText};
   }
 };
 
-export const createProgressBar = (
+export const createProgressBar = async (
   player: Player,
   options?: {
     barLength?: number;
     useEmoji?: boolean;
   },
-): string => {
-  const track = player.queue.current;
+): Promise<string> => {
+  const track = await player.queue.getCurrent();
   if (!track || track.isStream) return '';
   const total = track.duration;
   const current = player.position;

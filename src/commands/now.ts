@@ -17,10 +17,12 @@ export default {
     if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
     if (!player) return;
 
-    const track = player.queue.current!;
-    const colors = await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1});
+    const track = (await player.queue.getCurrent())!;
+    const colors = track.artworkUrl ? await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
     const repeatState = player.queueRepeat ? '대기열 반복 중' : player.trackRepeat ? '현재 음악 반복 중' : '반복 중이 아님';
-    const progressBar = createProgressBar(player);
+    const progressBar = await createProgressBar(player);
+    const queueSize = await player.queue.size();
+    const queueDuration = await player.queue.duration();
 
     return await safeReply(interaction, {
       embeds: [
@@ -35,7 +37,7 @@ export default {
             },
             {
               name: '남은 대기열',
-              value: inlineCode(`${player.queue.length}곡 (${msToTime(player.queue.duration)})`),
+              value: inlineCode(`${queueSize}곡 (${msToTime(queueDuration)})`),
               inline: true,
             },
             {
@@ -50,7 +52,7 @@ export default {
             },
             {
               name: '추천 음악 자동 재생',
-              value: inlineCode(player.get('autoplayEnabled') ? '활성화 됨' : '비활성화 됨'),
+              value: inlineCode(player.isAutoplay ? '활성화 됨' : '비활성화 됨'),
               inline: true,
             },
             {

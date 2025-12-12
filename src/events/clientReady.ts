@@ -4,7 +4,7 @@ import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
 import {truncateWithEllipsis} from '@/utils';
 
-const updatePresence = (client: NMClient) => {
+const updatePresence = async (client: NMClient) => {
   const stats = client.getStats();
 
   let activityName = '';
@@ -14,7 +14,7 @@ const updatePresence = (client: NMClient) => {
     // 재생 중인 플레이어가 있으면 랜덤으로 하나 선택
     const players = Array.from(client.manager.players.values());
     const randomPlayer = players[Math.floor(Math.random() * players.length)];
-    const currentTrack = randomPlayer?.queue.current;
+    const currentTrack = randomPlayer ? await randomPlayer.queue.getCurrent() : null;
 
     if (currentTrack) {
       activityName = truncateWithEllipsis(currentTrack.title, 50);
@@ -57,7 +57,7 @@ export default {
         client.logger.warn('🦔 🔪 Running in development mode!!');
       }
 
-      setInterval(() => updatePresence(client), 10_000);
+      setInterval(() => void updatePresence(client), 10_000);
     } catch (error) {
       client.logger.error(`Error in clientReady event: ${error}`);
     }

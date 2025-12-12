@@ -1,10 +1,10 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, inlineCode} from 'discord.js';
 
-import type {Command} from '@/client/types';
 import type {NMClient} from '@/client/Client';
+import type {Command} from '@/client/types';
+import {safeReply} from '@/utils/discord/interactions';
 import {msToTime} from '@/utils/formatting';
 import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
-import {safeReply} from '@/utils/discord/interactions';
 
 const parseTimeToSeconds = (time: string): number | null => {
   if (/^\d+$/.test(time)) return parseInt(time, 10);
@@ -57,18 +57,20 @@ export default {
     if (seconds < 0) return safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('0초보다 작은 시간으로 건너뛸 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
 
     const position = seconds * 1000;
-    if (position > player.queue.current!.duration)
+    const currentTrack = await player.queue.getCurrent();
+    if (!currentTrack) return safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('현재 재생중인 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
+    if (position > currentTrack.duration)
       return safeReply(interaction, {
         embeds: [
           new EmbedBuilder()
             .setTitle('음악의 길이보다 긴 시간으로 건너뛸 수 없어요.')
-            .setDescription(`현재 재생중인 음악의 길이는 ${msToTime(player.queue.current!.duration)}에요.`)
+            .setDescription(`현재 재생중인 음악의 길이는 ${msToTime(currentTrack.duration)}에요.`)
             .setColor(client.config.EMBED_COLOR_ERROR),
         ],
       });
     if (player.paused) return safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('일시 정지 상태에서는 건너뛰기를 할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
-    if (player.queue.current?.isStream) return safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('스트리밍 음악은 건너뛸 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
-    if (!player.queue.current?.isSeekable) return safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('이 트랙은 건너뛰기를 지원하지 않아요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
+    if (currentTrack.isStream) return safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('스트리밍 음악은 건너뛸 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
+    if (!currentTrack.isSeekable) return safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('이 트랙은 건너뛰기를 지원하지 않아요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
 
     player.seek(position);
     await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${formatTime(seconds)}(으)로 건너뛰었어요.`).setColor(client.config.EMBED_COLOR_NORMAL)]});

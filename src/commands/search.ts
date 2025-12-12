@@ -1,12 +1,12 @@
 import {ActionRowBuilder, ChatInputCommandInteraction, ComponentType, EmbedBuilder, GuildMember, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction, channelMention, codeBlock, italic} from 'discord.js';
 import {LoadTypes, SearchPlatform, StateTypes, type Track} from 'magmastream';
 
-import type {Command} from '@/client/types';
 import type {NMClient} from '@/client/Client';
-import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
+import type {Command} from '@/client/types';
 import {slashCommandMention} from '@/utils/discord';
-import {createPlayer, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
 import {safeReply} from '@/utils/discord/interactions';
+import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
+import {createPlayer, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder()
@@ -31,15 +31,17 @@ export default {
 
     let res = await client.manager.search({query, source: searchPlatform}, interaction.user);
 
-    if (res.loadType === LoadTypes.Empty || res.loadType === LoadTypes.Error)
+    if (res.loadType === LoadTypes.Empty || res.loadType === LoadTypes.Error || !('tracks' in res))
       return await safeReply(interaction, {
         embeds: [new EmbedBuilder().setTitle('음악을 찾을 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
         flags: MessageFlags.Ephemeral,
       });
 
-    const optinos = res.tracks
-      .filter(track => !!track.title)
-      .map((track, index) => {
+    const tracks = res.tracks as Track[];
+
+    const optinos = tracks
+      .filter((track: Track) => !!track.title)
+      .map((track: Track, index: number) => {
         return {
           label: truncateWithEllipsis(track.title, 100, ''),
           value: track.uri,
@@ -49,7 +51,14 @@ export default {
       })
       .slice(0, 10);
 
-    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId('search').setPlaceholder('음악을 선택해 주세요.').setMinValues(1).setMaxValues(optinos.length).addOptions(optinos));
+    if (optinos.length === 0)
+      return await safeReply(interaction, {
+        embeds: [new EmbedBuilder().setTitle('음악을 찾을 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+        flags: MessageFlags.Ephemeral,
+      });
+
+    const customId = `search-${interaction.id}`;
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId(customId).setPlaceholder('음악을 선택해 주세요.').setMinValues(1).setMaxValues(optinos.length).addOptions(optinos));
 
     const embed = new EmbedBuilder().setTitle(`🔍 ${platformDisplayName}에서 ${query} 검색 결과`).setDescription('대기열에 추가할 음악을 선택해 주세요.').setColor(client.config.EMBED_COLOR_NORMAL);
 
@@ -81,22 +90,31 @@ export default {
       return true;
     };
 
-    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000, componentType: ComponentType.StringSelect});
+    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000 * 5, componentType: ComponentType.StringSelect}); // 5분 동안 대기
     const followUp = await interaction.fetchReply();
     if (!collector || !followUp) return;
 
+    let handled = false;
+
     const disableComponents = async () => {
-      await followUp?.edit({embeds: [new EmbedBuilder().setTitle(null).setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'search')} 명령어를 사용해 다시 검색해 주세요.`)], components: []});
-      if (collector) collector.stop();
+      if (handled) return;
+      try {
+        await followUp?.edit({embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'search')} 명령어를 사용해 다시 검색해 주세요.`).setColor(client.config.EMBED_COLOR_ERROR)], components: []});
+      } catch {
+        // 이미 수정된 메시지는 무시
+      }
     };
 
     collector?.on('collect', async i => {
       if (!i.isStringSelectMenu()) return;
-      if (i.customId !== 'search') return;
+      if (i.customId !== customId) return;
 
-      const selectedTracks = i.values.map(value => res.tracks.find(track => track.uri === value)).filter((track): track is Track => Boolean(track));
+      handled = true;
+      collector.stop();
 
-      let player = client.manager.get(interaction.guildId!);
+      const selectedTracks = i.values.map(value => tracks.find((track: Track) => track.uri === value)).filter((track): track is Track => Boolean(track));
+
+      let player = client.manager.players.get(interaction.guildId!);
 
       const inVoice = await ensureVoiceChannel(interaction); // 음성 채널에 들어가 있는지 확인
       const inSameVoice = await ensureSameVoiceChannel(interaction); // 같은 음성 채널에 있는지 확인
@@ -109,7 +127,7 @@ export default {
       for (const track of selectedTracks) {
         if (track) {
           try {
-            player.queue.add(track);
+            await player.queue.add(track);
             results.push({track, success: true});
           } catch (e) {
             const errorMessage = e instanceof Error && e.message ? e.message : '알 수 없는 오류';
@@ -118,7 +136,8 @@ export default {
         }
       }
 
-      if (!player.playing && !player.paused && player.queue.size + 1 === selectedTracks.length) await player.play();
+      const searchQueueSize = await player.queue.size();
+      if (!player.playing && !player.paused && searchQueueSize + 1 === selectedTracks.length) await player.play();
 
       const tracksMeta = await getEmbedMeta(selectedTracks, true, player);
       const [tracksColor, tracksFooterText] = [tracksMeta.colors, tracksMeta.footerText];
@@ -130,11 +149,14 @@ export default {
             .join('\n')
         : '음악을 찾을 수 없어요.';
 
+      const firstTrackThumbnail = selectedTracks[0]?.artworkUrl || selectedTracks[0]?.thumbnail;
+
       return await i.update({
         embeds: [
           new EmbedBuilder()
             .setTitle(`💿 선택한 음악을 대기열에 추가했어요.`)
             .setDescription(description)
+            .setThumbnail(firstTrackThumbnail || null)
             .setFooter({text: tracksFooterText})
             .setColor((tracksColor[0]?.hex?.() ?? client.config.EMBED_COLOR_NORMAL) as HexColorString),
         ],
