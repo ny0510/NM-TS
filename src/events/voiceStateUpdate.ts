@@ -74,11 +74,20 @@ export default {
       if (!activePlayers.has(guildId)) {
         const timeout = setTimeout(
           async () => {
-            if (message) {
-              await message.edit({embeds: [embed.setDescription('10분이 지나서 자동으로 연결을 종료했어요.')]});
+            try {
+              if (message?.editable) {
+                await message.edit({embeds: [embed.setDescription('10분이 지나서 자동으로 연결을 종료했어요.')]});
+              }
+            } catch (editError) {
+              // 메시지 편집 실패 시 무시 (채널이 캐시에 없거나 메시지가 삭제된 경우)
+              client.logger.warn(`Failed to edit timeout message: ${editError}`);
             }
             player.set('stoppedByCommand', true);
-            player.destroy();
+            try {
+              player.destroy();
+            } catch (destroyError) {
+              client.logger.warn(`Failed to destroy player on timeout: ${destroyError}`);
+            }
             activePlayers.delete(guildId);
           },
           10 * 60 * 1000,

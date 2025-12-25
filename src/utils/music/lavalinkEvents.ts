@@ -68,33 +68,43 @@ export const registerLavalinkEvents = (client: NMClient) => {
   });
 
   client.manager.on(ManagerEventTypes.TrackError, async (player, track, error) => {
-    logger.error(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track error. Track: ${track.title} Error: ${error.exception?.message}`);
+    const trackTitle = track?.title ?? 'Unknown Track';
+    const errorMessage = error?.exception?.message ?? 'Unknown Error';
+    logger.error(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track error. Track: ${trackTitle} Error: ${errorMessage}`);
+
     const channel = client.channels.cache.get(player.textChannelId || '');
     if (!channel?.isSendable()) return;
 
-    await channel.send({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle('음악 재생 중 오류가 발생했어요.')
-          .setDescription(codeBlock('js', `${error.exception?.message}`))
-          .setColor(client.config.EMBED_COLOR_ERROR),
-      ],
-    });
+    try {
+      await channel.send({
+        embeds: [new EmbedBuilder().setTitle('음악 재생 중 오류가 발생했어요.').setDescription(codeBlock('js', errorMessage)).setColor(client.config.EMBED_COLOR_ERROR)],
+      });
+    } catch (sendError) {
+      logger.error(`Failed to send track error message: ${sendError}`);
+    }
   });
 
   client.manager.on(ManagerEventTypes.TrackStuck, async (player, track, threshold) => {
-    logger.warn(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track stuck. Track: ${track.title} Threshold: ${threshold}`);
+    const trackTitle = track?.title ?? 'Unknown Track';
+    // threshold는 객체일 수 있음 (예: { thresholdMs: 10000 })
+    const thresholdMs = typeof threshold === 'object' ? ((threshold as any)?.thresholdMs ?? 10000) : Number(threshold) || 10000;
+    logger.warn(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track stuck. Track: ${trackTitle} Threshold: ${thresholdMs}ms`);
+
     const channel = client.channels.cache.get(player.textChannelId || '');
     if (!channel?.isSendable()) return;
 
-    await channel.send({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle(`음악이 ${Number(threshold) / 1000}초 동안 재생되지 않았어요.`)
-          .setDescription('다음 음악으로 넘어갈게요.')
-          .setColor(client.config.EMBED_COLOR_ERROR),
-      ],
-    });
+    try {
+      await channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(`음악이 ${thresholdMs / 1000}초 동안 재생되지 않았어요.`)
+            .setDescription('다음 음악으로 넘어갈게요.')
+            .setColor(client.config.EMBED_COLOR_ERROR),
+        ],
+      });
+    } catch (sendError) {
+      logger.error(`Failed to send track stuck message: ${sendError}`);
+    }
 
     player.stop();
   });
@@ -107,18 +117,29 @@ export const registerLavalinkEvents = (client: NMClient) => {
     if (player.get('stoppedByCommand')) return;
 
     const embed = new EmbedBuilder().setTitle('대기열에 있는 음악을 모두 재생했어요. 30초 후에 자동으로 연결을 종료해요.').setColor(client.config.EMBED_COLOR_NORMAL);
-    let message: Message | undefined = await channel.send({embeds: [embed]});
+    let message: Message | undefined;
+
+    try {
+      message = await channel.send({embeds: [embed]});
+    } catch (sendError) {
+      logger.error(`Failed to send queue end message: ${sendError}`);
+      return;
+    }
 
     setTimeout(async () => {
-      const queueSize = await player.queue.size();
-      if (!player.playing && queueSize === 0) {
-        player.destroy();
-        logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed after 30 seconds of inactivity`);
-        try {
-          await message.edit({embeds: [embed.setDescription('30초가 지나 자동으로 연결을 종료했어요.')]});
-        } catch (error) {
-          // 메시지가 이미 삭제된 경우 무시
+      try {
+        const queueSize = await player.queue.size();
+        if (!player.playing && queueSize === 0) {
+          player.destroy();
+          logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed after 30 seconds of inactivity`);
+
+          if (message?.editable) {
+            await message.edit({embeds: [embed.setDescription('30초가 지나 자동으로 연결을 종료했어요.')]});
+          }
         }
+      } catch (error) {
+        // 메시지가 이미 삭제되었거나 채널이 캐시에 없는 경우 무시
+        logger.warn(`Failed to edit queue end message: ${error}`);
       }
     }, 30_000);
   });
