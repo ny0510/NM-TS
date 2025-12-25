@@ -1,0 +1,9 @@
+services:
+  nm:
+    build: .
+    container_name: nm
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production

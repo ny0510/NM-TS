@@ -1,0 +1,47 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Environment
+.env
+.env.*
+
+# Build outputs
+dist
+out
+*.tgz
+
+# Logs
+logs
+*.log
+
+# Coverage
+coverage
+*.lcov
+
+# Cache
+.cache
+.eslintcache
+*.tsbuildinfo
+
+# Magmastream session data (재빌드 시 필요 없음)
+magmastream
+
+# Claude AI
+.claude
+
+# macOS
+.DS_Store
+
+# Docker (재귀 방지)
+Dockerfile
+docker-compose.yml
