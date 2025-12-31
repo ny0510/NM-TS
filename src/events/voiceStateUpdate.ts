@@ -67,7 +67,11 @@ export default {
 
     const handleEmptyChannel = async (guildId: string, guild: VoiceState['guild'], player: any) => {
       if (!player.paused) player.pause(true);
-      const embed = new EmbedBuilder().setTitle('아무도 없어서 음악을 일시정지했어요. 10분 후에 자동으로 연결을 종료해요.').setColor(client.config.EMBED_COLOR_NORMAL);
+      const endTime = Math.floor((Date.now() + 10 * 60 * 1000) / 1000); // 10분 후 Timestamp
+      const embed = new EmbedBuilder()
+        .setTitle('아무도 없어서 음악을 일시정지했어요.')
+        .setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`)
+        .setColor(client.config.EMBED_COLOR_NORMAL);
 
       const message = await sendMessage(guild, player.textChannelId, {embeds: [embed]});
 

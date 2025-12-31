@@ -46,11 +46,12 @@ export default {
     const cooldownResult = client.services.cooldownManager.checkCooldown(command.data.name, interaction.user.id, command.cooldown);
 
     if (cooldownResult.onCooldown) {
+      const timestamp = Math.floor(Date.now() / 1000) + (cooldownResult.timeLeft ?? 0);
       return await safeReply(interaction, {
         embeds: [
           new EmbedBuilder()
             .setTitle('잠시 후에 다시 시도해 주세요.')
-            .setDescription(`${await slashCommandMention(interaction, command.data.name)} 명령어는 \`${cooldownResult.timeLeft}초\` 후에 사용할 수 있어요.`)
+            .setDescription(`${await slashCommandMention(interaction, command.data.name)} 명령어는 <t:${timestamp}:R>부터 사용할 수 있어요.`)
             .setColor(client.config.EMBED_COLOR_ERROR),
         ],
         flags: MessageFlags.Ephemeral,
