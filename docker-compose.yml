@@ -7,3 +7,9 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+    networks:
+      - lavalink
+
+networks:
+  lavalink:
+    external: true
