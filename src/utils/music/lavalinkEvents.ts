@@ -4,30 +4,31 @@ import {ManagerEventTypes, type Track} from 'magmastream';
 
 // import {createEAutoplaymbed, handleAutoplayOnTrackStart, manageTrackHistory} from './autoplay';
 import {getEmbedMeta} from './playerUtils';
+import {restoreAllSessions} from './sessionManager';
 import type {NMClient} from '@/client/Client';
+import {config} from '@/utils/config';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
 
-const logger = new Logger('Lavalink');
+const logger = new Logger('Lavalink', config.IS_DEV_MODE ? 'debug' : 'info');
 
 export const registerLavalinkEvents = (client: NMClient) => {
-  client.manager.on(ManagerEventTypes.NodeConnect, node => logger.info(`Node ${node.options.identifier} connected`));
+  // Debug 이벤트 활성화
+  client.manager.on(ManagerEventTypes.Debug, message => logger.debug(`${message}`));
+
+  // 노드 연결 시 저장된 세션 복원
+  client.manager.on(ManagerEventTypes.NodeConnect, async node => {
+    logger.info(`Node ${node.options.identifier} connected`);
+    // 약간의 딜레이 후 세션 복원 (노드가 완전히 준비될 때까지)
+    setTimeout(() => restoreAllSessions(client), 2000);
+  });
+
   client.manager.on(ManagerEventTypes.NodeDisconnect, (node, reason) => logger.warn(`Node ${node.options.identifier} disconnected! Reason: ${reason.reason}`));
   client.manager.on(ManagerEventTypes.NodeError, (node, error) => logger.error(`Node ${node.options.identifier} error: ${error}`));
   client.manager.on(ManagerEventTypes.NodeReconnect, node => logger.info(`Node ${node.options.identifier} reconnecting...`));
   client.manager.on(ManagerEventTypes.NodeDestroy, node => logger.info(`Node ${node.options.identifier} destroyed`));
   client.manager.on(ManagerEventTypes.PlayerCreate, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) created`));
   client.manager.on(ManagerEventTypes.PlayerDestroy, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed`));
-
-  // client.manager.on(ManagerEventTypes.PlayerRestored, async (player, node) => {
-  //   logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) restored from node ${node.options.identifier}`);
-  //   const channel = client.channels.cache.get(player.textChannelId || '');
-  //   if (!channel?.isSendable()) return;
-
-  //   await channel.send({
-  //     embeds: [new EmbedBuilder().setTitle('🔄 세션이 복원되었어요!').setDescription('이전 세션에서 재생을 이어갈게요.').setColor(client.config.EMBED_COLOR_NORMAL)],
-  //   });
-  // });
 
   client.manager.on(ManagerEventTypes.TrackEnd, async (player, track) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track end. Track: ${track.title}`));
 

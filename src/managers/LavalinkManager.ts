@@ -1,5 +1,5 @@
 import type {Client} from 'discord.js';
-import {AutoPlayPlatform, Manager, SearchPlatform, StateStorageType, TrackPartial} from 'magmastream';
+import {AutoPlayPlatform, Manager, SearchPlatform, TrackPartial} from 'magmastream';
 
 import type {Config} from '@/client/types';
 import type {ILogger} from '@/utils/logger';
@@ -20,15 +20,10 @@ export class LavalinkManager {
           port: config.LAVALINK_PORT,
           password: config.LAVALINK_PASSWORD,
           useSSL: config.LAVALINK_SECURE,
-          // enableSessionResumeOption: config.LAVALINK_ENABLE_SESSION_RESUME,
-          // sessionTimeoutSeconds: 60 * 5,
+          enableSessionResumeOption: true,
+          sessionTimeoutSeconds: 60 * 5,
         },
       ],
-      // stateStorage: {
-      //   type: StateStorageType.JSON,
-      //   deleteInactivePlayers: true,
-      // },
-      // normalizeYouTubeTitles: true,
       playNextOnEnd: true,
       defaultSearchPlatform: SearchPlatform.YouTube,
       autoPlaySearchPlatforms: [AutoPlayPlatform.YouTube, AutoPlayPlatform.Spotify, AutoPlayPlatform.SoundCloud],

@@ -21,7 +21,6 @@ export const config: Config = {
   LAVALINK_PORT: parseInt(process.env.LAVALINK_PORT!) || 2333,
   LAVALINK_PASSWORD: process.env.LAVALINK_PASSWORD || '',
   LAVALINK_SECURE: JSON.parse(process.env.LAVALINK_SECURE) || false,
-  // LAVALINK_ENABLE_SESSION_RESUME: JSON.parse(process.env.LAVALINK_ENABLE_SESSION_RESUME || 'false') || false,
 
   EMBED_COLOR_NORMAL: (process.env.EMBED_COLOR_NORMAL || '#b2d1bd') as HexColorString,
   EMBED_COLOR_ERROR: (process.env.EMBED_COLOR_ERROR || '#ff3333') as HexColorString,
