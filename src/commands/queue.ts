@@ -27,7 +27,7 @@ async function buildQueueEmbed(client: NMClient, player: Player, page: number) {
 
   return new EmbedBuilder()
     .setTitle(`📋 현재 대기열 (${msToTime(queueDuration)})`)
-    .setDescription(currentTrack ? `🎶 ${hyperlink(truncateWithEllipsis(currentTrack.title, 50), currentTrack.uri)}` : '현재 재생중인 음악이 없어요.')
+    .setDescription(currentTrack ? hyperlink(truncateWithEllipsis(`⏵ ${currentTrack.title}`, 50), currentTrack.uri) : '현재 재생중인 음악이 없어요.')
     .addFields(trackList)
     .setFooter({text: footer})
     .setColor(client.config.EMBED_COLOR_NORMAL);
