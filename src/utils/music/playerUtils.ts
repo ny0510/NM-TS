@@ -175,7 +175,7 @@ export const getEmbedMeta = async (trackOrTracks: Track | Track[], isPlaylist: b
     const actionText = action === 'add' ? '추가된' : '재생중인';
     const queueSize = await player.queue.size();
     const queueDuration = await player.queue.duration();
-    const footerText = `${actionText} 음악 (${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)}) | 대기열에 ${queueSize}곡 (${msToTime(queueDuration - track.duration)})`;
+    const footerText = `${actionText} 음악 (${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)}) | 대기열에 ${queueSize}곡 (${msToTime(queueDuration)})`;
     return {colors, footerText};
   }
 };
