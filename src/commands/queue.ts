@@ -123,12 +123,14 @@ export default {
       return true;
     };
 
-    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000 * 60}); // 60분
-    const followUp = await interaction.fetchReply();
-    if (!collector || !followUp) {
-      client.logger.warn('Failed to create collector or fetch reply');
+    const reply = await interaction.fetchReply();
+    if (!reply) {
+      client.logger.warn('Failed to fetch reply');
       return;
     }
+
+    // 메시지에 바인딩된 collector 생성 (이 메시지의 버튼만 감지)
+    const collector = reply.createMessageComponentCollector({filter, time: 60 * 1000 * 60}); // 60분
 
     const disableComponents = async () => {
       try {
