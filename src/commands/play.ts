@@ -10,6 +10,7 @@ import {truncateWithEllipsis} from '@/utils/formatting';
 import {playlistPattern, videoPattern} from '@/utils/formatting';
 import {coverPattern} from '@/utils/formatting';
 import {createPlayer, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
+import {createQuickAddButton} from '@/utils/music/quickAddButton';
 
 function isCoverTrack(track: Track): boolean {
   return coverPattern.test(track.title) || coverPattern.test(track.author);
@@ -171,6 +172,7 @@ export default {
               .setFooter({text: footerText})
               .setColor((colors[0]?.hex?.() ?? client.config.EMBED_COLOR_NORMAL) as HexColorString),
           ],
+          components: [createQuickAddButton(track.uri)],
         });
 
         break;
@@ -241,6 +243,7 @@ export default {
               .setFooter({text: `최대 100곡까지 한번에 추가할 수 있어요.\n${playlistFooterText}`})
               .setColor((playlistColors[0]?.hex?.() ?? client.config.EMBED_COLOR_NORMAL) as HexColorString),
           ],
+          components: [createQuickAddButton(query)],
         });
         break;
     }

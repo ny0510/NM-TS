@@ -97,6 +97,9 @@ export default {
     });
 
     const filter = async (i: MessageComponentInteraction) => {
+      // queue 버튼만 처리 (다른 버튼은 무시)
+      if (!i.customId.startsWith('queue_')) return false;
+
       if (i.user.id !== interaction.user.id) {
         try {
           // 인터랙션이 이미 응답되었는지 확인

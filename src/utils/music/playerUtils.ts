@@ -167,7 +167,10 @@ export const getEmbedMeta = async (trackOrTracks: Track | Track[], isPlaylist: b
     const playlistDuration = tracks.reduce((acc, track) => acc + (track.duration || 0), 0);
     const queueSize = await player.queue.size();
     const queueDuration = await player.queue.duration();
-    const footerText = `추가된 음악 ${tracks.length}곡 (${msToTime(playlistDuration)}) | 대기열에 ${queueSize}곡 (${msToTime(queueDuration)})`;
+    const currentTrack = await player.queue.getCurrent();
+    // queue.duration()이 current 트랙도 포함하므로, current 트랙의 duration을 빼줌
+    const actualQueueDuration = currentTrack ? queueDuration - (currentTrack.duration || 0) : queueDuration;
+    const footerText = `추가된 음악 ${tracks.length}곡 (${msToTime(playlistDuration)}) | 대기열에 ${queueSize}곡 (${msToTime(actualQueueDuration)})`;
     return {colors, footerText};
   } else {
     const track = trackOrTracks as Track;
@@ -175,7 +178,10 @@ export const getEmbedMeta = async (trackOrTracks: Track | Track[], isPlaylist: b
     const actionText = action === 'add' ? '추가된' : '재생중인';
     const queueSize = await player.queue.size();
     const queueDuration = await player.queue.duration();
-    const footerText = `${actionText} 음악 (${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)}) | 대기열에 ${queueSize}곡 (${msToTime(queueDuration)})`;
+    const currentTrack = await player.queue.getCurrent();
+    // queue.duration()이 current 트랙도 포함하므로, current 트랙의 duration을 빼줌
+    const actualQueueDuration = currentTrack ? queueDuration - (currentTrack.duration || 0) : queueDuration;
+    const footerText = `${actionText} 음악 (${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)}) | 대기열에 ${queueSize}곡 (${msToTime(actualQueueDuration)})`;
     return {colors, footerText};
   }
 };

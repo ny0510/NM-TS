@@ -1,5 +1,5 @@
 import type {Client} from 'discord.js';
-import {AutoPlayPlatform, Manager, SearchPlatform, TrackPartial} from 'magmastream';
+import {AutoPlayPlatform, Manager, SearchPlatform, StateStorageType, TrackPartial} from 'magmastream';
 
 import type {Config} from '@/client/types';
 import type {ILogger} from '@/utils/logger';
@@ -25,6 +25,9 @@ export class LavalinkManager {
         },
       ],
       playNextOnEnd: true,
+      stateStorage: {
+        type: StateStorageType.JSON,
+      },
       defaultSearchPlatform: SearchPlatform.YouTube,
       autoPlaySearchPlatforms: [AutoPlayPlatform.YouTube, AutoPlayPlatform.Spotify, AutoPlayPlatform.SoundCloud],
       trackPartial: [TrackPartial.Author, TrackPartial.ArtworkUrl, TrackPartial.Duration, TrackPartial.Identifier, TrackPartial.PluginInfo, TrackPartial.Requester, TrackPartial.SourceName, TrackPartial.Title, TrackPartial.Track, TrackPartial.Uri],

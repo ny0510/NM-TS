@@ -2,12 +2,12 @@ import {EmbedBuilder, type HexColorString, Message, MessageFlags, codeBlock} fro
 import {ManagerEventTypes, type Track} from 'magmastream';
 
 import {getEmbedMeta} from './playerUtils';
+import {createQuickAddButton} from './quickAddButton';
 import type {NMClient} from '@/client/Client';
-import {config} from '@/utils/config';
 import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
 
-const logger = new Logger('Lavalink', config.IS_DEV_MODE ? 'debug' : 'info');
+const logger = new Logger('Lavalink');
 
 export const registerLavalinkEvents = (client: NMClient) => {
   // Debug 이벤트 활성화
@@ -22,13 +22,53 @@ export const registerLavalinkEvents = (client: NMClient) => {
   client.manager.on(ManagerEventTypes.PlayerCreate, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) created`));
   client.manager.on(ManagerEventTypes.PlayerDestroy, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed`));
   client.manager.on(ManagerEventTypes.PlayerMove, (player, oldChannelId, newChannelId) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) moved from ${oldChannelId} to ${newChannelId}`));
-  client.manager.on(ManagerEventTypes.PlayerRestored, player => {
+  client.manager.on(ManagerEventTypes.PlayerRestored, async player => {
+    const textChannel = client.channels.cache.get(player.textChannelId || '');
+
+    // 음성 채널 유효성 확인
+    if (player.voiceChannelId) {
+      try {
+        const voiceChannel = await client.channels.fetch(player.voiceChannelId);
+        if (!voiceChannel || !voiceChannel.isVoiceBased()) {
+          logger.warn(`Voice channel ${player.voiceChannelId} no longer exists or is not accessible, destroying player`);
+          if (textChannel?.isSendable()) {
+            await textChannel.send({
+              embeds: [new EmbedBuilder().setTitle('⚠️ 세션 복원 실패').setDescription('이전에 사용하던 음성 채널이 더 이상 존재하지 않아요.').setColor(client.config.EMBED_COLOR_ERROR)],
+            });
+          }
+          player.set('stoppedByCommand', true);
+          player.destroy();
+          return;
+        }
+      } catch {
+        // 채널을 가져올 수 없음 (삭제됨 또는 권한 없음)
+        logger.warn(`Failed to fetch voice channel ${player.voiceChannelId}, destroying player`);
+        if (textChannel?.isSendable()) {
+          await textChannel.send({
+            embeds: [new EmbedBuilder().setTitle('⚠️ 세션 복원 실패').setDescription('이전에 사용하던 음성 채널에 접근할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+          });
+        }
+        player.set('stoppedByCommand', true);
+        player.destroy();
+        return;
+      }
+    } else {
+      // voiceChannelId가 없으면 플레이어 삭제
+      logger.warn(`Player ${player.guildId} has no voice channel, destroying player`);
+      if (textChannel?.isSendable()) {
+        await textChannel.send({
+          embeds: [new EmbedBuilder().setTitle('⚠️ 세션 복원 실패').setDescription('음성 채널 정보가 없어 세션을 복원할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+        });
+      }
+      player.set('stoppedByCommand', true);
+      player.destroy();
+      return;
+    }
+
+    if (!textChannel?.isSendable()) return;
+
     logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) restored from previous session`);
-
-    const channel = client.channels.cache.get(player.textChannelId || '');
-    if (!channel?.isSendable()) return;
-
-    channel.send({
+    await textChannel.send({
       embeds: [new EmbedBuilder().setTitle('🔄 세션이 복원되었어요!').setDescription('이전 세션에서 재생을 이어갈게요.').setColor(client.config.EMBED_COLOR_NORMAL)],
     });
   });
@@ -51,6 +91,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
             .setFooter({text: footerText})
             .setColor(client.config.EMBED_COLOR_NORMAL),
         ],
+        components: [createQuickAddButton(track.uri)],
       });
   });
 
