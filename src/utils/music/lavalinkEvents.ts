@@ -122,8 +122,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
     try {
       message = await channel.send({embeds: [embed]});
     } catch (sendError) {
-      logger.error(`Failed to send queue end message: ${sendError}`);
-      return;
+      logger.warn(`Failed to send queue end message: ${sendError}`);
     }
 
     setTimeout(async () => {

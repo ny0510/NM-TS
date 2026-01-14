@@ -68,24 +68,13 @@ export default {
     const handleEmptyChannel = async (guildId: string, guild: VoiceState['guild'], player: any) => {
       if (!player.paused) player.pause(true);
       const endTime = Math.floor((Date.now() + 10 * 60 * 1000) / 1000); // 10분 후 Timestamp
-      const embed = new EmbedBuilder()
-        .setTitle('아무도 없어서 음악을 일시정지했어요.')
-        .setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`)
-        .setColor(client.config.EMBED_COLOR_NORMAL);
+      const embed = new EmbedBuilder().setTitle('아무도 없어서 음악을 일시정지했어요.').setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`).setColor(client.config.EMBED_COLOR_NORMAL);
 
       const message = await sendMessage(guild, player.textChannelId, {embeds: [embed]});
 
       if (!activePlayers.has(guildId)) {
         const timeout = setTimeout(
           async () => {
-            try {
-              if (message?.editable) {
-                await message.edit({embeds: [embed.setDescription('10분이 지나서 자동으로 연결을 종료했어요.')]});
-              }
-            } catch (editError) {
-              // 메시지 편집 실패 시 무시 (채널이 캐시에 없거나 메시지가 삭제된 경우)
-              client.logger.warn(`Failed to edit timeout message: ${editError}`);
-            }
             player.set('stoppedByCommand', true);
             try {
               player.destroy();
@@ -93,6 +82,14 @@ export default {
               client.logger.warn(`Failed to destroy player on timeout: ${destroyError}`);
             }
             activePlayers.delete(guildId);
+
+            if (message?.editable) {
+              try {
+                await message.edit({embeds: [embed.setDescription('10분이 지나서 자동으로 연결을 종료했어요.')]});
+              } catch (editError) {
+                client.logger.warn(`Failed to edit timeout message: ${editError}`);
+              }
+            }
           },
           10 * 60 * 1000,
         );
