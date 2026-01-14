@@ -57,7 +57,7 @@ export default {
         flags: MessageFlags.Ephemeral,
       });
 
-    const customId = `search-${interaction.id}`;
+    const customId = `search:${interaction.id}`;
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId(customId).setPlaceholder('음악을 선택해 주세요.').setMinValues(1).setMaxValues(optinos.length).addOptions(optinos));
 
     const embed = new EmbedBuilder().setTitle(`🔍 ${platformDisplayName}에서 ${query} 검색 결과`).setDescription('대기열에 추가할 음악을 선택해 주세요.').setColor(client.config.EMBED_COLOR_NORMAL);
