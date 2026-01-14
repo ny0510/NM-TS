@@ -1,13 +1,10 @@
 import {EmbedBuilder, type HexColorString, Message, MessageFlags, codeBlock} from 'discord.js';
-import getColors from 'get-image-colors';
 import {ManagerEventTypes, type Track} from 'magmastream';
 
-// import {createEAutoplaymbed, handleAutoplayOnTrackStart, manageTrackHistory} from './autoplay';
 import {getEmbedMeta} from './playerUtils';
-import {restoreAllSessions} from './sessionManager';
 import type {NMClient} from '@/client/Client';
 import {config} from '@/utils/config';
-import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
+import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
 
 const logger = new Logger('Lavalink', config.IS_DEV_MODE ? 'debug' : 'info');
@@ -16,12 +13,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
   // Debug 이벤트 활성화
   client.manager.on(ManagerEventTypes.Debug, message => logger.debug(`${message}`));
 
-  // 노드 연결 시 저장된 세션 복원
-  client.manager.on(ManagerEventTypes.NodeConnect, async node => {
-    logger.info(`Node ${node.options.identifier} connected`);
-    // 약간의 딜레이 후 세션 복원 (노드가 완전히 준비될 때까지)
-    setTimeout(() => restoreAllSessions(client), 2000);
-  });
+  client.manager.on(ManagerEventTypes.NodeConnect, async node => logger.info(`Node ${node.options.identifier} connected`));
 
   client.manager.on(ManagerEventTypes.NodeDisconnect, (node, reason) => logger.warn(`Node ${node.options.identifier} disconnected! Reason: ${reason.reason}`));
   client.manager.on(ManagerEventTypes.NodeError, (node, error) => logger.error(`Node ${node.options.identifier} error: ${error}`));
@@ -29,15 +21,23 @@ export const registerLavalinkEvents = (client: NMClient) => {
   client.manager.on(ManagerEventTypes.NodeDestroy, node => logger.info(`Node ${node.options.identifier} destroyed`));
   client.manager.on(ManagerEventTypes.PlayerCreate, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) created`));
   client.manager.on(ManagerEventTypes.PlayerDestroy, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed`));
+  client.manager.on(ManagerEventTypes.PlayerMove, (player, oldChannelId, newChannelId) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) moved from ${oldChannelId} to ${newChannelId}`));
+  client.manager.on(ManagerEventTypes.PlayerRestored, player => {
+    logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) restored from previous session`);
+
+    const channel = client.channels.cache.get(player.textChannelId || '');
+    if (!channel?.isSendable()) return;
+
+    channel.send({
+      embeds: [new EmbedBuilder().setTitle('🔄 세션이 복원되었어요!').setDescription('이전 세션에서 재생을 이어갈게요.').setColor(client.config.EMBED_COLOR_NORMAL)],
+    });
+  });
 
   client.manager.on(ManagerEventTypes.TrackEnd, async (player, track) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track end. Track: ${track.title}`));
 
   client.manager.on(ManagerEventTypes.TrackStart, async (player, track: Track) => {
     logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track start. Track: ${track.title}`);
     const channel = client.channels.cache.get(player.textChannelId || '');
-
-    // 트랙 히스토리 관리
-    // manageTrackHistory(player, track);
 
     const trackMeta = await getEmbedMeta(track, false, player, 'play');
     const footerText = trackMeta.footerText;
@@ -52,20 +52,6 @@ export const registerLavalinkEvents = (client: NMClient) => {
             .setColor(client.config.EMBED_COLOR_NORMAL),
         ],
       });
-
-    // // 자동재생 기능: 대기열이 적을 때 관련 트랙 추가
-    // const autoplayResult = await handleAutoplayOnTrackStart(client, player);
-
-    // if (autoplayResult.success && autoplayResult.addedTracks.length > 0 && channel?.isSendable()) {
-    //   const embed = await createAutoplayEmbed(autoplayResult.addedTracks, player, client, '자동재생으로 관련 음악을 추가했어요!');
-
-    //   await channel.send({
-    //     embeds: [embed],
-    //   });
-    // } else if (!autoplayResult.success && autoplayResult.error) {
-    //   // 자동재생 오류는 로깅만 하고 사용자에게 표시하지 않음
-    //   logger.error(`Autoplay error for player ${player.guildId}: ${autoplayResult.error}`);
-    // }
   });
 
   client.manager.on(ManagerEventTypes.TrackError, async (player, track, error) => {
@@ -87,7 +73,6 @@ export const registerLavalinkEvents = (client: NMClient) => {
 
   client.manager.on(ManagerEventTypes.TrackStuck, async (player, track, threshold) => {
     const trackTitle = track?.title ?? 'Unknown Track';
-    // threshold는 객체일 수 있음 (예: { thresholdMs: 10000 })
     const thresholdMs = typeof threshold === 'object' ? ((threshold as any)?.thresholdMs ?? 10000) : Number(threshold) || 10000;
     logger.warn(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track stuck. Track: ${trackTitle} Threshold: ${thresholdMs}ms`);
 

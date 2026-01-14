@@ -1,7 +1,6 @@
 import {EmbedBuilder} from 'discord.js';
 
 import {NMClient} from '@/client/Client';
-import {saveAllSessions} from '@/utils/music/sessionManager';
 
 const client = new NMClient();
 
@@ -12,9 +11,6 @@ const gracefulShutdown = async (signal: string) => {
   isShuttingDown = true;
 
   client.logger.info(`${signal} received. Shutting down gracefully...`);
-
-  // 모든 플레이어 세션 저장
-  await saveAllSessions(client);
 
   // 모든 플레이어에게 종료 메시지 전송
   const notifyPromises = Array.from(client.manager.players.values()).map(async player => {
