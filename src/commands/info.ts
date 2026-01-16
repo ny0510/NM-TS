@@ -26,7 +26,7 @@ export default {
         {name: '서버 수', value: `📊 ${stats.guilds}개`, inline: true},
         {name: '사용자 수', value: `👥 ${stats.users}명`, inline: true},
         {name: '현재 재생중인 서버 수', value: `🎵 ${stats.activePlayers}개`, inline: true},
-        {name: '음악 서버 상태', value: `🎛 CPU ${stats.cpuUsage}% | 🛢️ RAM ${stats.memoryUsage}MB | 🕒 업타임 ${stats.uptime ? time(new Date(Date.now() - stats.uptime), 'R') : 'N/A'}`},
+        {name: '음악 서버 상태', value: `🎛 CPU ${stats.cpuUsage}% | 🛢️ RAM ${stats.memoryUsage}MB`},
       ];
 
       await safeReply(interaction, {

@@ -170,7 +170,6 @@ export class NMClient extends Client {
     const guilds = this.guilds.cache;
     const users = guilds.reduce((acc, guild) => acc + guild.memberCount, 0);
     const activePlayers = this.manager.players.size;
-    const uptime = this.uptime || 0;
 
     const lavalinkStats = Array.from(this.manager.nodes.values())[0]?.stats;
     const memoryUsage = lavalinkStats?.memory ? Math.round(lavalinkStats.memory.used / 1024 / 1024) : 0;
@@ -180,7 +179,6 @@ export class NMClient extends Client {
       guilds: guilds.size,
       users,
       activePlayers,
-      uptime,
       memoryUsage,
       cpuUsage,
     };

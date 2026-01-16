@@ -72,7 +72,6 @@ export interface ClientStats {
   guilds: number;
   users: number;
   activePlayers: number;
-  uptime: number;
   memoryUsage: number;
   cpuUsage: number;
 }
