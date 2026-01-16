@@ -1,5 +1,6 @@
 magmastream
 data
+lavalink
 
 # dependencies (bun install)
 node_modules

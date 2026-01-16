@@ -1,6 +1,37 @@
 services:
+  lavalink:
+    image: ghcr.io/lavalink-devs/lavalink:4-alpine
+    container_name: lavalink
+    restart: unless-stopped
+    environment:
+      - _JAVA_OPTIONS=-Xmx2G
+    volumes:
+      - ./lavalink/application.yml:/opt/Lavalink/application.yml
+      - ./lavalink/plugins/:/opt/Lavalink/plugins/
+    networks:
+      - nm
+    ports:
+      - '2333:2333'
+    healthcheck:
+      test: nc -z -v localhost 2333
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - ejs-api
+
+  ejs-api:
+    image: ghcr.io/kikkia/yt-cipher:master
+    container_name: ejs_signature_api
+    restart: unless-stopped
+    networks:
+      - nm
+    ports:
+      - '8001:8001'
+
   nm:
     build: .
+    image: ghcr.io/ny0510/nm:latest
     container_name: nm
     restart: unless-stopped
     env_file:
@@ -8,8 +39,11 @@ services:
     environment:
       - NODE_ENV=production
     networks:
-      - lavalink
+      - nm
+    depends_on:
+      lavalink:
+        condition: service_healthy
 
 networks:
-  lavalink:
+  nm:
     external: true
