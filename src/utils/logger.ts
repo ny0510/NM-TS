@@ -26,7 +26,6 @@ export class Logger implements ILogger {
 
   public constructor(prefix: string, level?: LogLevel, webhookUrl?: string) {
     this._prefix = chalk.yellowBright(`(${prefix})`);
-    // level이 명시적으로 전달되지 않으면 NODE_ENV에 따라 자동 설정
     this._level = level ?? (process.env.NODE_ENV === 'development' ? 'debug' : 'info');
 
     if (webhookUrl) {
