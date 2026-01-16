@@ -68,9 +68,13 @@ export const registerLavalinkEvents = (client: NMClient) => {
     if (!textChannel?.isSendable()) return;
 
     logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) restored from previous session`);
-    await textChannel.send({
-      embeds: [new EmbedBuilder().setTitle('🔄 세션이 복원되었어요!').setDescription('이전 세션에서 재생을 이어갈게요.').setColor(client.config.EMBED_COLOR_NORMAL)],
-    });
+    try {
+      await textChannel.send({
+        embeds: [new EmbedBuilder().setTitle('🔄 세션이 복원되었어요!').setDescription('이전 세션에서 재생을 이어갈게요.').setColor(client.config.EMBED_COLOR_NORMAL)],
+      });
+    } catch (error) {
+      logger.warn(`Failed to send player restored message: ${error}`);
+    }
   });
 
   client.manager.on(ManagerEventTypes.TrackEnd, async (player, track) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track end. Track: ${track.title}`));
@@ -83,7 +87,9 @@ export const registerLavalinkEvents = (client: NMClient) => {
     const footerText = trackMeta.footerText;
     const isRepeating = player.queueRepeat || player.trackRepeat;
 
-    if (channel?.isSendable() && !isRepeating)
+    if (!channel?.isSendable() || isRepeating) return;
+
+    try {
       await channel.send({
         embeds: [
           new EmbedBuilder()
@@ -93,6 +99,9 @@ export const registerLavalinkEvents = (client: NMClient) => {
         ],
         components: [createQuickAddButton(track.uri)],
       });
+    } catch (error) {
+      logger.warn(`Failed to send track start message: ${error}`);
+    }
   });
 
   client.manager.on(ManagerEventTypes.TrackError, async (player, track, error) => {
