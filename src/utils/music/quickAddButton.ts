@@ -1,7 +1,7 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, type HexColorString, MessageFlags} from 'discord.js';
 import {LoadTypes} from 'magmastream';
 
-import {getEmbedMeta} from './playerUtils';
+import {createPlayer, getEmbedMeta} from './playerUtils';
 import type {NMClient} from '@/client/Client';
 import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
@@ -131,20 +131,9 @@ export async function handleQuickAddButton(interaction: ButtonInteraction): Prom
       return;
     }
 
-    // 플레이어 가져오기 또는 생성
-    let player = client.manager.players.get(interaction.guildId!);
-
-    if (!player) {
-      player = client.manager.create({
-        guildId: interaction.guildId!,
-        textChannelId: interaction.channelId,
-        voiceChannelId: voiceChannel.id,
-        volume: client.config.DEFAULT_VOLUME,
-        selfDeafen: true,
-        selfMute: true,
-      });
-      player.connect();
-    }
+    // 플레이어 가져오기 또는 없으면 생성
+    const player = client.manager.players.get(interaction.guildId!) ?? (await createPlayer(interaction));
+    if (!player) return;
 
     // 같은 음성 채널에 있는지 확인
     if (player.voiceChannelId !== voiceChannel.id) {
