@@ -70,7 +70,7 @@ export default {
     // Permission Check
     const {result, missing} = await checkPermissions(interaction as ChatInputCommandInteraction, command);
     if (!result) {
-      const missingPermissions = missing.map(permission => `+ ${permission} (${PermissionTranslations[permission as PermissionsString]})`).join('\n');
+      const missingPermissions = missing.map(permission => `+ ${PermissionTranslations[permission as PermissionsString]} (${permission})`).join('\n');
       return await safeReply(interaction, {
         embeds: [new EmbedBuilder().setTitle('명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.').setDescription(codeBlock('diff', missingPermissions)).setColor(client.config.EMBED_COLOR_ERROR)],
         flags: MessageFlags.Ephemeral,

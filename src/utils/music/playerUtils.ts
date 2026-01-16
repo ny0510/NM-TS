@@ -1,10 +1,10 @@
-import {ChatInputCommandInteraction, EmbedBuilder, GuildMember, type HexColorString, MessageFlags, channelMention, codeBlock} from 'discord.js';
+import {ButtonInteraction, ChatInputCommandInteraction, EmbedBuilder, GuildMember, type HexColorString, MessageFlags, PermissionFlagsBits, type PermissionsString, channelMention, codeBlock} from 'discord.js';
 import getColors from 'get-image-colors';
 import {type Player, StateTypes, type Track} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
 import {config} from '@/utils/config';
-import {slashCommandMention} from '@/utils/discord';
+import {PermissionTranslations, slashCommandMention} from '@/utils/discord';
 import {safeReply} from '@/utils/discord/interactions';
 import {msToTime} from '@/utils/formatting';
 
@@ -67,13 +67,48 @@ export const ensurePlaying = async (interaction: ChatInputCommandInteraction): P
   return true;
 };
 
-export const createPlayer = async (interaction: ChatInputCommandInteraction): Promise<Player | undefined> => {
+export const createPlayer = async (interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<Player | undefined> => {
   const client = interaction.client as NMClient;
   const member = interaction.member as GuildMember;
+  const channel = client.channels.cache.get(interaction.channelId);
 
-  let player: Player;
+  if (!channel || channel.isDMBased()) return;
+
+  const guild = client.guilds.cache.get(interaction.guildId!);
+  const botMember = guild?.members.me;
+  const botPermissions = channel.permissionsFor(botMember!);
+
+  // PermissionFlagsBits 기반으로 권한 체크 및 누락 권한 표시
+  const requiredPermissions = [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages];
+  const missingPermissions = requiredPermissions.filter(perm => !botPermissions?.has(perm));
+
+  if (missingPermissions.length) {
+    // PermissionFlagsBits: { [key: string]: bigint } 형태이므로, 역매핑 필요
+    const bitToName = Object.entries(PermissionFlagsBits).reduce(
+      (acc, [name, bit]) => {
+        acc[bit.toString()] = name;
+        return acc;
+      },
+      {} as Record<string, string>,
+    );
+
+    const missingText = missingPermissions
+      .map(perm => {
+        const permName = bitToName[perm.toString()] as PermissionsString | undefined;
+        const displayName = permName || perm.toString();
+        const translation = permName && PermissionTranslations[permName] ? PermissionTranslations[permName] : '알 수 없음';
+        return `+ ${translation} (${displayName})`;
+      })
+      .join('\n');
+    await safeReply(interaction, {
+      embeds: [new EmbedBuilder().setTitle('명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.').setDescription(codeBlock('diff', missingText)).setColor(client.config.EMBED_COLOR_ERROR)],
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   try {
-    player = client.manager.create({
+    const player = client.manager.create({
       guildId: interaction.guildId!,
       voiceChannelId: member.voice.channel?.id,
       textChannelId: interaction.channelId,
@@ -82,36 +117,18 @@ export const createPlayer = async (interaction: ChatInputCommandInteraction): Pr
       selfMute: true,
     });
     if (player.state !== StateTypes.Connected) player.connect();
-
-    // 자동재생 상태 초기화 (기본값: 비활성화)
-    if (!player.get('autoplayEnabled')) {
-      player.set('autoplayEnabled', false);
-    }
-
-    // 과거 재생된 곡들의 히스토리 초기화 (중복 방지용)
-    if (!player.get('playHistory')) {
-      player.set('playHistory', []);
-    }
-
-    // 최근 자동재생으로 추가된 곡들의 메타데이터 저장 (더 정확한 중복 방지)
-    if (!player.get('autoplayHistory')) {
-      player.set('autoplayHistory', []);
-    }
-
     return player;
   } catch (e) {
     client.logger.error(`Failed to create player: ${e}`);
-
     let errorMessage = '플레이어를 생성하는 중 오류가 발생했어요.';
     let errorDescription = '';
 
-    if (e && typeof e === 'object' && 'message' in e) {
-      const error = e as Error;
-      if (error.message.includes('User limit')) {
+    if (e instanceof Error) {
+      if (e.message.includes('User limit')) {
         errorMessage = '음성 채널이 가득 찼어요.';
         errorDescription = '다른 음성 채널을 이용해 주세요.';
       } else if (client.config.IS_DEV_MODE) {
-        errorDescription = codeBlock('js', `${error.message}`);
+        errorDescription = codeBlock('js', e.message);
       }
     }
 
@@ -119,7 +136,7 @@ export const createPlayer = async (interaction: ChatInputCommandInteraction): Pr
       embeds: [new EmbedBuilder().setTitle(errorMessage).setDescription(errorDescription).setColor(client.config.EMBED_COLOR_ERROR)],
       flags: MessageFlags.Ephemeral,
     });
-    return undefined;
+    return;
   }
 };
 
