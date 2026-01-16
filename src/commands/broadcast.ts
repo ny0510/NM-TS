@@ -1,4 +1,4 @@
-import {EmbedBuilder, MessageFlags, PermissionFlagsBits, SlashCommandBuilder, codeBlock} from 'discord.js';
+import {EmbedBuilder, MessageFlags, SlashCommandBuilder, codeBlock} from 'discord.js';
 import type {ChatInputCommandInteraction} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
@@ -7,7 +7,7 @@ import type {Command} from '@/client/types';
 export default {
   data: new SlashCommandBuilder()
     .setName('broadcast')
-    .setDescription('현재 재생중인 모든 서버에 공지사항을 보냅니다 (봇 개발자 전용)')
+    .setDescription('현재 재생중인 모든 서버에 공지사항을 보내요.')
     .addStringOption(option => option.setName('message').setDescription('보낼 공지사항 내용').setRequired(true))
     .addBooleanOption(option => option.setName('preview').setDescription('전송 전 임베드 미리보기').setRequired(false)),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -33,10 +33,7 @@ export default {
       }
     }
 
-    if (!isOwner) {
-      await interaction.reply({content: '이 명령어는 봇 개발자만 사용할 수 있습니다.', flags: [MessageFlags.Ephemeral]});
-      return;
-    }
+    if (!isOwner) return;
 
     const message = interaction.options.getString('message', true);
     const preview = interaction.options.getBoolean('preview') || false;
