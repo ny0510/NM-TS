@@ -1,19 +1,17 @@
-# syntax=docker/dockerfile:1
-
 FROM oven/bun:1 AS base
 WORKDIR /app
 
-FROM base AS install
+FROM base AS deps
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production
 
 FROM base AS release
-COPY --from=install /app/node_modules ./node_modules
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN rm -rf .git .github .vscode .env* .claude
-
-RUN chown -R bun:bun /app
+RUN mkdir -p /app/lavalink/plugins /app/magmastream \
+  && find /app -mindepth 1 -maxdepth 1 ! -name 'node_modules' -exec chown -R bun:bun {} +
 
 ENV NODE_ENV=production
 
