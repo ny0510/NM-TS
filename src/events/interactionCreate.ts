@@ -17,7 +17,7 @@ export default {
 
     // 버튼 인터랙션 처리
     if (interaction.isButton()) {
-      if (interaction.customId.startsWith('qa:')) {
+      if (interaction.customId === 'quick_add') {
         await handleQuickAddButton(interaction);
       } else if (interaction.customId.startsWith('control_')) {
         await handlePlayerControls(interaction);

@@ -9,7 +9,6 @@ export function createPlayerControls(player: Player, trackUri: string): ActionRo
   const row = new ActionRowBuilder<ButtonBuilder>();
 
   row.addComponents(
-    new ButtonBuilder().setCustomId('control_prev').setEmoji('⏮️').setStyle(ButtonStyle.Secondary),
     new ButtonBuilder()
       .setCustomId('control_pause')
       .setEmoji(player.paused ? '▶️' : '⏸️')
@@ -17,7 +16,7 @@ export function createPlayerControls(player: Player, trackUri: string): ActionRo
     new ButtonBuilder().setCustomId('control_next').setEmoji('⏭️').setStyle(ButtonStyle.Secondary),
   );
 
-  const quickAddRow = createQuickAddButton(trackUri);
+  const quickAddRow = createQuickAddButton();
   row.addComponents(quickAddRow.components);
 
   return row;
@@ -46,29 +45,19 @@ export async function handlePlayerControls(interaction: ButtonInteraction): Prom
     return;
   }
 
+  // 현재 재생 중인 트랙과 버튼이 생성된 시점의 트랙(임베드 URL)이 같은지 확인
+  const embedUrl = interaction.message.embeds[0]?.url;
+  if (embedUrl && embedUrl !== currentTrack.uri) {
+    await interaction.reply({
+      embeds: [new EmbedBuilder().setTitle('만료된 컨트롤러에요.').setDescription('현재 재생 중인 음악의 컨트롤러를 사용해 주세요.').setColor(client.config.EMBED_COLOR_ERROR)],
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
   await interaction.deferUpdate();
 
   switch (interaction.customId) {
-    case 'control_prev': {
-      if (player.position > 5000) {
-        player.seek(0);
-        return;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const queue = player.queue as any;
-      if (queue.previous && queue.previous.length > 0) {
-        const previousTrack = queue.previous.pop();
-        if (previousTrack) {
-          player.queue.add(previousTrack, 0);
-          player.stop();
-        }
-      } else {
-        player.seek(0);
-      }
-      break;
-    }
-
     case 'control_pause':
       player.pause(!player.paused);
       await interaction.editReply({

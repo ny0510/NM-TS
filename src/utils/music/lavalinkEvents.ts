@@ -98,7 +98,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
           const lastMessage = await channel.messages.fetch(lastMessageId);
           if (lastMessage && lastMessage.editable) {
             await lastMessage.edit({
-              components: [createQuickAddButton(lastMessage.embeds[0]?.url ?? '')],
+              components: [createQuickAddButton()],
             });
           }
         } catch {
@@ -110,6 +110,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
         embeds: [
           new EmbedBuilder()
             .setDescription(`♪ ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}`)
+            .setURL(track.uri)
             .setFooter({text: footerText})
             .setColor(client.config.EMBED_COLOR_NORMAL),
         ],
