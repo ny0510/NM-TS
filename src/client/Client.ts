@@ -4,8 +4,8 @@ import type {ClientServices, ClientStats, Config} from './types';
 import {CommandManager} from '@/managers/CommandManager';
 import {CooldownManager} from '@/managers/CooldownManager';
 import {EventManager} from '@/managers/EventManager';
+import {KoreanbotsManager} from '@/managers/KoreanbotsManager';
 import {LavalinkManager} from '@/managers/LavalinkManager';
-import {StatsService} from '@/services/StatsService';
 import {config} from '@/utils/config';
 import {type ILogger, Logger} from '@/utils/logger';
 
@@ -13,7 +13,7 @@ export class NMClient extends Client {
   public readonly logger: ILogger;
   public readonly config: Config;
   public readonly services: ClientServices;
-  private readonly statsService: StatsService;
+  private readonly koreanbotsManager: KoreanbotsManager;
 
   public constructor() {
     super({
@@ -35,10 +35,10 @@ export class NMClient extends Client {
       cooldownManager: new CooldownManager(),
     };
 
-    this.statsService = new StatsService(this, this.logger);
+    this.koreanbotsManager = new KoreanbotsManager(this, this.logger);
 
     this.setupEventHandlers();
-    this.statsService.start();
+    this.koreanbotsManager.start();
     this.initialize();
   }
 
@@ -112,7 +112,7 @@ export class NMClient extends Client {
   }
 
   public override async destroy(): Promise<void> {
-    this.statsService.stop();
+    this.koreanbotsManager.stop();
 
     await super.destroy();
   }
