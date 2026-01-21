@@ -8,7 +8,9 @@ RUN bun install --frozen-lockfile --production
 FROM base AS release
 WORKDIR /app
 
-# Non-root user setup from the beginning to avoid permission issues
+# Set ownership of the working directory to bun user
+RUN chown bun:bun /app
+
 USER bun
 
 # Copy dependencies with correct ownership
@@ -18,7 +20,7 @@ COPY --from=deps --chown=bun:bun /app/package.json ./package.json
 # Copy source code with correct ownership
 COPY --chown=bun:bun . .
 
-# Create necessary directories (if not exist in source)
+# Create necessary directories
 RUN mkdir -p lavalink/plugins magmastream
 
 ENV NODE_ENV=production
