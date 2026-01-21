@@ -1,6 +1,6 @@
-import type {ChatInputCommandInteraction} from 'discord.js';
+import type {BaseInteraction} from 'discord.js';
 
-export const slashCommandMention = async (interaction: ChatInputCommandInteraction, commandName: string): Promise<string> => {
+export const slashCommandMention = async (interaction: BaseInteraction, commandName: string): Promise<string> => {
   const guildCommand = await interaction.guild?.commands.fetch().then(commands => commands.find(cmd => cmd.name === commandName));
   const globalCommand = await interaction.client.application?.commands.fetch().then(commands => commands.find(cmd => cmd.name === commandName));
   return `</${commandName}:${guildCommand?.id || globalCommand?.id || ''}>`;

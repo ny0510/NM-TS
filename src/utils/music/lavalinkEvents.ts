@@ -1,6 +1,7 @@
 import {EmbedBuilder, type HexColorString, Message, MessageFlags, codeBlock} from 'discord.js';
 import {ManagerEventTypes, type Track} from 'magmastream';
 
+import {createPlayerControls} from './controls';
 import {getEmbedMeta} from './playerUtils';
 import {createQuickAddButton} from './quickAddButton';
 import type {NMClient} from '@/client/Client';
@@ -90,15 +91,32 @@ export const registerLavalinkEvents = (client: NMClient) => {
     if (!channel?.isSendable() || isRepeating) return;
 
     try {
-      await channel.send({
+      // 이전 메시지가 있다면 버튼 제거
+      const lastMessageId = player.get<string>('lastMessageId');
+      if (lastMessageId && channel?.isSendable()) {
+        try {
+          const lastMessage = await channel.messages.fetch(lastMessageId);
+          if (lastMessage && lastMessage.editable) {
+            await lastMessage.edit({
+              components: [createQuickAddButton(lastMessage.embeds[0]?.url ?? '')],
+            });
+          }
+        } catch {
+          // 메시지가 삭제되었거나 권한이 없는 경우 무시
+        }
+      }
+
+      const message = await channel.send({
         embeds: [
           new EmbedBuilder()
             .setDescription(`♪ ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}`)
             .setFooter({text: footerText})
             .setColor(client.config.EMBED_COLOR_NORMAL),
         ],
-        components: [createQuickAddButton(track.uri)],
+        components: [createPlayerControls(player, track.uri)],
       });
+
+      player.set('lastMessageId', message.id);
     } catch (error) {
       logger.warn(`Failed to send track start message: ${error}`);
     }

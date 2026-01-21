@@ -7,6 +7,7 @@ import {isInteractionProcessed} from '@/utils/discord/interactions';
 import {safeReply} from '@/utils/discord/interactions';
 import {checkPermissions} from '@/utils/discord/permissions';
 import PermissionTranslations from '@/utils/discord/permissions/locale/permission';
+import {handlePlayerControls} from '@/utils/music/controls';
 import {handleQuickAddButton} from '@/utils/music/quickAddButton';
 
 export default {
@@ -14,12 +15,13 @@ export default {
   async execute(interaction: BaseInteraction): Promise<void> {
     const client = interaction.client as NMClient;
 
-    // 버튼 인터랙션 처리 (qa: 버튼만 여기서 처리, 나머지는 각 명령어의 collector에서 처리)
+    // 버튼 인터랙션 처리
     if (interaction.isButton()) {
       if (interaction.customId.startsWith('qa:')) {
         await handleQuickAddButton(interaction);
+      } else if (interaction.customId.startsWith('control_')) {
+        await handlePlayerControls(interaction);
       }
-      // qa: 외의 버튼은 collector에서 처리되므로 여기서 return하지 않음
       return;
     }
 
