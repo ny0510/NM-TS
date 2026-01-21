@@ -66,4 +66,3 @@ services:
 
 networks:
   nm:
-    external: true
