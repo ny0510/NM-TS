@@ -7,13 +7,20 @@ RUN bun install --frozen-lockfile --production
 
 FROM base AS release
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
 
-RUN mkdir -p /app/lavalink/plugins /app/magmastream \
-  && find /app -mindepth 1 -maxdepth 1 ! -name 'node_modules' -exec chown -R bun:bun {} +
+# Non-root user setup from the beginning to avoid permission issues
+USER bun
+
+# Copy dependencies with correct ownership
+COPY --from=deps --chown=bun:bun /app/node_modules ./node_modules
+COPY --from=deps --chown=bun:bun /app/package.json ./package.json
+
+# Copy source code with correct ownership
+COPY --chown=bun:bun . .
+
+# Create necessary directories (if not exist in source)
+RUN mkdir -p lavalink/plugins magmastream
 
 ENV NODE_ENV=production
 
-USER bun
 CMD ["bun", "run", "src/index.ts"]
