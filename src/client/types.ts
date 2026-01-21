@@ -1,4 +1,4 @@
-import {type AutocompleteInteraction, type ChatInputCommandInteraction, type HexColorString, PermissionsBitField, SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder} from 'discord.js';
+import {type AutocompleteInteraction, type ChatInputCommandInteraction, type ClientEvents, type HexColorString, PermissionsBitField, SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder} from 'discord.js';
 
 // Command 인터페이스
 export interface Command {
@@ -10,10 +10,10 @@ export interface Command {
 }
 
 // Event 인터페이스
-export interface Event {
-  name: string;
-  once?: boolean | false;
-  execute(...args: any): Promise<void> | void;
+export interface Event<K extends keyof ClientEvents = keyof ClientEvents> {
+  name: K;
+  once?: boolean;
+  execute(...args: ClientEvents[K]): Promise<void> | void;
 }
 
 // Config 인터페이스들

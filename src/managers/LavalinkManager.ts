@@ -1,3 +1,4 @@
+import type {NMClient} from '@/client/Client';
 import type {Client} from 'discord.js';
 import {AutoPlayPlatform, Manager, SearchPlatform, StateStorageType, TrackPartial} from 'magmastream';
 
@@ -52,7 +53,7 @@ export class LavalinkManager {
     }
   }
 
-  public registerEvents(client: any): void {
+  public registerEvents(client: NMClient): void {
     registerLavalinkEvents(client);
     this.logger.debug('Lavalink events registered');
   }

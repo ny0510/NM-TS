@@ -123,7 +123,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
 
   client.manager.on(ManagerEventTypes.TrackStuck, async (player, track, threshold) => {
     const trackTitle = track?.title ?? 'Unknown Track';
-    const thresholdMs = typeof threshold === 'object' ? ((threshold as any)?.thresholdMs ?? 10000) : Number(threshold) || 10000;
+    const thresholdMs = typeof threshold === 'object' && threshold !== null && 'thresholdMs' in threshold ? (threshold as {thresholdMs: number}).thresholdMs : Number(threshold) || 10000;
     logger.warn(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track stuck. Track: ${trackTitle} Threshold: ${thresholdMs}ms`);
 
     const channel = client.channels.cache.get(player.textChannelId || '');

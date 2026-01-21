@@ -1,4 +1,4 @@
-import {EmbedBuilder, MessageFlags, SlashCommandBuilder, codeBlock} from 'discord.js';
+import {EmbedBuilder, MessageFlags, SlashCommandBuilder, codeBlock, Team, User} from 'discord.js';
 import type {ChatInputCommandInteraction} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
@@ -19,19 +19,15 @@ export default {
       }
     } catch {}
 
-    const owner = (client.application as any)?.owner;
+    const owner = client.application?.owner;
     let isOwner = false;
-    if (owner) {
-      if (owner.id) {
-        isOwner = owner.id === interaction.user.id;
-      } else if (owner.members) {
-        try {
-          isOwner = Boolean(owner.members.find((m: any) => m.user?.id === interaction.user.id));
-        } catch {
-          isOwner = false;
-        }
-      }
+
+    if (owner instanceof User) {
+      isOwner = owner.id === interaction.user.id;
+    } else if (owner instanceof Team) {
+      isOwner = owner.members.some(m => m.user.id === interaction.user.id);
     }
+
 
     if (!isOwner) return;
 

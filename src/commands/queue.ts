@@ -1,4 +1,5 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, MessageComponentInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import type {Track} from 'magmastream';
 import type {Player} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
@@ -20,7 +21,7 @@ async function buildQueueEmbed(client: NMClient, player: Player, page: number) {
   const queueDuration = await player.queue.duration();
 
   const footer = totalPages > 1 ? `${page}/${totalPages} 페이지\n+${Math.max(0, totalTracks - page * TRACKS_PER_PAGE)}곡` : ' ';
-  const trackList = tracks.map((track: any, i: number) => ({
+  const trackList = tracks.map((track: Track, i: number) => ({
     name: `${start + i + 1}. ${truncateWithEllipsis(track.title, 50)}`,
     value: `┕ ${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)} | ${typeof track.requester === 'string' ? track.requester : track.requester?.id ? `<@${track.requester.id}>` : '알 수 없음'}`,
   }));
@@ -143,23 +144,15 @@ export default {
           });
         }
       } catch (error) {
-        // 메시지가 삭제되었거나 편집할 수 없는 경우 무시
-        if (error && typeof error === 'object' && 'code' in error) {
-          const discordError = error as {code: number};
-          if (discordError.code !== 10008 && discordError.code !== 50001) {
-            // Unknown Message, Missing Access
-            client.logger.error(`Failed to edit message: ${error}`);
-          } else {
-            // Known errors - log at debug level to reduce spam
-            client.logger.debug(`Failed to edit message (known error ${discordError.code}): ${error}`);
-          }
+        const code = (error as {code?: number})?.code;
+        // 10008: Unknown Message, 50001: Missing Access
+        if (code === 10008 || code === 50001) {
+          client.logger.debug(`Failed to edit message (known error ${code}): ${error}`);
         } else {
           client.logger.error(`Failed to edit message: ${error}`);
         }
       } finally {
-        if (collector && !collector.ended) {
-          collector.stop();
-        }
+        if (!collector.ended) collector.stop();
       }
     };
 
@@ -196,7 +189,6 @@ export default {
             embeds: [new EmbedBuilder().setTitle('대기열이 비어있어요.').setDescription('더 이상 재생할 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
             components: [],
           });
-          collector.stop();
           return;
         }
 

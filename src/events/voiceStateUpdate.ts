@@ -1,3 +1,4 @@
+import type {Player} from 'magmastream';
 import {ActivityType, EmbedBuilder, Events, GuildMember, type MessageCreateOptions, MessagePayload, PresenceUpdateStatus, TextChannel, VoiceState} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
@@ -65,7 +66,7 @@ export default {
 
     const getNonBotMembers = (voiceChannel: VoiceState['channel']) => voiceChannel?.members.filter((member: GuildMember) => !member.user.bot);
 
-    const handleEmptyChannel = async (guildId: string, guild: VoiceState['guild'], player: any) => {
+    const handleEmptyChannel = async (guildId: string, guild: VoiceState['guild'], player: Player) => {
       if (!player.paused) player.pause(true);
       const endTime = Math.floor((Date.now() + 10 * 60 * 1000) / 1000); // 10분 후 Timestamp
       const embed = new EmbedBuilder().setTitle('아무도 없어서 음악을 일시정지했어요.').setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`).setColor(client.config.EMBED_COLOR_NORMAL);
@@ -98,7 +99,7 @@ export default {
       }
     };
 
-    const handleMemberJoin = async (guildId: string, guild: VoiceState['guild'], player: any) => {
+    const handleMemberJoin = async (guildId: string, guild: VoiceState['guild'], player: Player) => {
       if (player.paused) {
         await sendMessage(guild, player.textChannelId, {embeds: [new EmbedBuilder().setTitle('다시 음악을 재생할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
         player.pause(false);
