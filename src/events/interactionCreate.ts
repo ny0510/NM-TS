@@ -7,8 +7,8 @@ import {isInteractionProcessed} from '@/utils/discord/interactions';
 import {safeReply} from '@/utils/discord/interactions';
 import {checkPermissions} from '@/utils/discord/permissions';
 import PermissionTranslations from '@/utils/discord/permissions/locale/permission';
-import {handlePlayerControls} from '@/utils/music/controls';
-import {handleQuickAddButton} from '@/utils/music/quickAddButton';
+import {handlePlayerControlsButtons} from '@/utils/music/buttons/controlsButton';
+import {handleQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 
 export default {
   name: Events.InteractionCreate,
@@ -20,7 +20,7 @@ export default {
       if (interaction.customId === 'quick_add') {
         await handleQuickAddButton(interaction);
       } else if (interaction.customId.startsWith('control_')) {
-        await handlePlayerControls(interaction);
+        await handlePlayerControlsButtons(interaction);
       }
       return;
     }

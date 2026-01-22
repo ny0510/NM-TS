@@ -2,12 +2,12 @@ import {ButtonInteraction, ChatInputCommandInteraction, EmbedBuilder, GuildMembe
 import getColors from 'get-image-colors';
 import {LoadTypes, type Player, StateTypes, type Track} from 'magmastream';
 
-import {createQuickAddButton} from './quickAddButton';
 import type {NMClient} from '@/client/Client';
 import {config} from '@/utils/config';
 import {PermissionTranslations, slashCommandMention} from '@/utils/discord';
 import {safeReply} from '@/utils/discord/interactions';
 import {coverPattern, hyperlink, msToTime, playlistPattern, truncateWithEllipsis, videoPattern} from '@/utils/formatting';
+import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 
 export const ensureVoiceChannel = async (interaction: ChatInputCommandInteraction): Promise<boolean> => {
   const client = interaction.client as NMClient;
@@ -335,18 +335,18 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
       const trackMeta = await getEmbedMeta(track, false, player, 'add');
       const [colors, footerText] = [trackMeta.colors, trackMeta.footerText];
 
-      let trackTitle = `💿 음악을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
+      let trackTitle = `음악을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
       if (excludeCover && excludeShorts) {
-        trackTitle = `💿 커버 곡과 쇼츠를 제외하고 음악을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
+        trackTitle = `커버 곡과 쇼츠를 제외하고 음악을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
       } else if (excludeCover) {
-        trackTitle = `💿 커버 곡을 제외하고 음악을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
+        trackTitle = `커버 곡을 제외하고 음악을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
       } else if (excludeShorts) {
-        trackTitle = `💿 쇼츠를 제외하고 음악을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
+        trackTitle = `쇼츠를 제외하고 음악을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
       }
 
       const embed = new EmbedBuilder()
-        .setTitle(trackTitle)
-        .setDescription(hyperlink(truncateWithEllipsis(track.title, 50), track.uri))
+        .setTitle(truncateWithEllipsis(`💿 ${track.title}`, 50))
+        .setDescription(trackTitle)
         .setThumbnail(track.artworkUrl ?? null)
         .setFooter({text: footerText})
         .setURL(track.uri)
@@ -402,24 +402,24 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
       const playlistMeta = await getEmbedMeta(res.tracks, true, player);
       const [playlistColors, playlistFooterText] = [playlistMeta.colors, playlistMeta.footerText];
 
-      let playlistTitle = `📜 재생목록에 포함된 음악 ${res.tracks.length}곡을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
+      let playlistTitle = `재생목록에 포함된 음악 ${res.tracks.length}곡을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
 
       const originalPlaylistCount = res.playlist?.tracks.length || 0;
       const isFiltered = res.tracks.length !== originalPlaylistCount;
 
       if (isFiltered) {
         if (excludeCover && excludeShorts) {
-          playlistTitle = `📜 재생목록에서 커버 곡과 쇼츠를 제외한 음악 ${res.tracks.length}곡을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
+          playlistTitle = `재생목록에서 커버 곡과 쇼츠를 제외한 음악 ${res.tracks.length}곡을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
         } else if (excludeCover) {
-          playlistTitle = `📜 재생목록에서 커버 곡을 제외한 음악 ${res.tracks.length}곡을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
+          playlistTitle = `재생목록에서 커버 곡을 제외한 음악 ${res.tracks.length}곡을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
         } else if (excludeShorts) {
-          playlistTitle = `📜 재생목록에서 쇼츠를 제외한 음악 ${res.tracks.length}곡을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
+          playlistTitle = `재생목록에서 쇼츠를 제외한 음악 ${res.tracks.length}곡을 대기열${addFirst ? '의 맨 앞에' : index !== null ? `의 ${index}번째에` : '에'} 추가했어요.`;
         }
       }
 
       const embed = new EmbedBuilder()
-        .setTitle(playlistTitle)
-        .setDescription(hyperlink(truncateWithEllipsis(res.playlist?.name!, 50), query))
+        .setTitle(truncateWithEllipsis(`📜 ${res.playlist.name}`, 50))
+        .setDescription(playlistTitle)
         .setThumbnail(res.playlist?.tracks[0]?.artworkUrl ?? null)
         .setURL(query)
         .setFooter({text: `최대 100곡까지 한번에 추가할 수 있어요.\n${playlistFooterText}`})

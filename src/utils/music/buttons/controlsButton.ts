@@ -1,9 +1,9 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, MessageFlags} from 'discord.js';
 import type {Player} from 'magmastream';
 
-import {createQuickAddButton} from './quickAddButton';
 import type {NMClient} from '@/client/Client';
 import {ensurePlaying} from '@/utils/music';
+import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 
 export function createPlayerControls(player: Player, trackUri: string): ActionRowBuilder<ButtonBuilder> {
   const row = new ActionRowBuilder<ButtonBuilder>();
@@ -22,13 +22,13 @@ export function createPlayerControls(player: Player, trackUri: string): ActionRo
   return row;
 }
 
-export async function handlePlayerControls(interaction: ButtonInteraction): Promise<void> {
+export async function handlePlayerControlsButtons(interaction: ButtonInteraction): Promise<void> {
   const client = interaction.client as NMClient;
   const player = client.manager.players.get(interaction.guildId!);
 
   if (!player) {
     await interaction.reply({
-      embeds: [new EmbedBuilder().setTitle('재생 중인 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+      embeds: [new EmbedBuilder().setTitle('현재 재생 중인 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -39,7 +39,7 @@ export async function handlePlayerControls(interaction: ButtonInteraction): Prom
   const currentTrack = await player.queue.getCurrent();
   if (!currentTrack) {
     await interaction.reply({
-      embeds: [new EmbedBuilder().setTitle('재생 중인 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+      embeds: [new EmbedBuilder().setTitle('현재 재생 중인 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
       flags: MessageFlags.Ephemeral,
     });
     return;

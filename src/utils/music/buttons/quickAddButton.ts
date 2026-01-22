@@ -1,10 +1,8 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, type HexColorString, MessageFlags} from 'discord.js';
-import {LoadTypes} from 'magmastream';
 
-import {addTrackToQueue} from './playerUtils';
 import type {NMClient} from '@/client/Client';
-import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
+import {addTrackToQueue} from '@/utils/music/playerUtils';
 
 const logger = new Logger('QuickAdd');
 

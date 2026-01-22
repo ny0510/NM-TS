@@ -1,12 +1,12 @@
-import {EmbedBuilder, type HexColorString, Message, MessageFlags, codeBlock} from 'discord.js';
+import {EmbedBuilder, Message, codeBlock} from 'discord.js';
 import {ManagerEventTypes, type Track} from 'magmastream';
 
-import {createPlayerControls} from './controls';
-import {getEmbedMeta} from './playerUtils';
-import {createQuickAddButton} from './quickAddButton';
 import type {NMClient} from '@/client/Client';
 import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
+import {createPlayerControls} from '@/utils/music/buttons/controlsButton';
+import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
+import {getEmbedMeta} from '@/utils/music/playerUtils';
 
 const logger = new Logger('Lavalink');
 
