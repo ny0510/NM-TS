@@ -29,13 +29,13 @@ export class NMClient extends Client {
     this.logger = new Logger(config.LOG_PREFIX, 'info', config.DISCORD_LOG_WEBHOOK_URL);
 
     this.services = {
-      commandManager: new CommandManager(this.logger, this.config),
-      eventManager: new EventManager(this, this.logger),
-      lavalinkManager: new LavalinkManager(this, this.logger, this.config),
+      commandManager: new CommandManager(new Logger('Command', 'info', config.DISCORD_LOG_WEBHOOK_URL), this.config),
+      eventManager: new EventManager(this, new Logger('Event', 'info', config.DISCORD_LOG_WEBHOOK_URL)),
+      lavalinkManager: new LavalinkManager(this, new Logger('Lavalink', 'info', config.DISCORD_LOG_WEBHOOK_URL), this.config),
       cooldownManager: new CooldownManager(),
     };
 
-    this.koreanbotsManager = new KoreanbotsManager(this, this.logger);
+    this.koreanbotsManager = new KoreanbotsManager(this, new Logger('Koreanbots', 'info', config.DISCORD_LOG_WEBHOOK_URL));
 
     this.setupEventHandlers();
     this.koreanbotsManager.start();
