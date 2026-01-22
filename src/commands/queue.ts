@@ -38,13 +38,11 @@ function buildQueueButtons(page: number, totalPages: number) {
   return new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId('queue_previous')
-      .setLabel('이전')
       .setEmoji('◀')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page <= 1),
     new ButtonBuilder()
       .setCustomId('queue_next')
-      .setLabel('다음')
       .setEmoji('▶')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page >= totalPages),
