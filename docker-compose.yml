@@ -29,6 +29,8 @@ services:
     image: ghcr.io/kikkia/yt-cipher:master
     container_name: ejs_signature_api
     restart: unless-stopped
+    init: true
+    stop_grace_period: 2s
     networks:
       - nm
     ports:
