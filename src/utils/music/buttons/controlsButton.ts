@@ -1,8 +1,8 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, MessageFlags} from 'discord.js';
+import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, GuildMember, MessageFlags} from 'discord.js';
 import type {Player} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
-import {ensurePlaying} from '@/utils/music';
+import {ensurePlaying, ensureSameVoiceChannel} from '@/utils/music';
 import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 
 export function createPlayerControls(player: Player, trackUri: string): ActionRowBuilder<ButtonBuilder> {
@@ -35,6 +35,7 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
   }
 
   if (!(await ensurePlaying(interaction))) return;
+  if (!(await ensureSameVoiceChannel(interaction))) return;
 
   const currentTrack = await player.queue.getCurrent();
   if (!currentTrack) {

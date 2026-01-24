@@ -21,6 +21,18 @@ export const registerLavalinkEvents = (client: NMClient) => {
   client.manager.on(ManagerEventTypes.NodeReconnect, node => logger.info(`Node ${node.options.identifier} reconnecting...`));
   client.manager.on(ManagerEventTypes.NodeDestroy, node => logger.info(`Node ${node.options.identifier} destroyed`));
   client.manager.on(ManagerEventTypes.PlayerCreate, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) created`));
+
+  // Ensure per-player session directory exists when a player is created to prevent ENOENT
+  client.manager.on(ManagerEventTypes.PlayerCreate, async player => {
+    try {
+      const {join} = await import('node:path');
+      const {mkdir} = await import('node:fs/promises');
+      const dir = join(process.cwd(), 'magmastream', 'sessionData', 'players', player.guildId);
+      await mkdir(dir, {recursive: true});
+    } catch (e) {
+      logger.warn(`Failed to ensure session dir for player ${player.guildId}: ${e}`);
+    }
+  });
   client.manager.on(ManagerEventTypes.PlayerDestroy, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed`));
   client.manager.on(ManagerEventTypes.PlayerMove, (player, oldChannelId, newChannelId) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) moved from ${oldChannelId} to ${newChannelId}`));
   client.manager.on(ManagerEventTypes.PlayerRestored, async player => {

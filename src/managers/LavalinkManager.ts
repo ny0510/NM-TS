@@ -21,6 +21,12 @@ export class LavalinkManager {
       this.logger.error(`Failed to create session data directory: ${error}`);
     });
 
+    // Ensure players directory exists to avoid ENOENT when Magmastream writes player files
+    const playersDir = join(sessionDir, 'players');
+    mkdir(playersDir, {recursive: true}).catch(error => {
+      this.logger.error(`Failed to create players directory: ${error}`);
+    });
+
     this.manager = new Manager({
       nodes: [
         {

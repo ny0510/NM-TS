@@ -75,7 +75,15 @@ export class Logger implements ILogger {
     if (!this._webhook) return;
 
     try {
-      const embed = new EmbedBuilder().setTimestamp().setColor(this._client?.config.EMBED_COLOR_ERROR!).setTitle('An error occurred').addFields({name: 'Message', value: message});
+      // Defensive: ensure color and message are defined and valid for EmbedBuilder
+      const color = (this._client?.config?.EMBED_COLOR_ERROR as any) ?? '#ff3333';
+      const safeMessage = message ?? 'An error occurred';
+
+      const embed = new EmbedBuilder()
+        .setTimestamp()
+        .setTitle('An error occurred')
+        .setColor(typeof color === 'string' || typeof color === 'number' ? (color as any) : '#ff3333')
+        .addFields({name: 'Message', value: safeMessage});
 
       if (error instanceof Error && error.stack) {
         const stackLines = error.stack.split('\n');

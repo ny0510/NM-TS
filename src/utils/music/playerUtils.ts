@@ -24,7 +24,7 @@ export const ensureVoiceChannel = async (interaction: ChatInputCommandInteractio
   return true;
 };
 
-export const ensureSameVoiceChannel = async (interaction: ChatInputCommandInteraction): Promise<boolean> => {
+export const ensureSameVoiceChannel = async (interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<boolean> => {
   const client = interaction.client as NMClient;
   const member = interaction.member as GuildMember;
   const player = client.manager.players.get(interaction.guildId!);
