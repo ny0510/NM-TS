@@ -22,17 +22,6 @@ export const registerLavalinkEvents = (client: NMClient) => {
   client.manager.on(ManagerEventTypes.NodeDestroy, node => logger.info(`Node ${node.options.identifier} destroyed`));
   client.manager.on(ManagerEventTypes.PlayerCreate, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) created`));
 
-  // Ensure per-player session directory exists when a player is created to prevent ENOENT
-  client.manager.on(ManagerEventTypes.PlayerCreate, async player => {
-    try {
-      const {join} = await import('node:path');
-      const {mkdir} = await import('node:fs/promises');
-      const dir = join(process.cwd(), 'magmastream', 'sessionData', 'players', player.guildId);
-      await mkdir(dir, {recursive: true});
-    } catch (e) {
-      logger.warn(`Failed to ensure session dir for player ${player.guildId}: ${e}`);
-    }
-  });
   client.manager.on(ManagerEventTypes.PlayerDestroy, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed`));
   client.manager.on(ManagerEventTypes.PlayerMove, (player, oldChannelId, newChannelId) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) moved from ${oldChannelId} to ${newChannelId}`));
   client.manager.on(ManagerEventTypes.PlayerRestored, async player => {
@@ -182,6 +171,21 @@ export const registerLavalinkEvents = (client: NMClient) => {
 
     if (!channel?.isSendable()) return;
     if (player.get('stoppedByCommand')) return;
+
+    // Autoplay가 켜져 있는데 큐가 끝났다면 곡을 찾지 못한 것임
+    if (player.isAutoplay) {
+      logger.warn(`Autoplay is enabled but queue ended for player ${player.guildId}`);
+      if (channel?.isSendable()) {
+        try {
+          await channel.send({
+            embeds: [new EmbedBuilder().setTitle('자동 재생할 곡을 찾지 못했어요.').setDescription('비슷한 곡을 찾을 수 없어 재생을 종료할게요.').setColor(client.config.EMBED_COLOR_ERROR)],
+          });
+        } catch (e) {
+          logger.warn(`Failed to send autoplay failure message: ${e}`);
+        }
+      }
+      player.setAutoplay(false); // 오토플레이 해제
+    }
 
     const embed = new EmbedBuilder().setTitle('대기열에 있는 음악을 모두 재생했어요. 30초 후에 자동으로 연결을 종료해요.').setColor(client.config.EMBED_COLOR_NORMAL);
     let message: Message | undefined;

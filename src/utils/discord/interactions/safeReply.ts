@@ -29,7 +29,13 @@ export async function safeReply(interaction: CommandInteraction | ButtonInteract
       await interaction.reply(replyOptions);
     }
   } catch (error) {
-    client.logger.error(`Failed to reply to interaction ${interaction.id}: ${error}`);
+    // Treat Unknown interaction (10062) as non-fatal and log at debug level
+    const err = error as any;
+    if (err?.code === 10062) {
+      client.logger.debug(`Interaction ${interaction.id} expired/unknown before reply could be sent: ${err}`);
+    } else {
+      client.logger.error(`Failed to reply to interaction ${interaction.id}: ${error}`);
+    }
 
     // 마지막 시도: 오류 메시지 전송 (단, 이미 응답되지 않은 경우만)
     if (!interaction.replied && !interaction.deferred) {
@@ -39,7 +45,12 @@ export async function safeReply(interaction: CommandInteraction | ButtonInteract
           flags: MessageFlags.Ephemeral,
         });
       } catch (finalError) {
-        client.logger.error(`Final reply attempt failed for interaction ${interaction.id}: ${finalError}`);
+        const finalErr = finalError as any;
+        if (finalErr?.code === 10062) {
+          client.logger.debug(`Final reply attempt failed for interaction ${interaction.id}: Unknown interaction`);
+        } else {
+          client.logger.error(`Final reply attempt failed for interaction ${interaction.id}: ${finalError}`);
+        }
       }
     }
   }

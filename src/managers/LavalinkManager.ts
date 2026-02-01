@@ -1,12 +1,10 @@
 import type {Client} from 'discord.js';
 import {AutoPlayPlatform, Manager, SearchPlatform, StateStorageType, TrackPartial} from 'magmastream';
-import {join} from 'node:path';
 
 import type {NMClient} from '@/client/Client';
 import type {Config} from '@/client/types';
 import type {ILogger} from '@/utils/logger';
 import {registerLavalinkEvents} from '@/utils/music';
-import {mkdir} from 'node:fs/promises';
 
 export class LavalinkManager {
   private readonly manager: Manager;
@@ -14,18 +12,6 @@ export class LavalinkManager {
 
   constructor(client: Client, logger: ILogger, config: Config) {
     this.logger = logger;
-
-    // Ensure session data directory exists
-    const sessionDir = join(process.cwd(), 'magmastream', 'sessionData');
-    mkdir(sessionDir, {recursive: true}).catch(error => {
-      this.logger.error(`Failed to create session data directory: ${error}`);
-    });
-
-    // Ensure players directory exists to avoid ENOENT when Magmastream writes player files
-    const playersDir = join(sessionDir, 'players');
-    mkdir(playersDir, {recursive: true}).catch(error => {
-      this.logger.error(`Failed to create players directory: ${error}`);
-    });
 
     this.manager = new Manager({
       nodes: [

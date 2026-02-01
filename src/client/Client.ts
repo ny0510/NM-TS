@@ -62,6 +62,8 @@ export class NMClient extends Client {
 
   private async initialize(): Promise<void> {
     try {
+      this.logger.info(`Initializing NM Client v${process.env.npm_package_version}`);
+
       await this.login(this.config.DISCORD_TOKEN);
       this.logger.info('Successfully logged in to Discord');
 
