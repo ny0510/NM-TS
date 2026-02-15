@@ -1,5 +1,5 @@
-import type {Player} from 'magmastream';
 import {ActivityType, EmbedBuilder, Events, GuildMember, type MessageCreateOptions, MessagePayload, PresenceUpdateStatus, TextChannel, VoiceState} from 'discord.js';
+import type {Player} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
@@ -29,12 +29,15 @@ export default {
     const isBotStateChange = newState.id === client.user?.id || oldState.id === client.user?.id;
 
     if (isBotStateChange) {
-      // 봇이 음성 채널에서 완전히 나갔는지 확인 (강제 퇴장)
       if (oldState.channelId && !newState.channelId) {
         const player = client.manager.players.get(guildId);
         if (player) {
           client.logger.info(`Bot was kicked from voice channel in guild ${guild.name} (${guildId})`);
           const textChannelId = player.textChannelId;
+
+          const botMember = guild.members.cache.get(client.user!.id);
+          const isTimedOut = botMember?.communicationDisabledUntil !== null && botMember?.communicationDisabledUntil !== undefined && botMember.communicationDisabledUntil > new Date();
+
           player.set('stoppedByCommand', true);
           try {
             player.destroy();
@@ -42,11 +45,13 @@ export default {
             client.logger.error(`Failed to destroy player on bot kick: ${error}`);
           }
           activePlayers.delete(guildId);
-          await sendMessage(guild, textChannelId, {embeds: [new EmbedBuilder().setTitle('음성 채널에서 퇴장당했어요. 음악을 정지할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
+
+          if (!isTimedOut) {
+            await sendMessage(guild, textChannelId, {embeds: [new EmbedBuilder().setTitle('음성 채널에서 퇴장당했어요. 음악을 정지할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
+          }
         }
         return;
       }
-      // 봇 자신의 다른 voice state 변경은 무시
       return;
     }
 
