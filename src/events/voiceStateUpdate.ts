@@ -3,6 +3,7 @@ import type {Player} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
+import {destroyPlayerSafely} from '@/utils/music/playerUtils';
 
 const activePlayers = new Map<string, NodeJS.Timeout>();
 
@@ -20,7 +21,7 @@ export default {
         if (!textChannel) return;
         return await textChannel.send(payload);
       } catch (error) {
-        client.logger.error(`Failed to send message in voice state update: ${error}`);
+        client.logger.warn(`Failed to send message in voice state update: ${error}`);
         return;
       }
     };
@@ -39,11 +40,7 @@ export default {
           const isTimedOut = botMember?.communicationDisabledUntil !== null && botMember?.communicationDisabledUntil !== undefined && botMember.communicationDisabledUntil > new Date();
 
           player.set('stoppedByCommand', true);
-          try {
-            player.destroy();
-          } catch (error) {
-            client.logger.error(`Failed to destroy player on bot kick: ${error}`);
-          }
+          destroyPlayerSafely(player, client, `Bot was kicked from voice channel in guild ${guild.name} (${guildId})`);
           activePlayers.delete(guildId);
 
           if (!isTimedOut) {
@@ -82,11 +79,7 @@ export default {
         const timeout = setTimeout(
           async () => {
             player.set('stoppedByCommand', true);
-            try {
-              player.destroy();
-            } catch (destroyError) {
-              client.logger.warn(`Failed to destroy player on timeout: ${destroyError}`);
-            }
+            destroyPlayerSafely(player, client, `Player timeout in guild ${guild.name} (${guildId})`);
             activePlayers.delete(guildId);
 
             if (message?.editable) {

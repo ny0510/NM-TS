@@ -1,4 +1,4 @@
-import {ActivityType, Events, PresenceUpdateStatus} from 'discord.js';
+import {ActivityType, Events, GatewayIntentBits, PresenceUpdateStatus} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
@@ -37,6 +37,35 @@ const updatePresence = async (client: NMClient) => {
   });
 };
 
+const checkRequiredIntents = (client: NMClient): void => {
+  const requiredIntents = [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildVoiceStates,
+    GatewayIntentBits.GuildMembers,
+  ];
+
+  const clientIntents = client.options.intents;
+  const missingIntents: string[] = [];
+
+  for (const intent of requiredIntents) {
+    if (typeof clientIntents === 'number') {
+      if ((clientIntents & intent) !== intent) {
+        missingIntents.push(GatewayIntentBits[intent]);
+      }
+    }
+  }
+
+  if (missingIntents.length > 0) {
+    client.logger.warn('⚠️  Missing required Discord Intents! Please enable them at:');
+    client.logger.warn(`   https://discord.com/developers/applications/${client.user?.id}/bot`);
+    client.logger.warn(`   Missing intents: ${missingIntents.join(', ')}`);
+    client.logger.warn('   Required intents:');
+    client.logger.warn('   - SERVER MEMBERS INTENT (for voice state tracking)');
+    client.logger.warn('   - PRESENCE INTENT is NOT required');
+    client.logger.warn('   - MESSAGE CONTENT INTENT is NOT required');
+  }
+};
+
 export default {
   name: Events.ClientReady,
   once: true,
@@ -56,6 +85,8 @@ export default {
       if (client.config.IS_DEV_MODE) {
         client.logger.warn('🦔 🔪 Running in development mode!!');
       }
+
+      checkRequiredIntents(client);
 
       setInterval(() => void updatePresence(client), 10_000);
     } catch (error) {

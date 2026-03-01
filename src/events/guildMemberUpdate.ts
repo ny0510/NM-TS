@@ -2,6 +2,7 @@ import {Events, type GuildMember} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
+import {destroyPlayerSafely} from '@/utils/music/playerUtils';
 
 export default {
   name: Events.GuildMemberUpdate,
@@ -18,9 +19,8 @@ export default {
         const player = client.manager.players.get(newMember.guild.id);
 
         if (player) {
-          client.logger.info(`Player destroyed due to ${newMember.user.tag} was timed out in guild ${newMember.guild.name} (${newMember.guild.id})`);
           player.set('stoppedByCommand', true);
-          player.destroy();
+          destroyPlayerSafely(player, client, `${newMember.user.tag} was timed out in guild ${newMember.guild.name} (${newMember.guild.id})`);
         }
       }
     } catch (error) {

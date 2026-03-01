@@ -3,6 +3,7 @@ import {type AutocompleteInteraction, BaseInteraction, ChatInputCommandInteracti
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
 import {slashCommandMention} from '@/utils/discord';
+import {getClient} from '@/utils/discord/client';
 import {isInteractionProcessed} from '@/utils/discord/interactions';
 import {safeReply} from '@/utils/discord/interactions';
 import {checkPermissions} from '@/utils/discord/permissions';
@@ -13,7 +14,7 @@ import {handleQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 export default {
   name: Events.InteractionCreate,
   async execute(interaction: BaseInteraction): Promise<void> {
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
 
     // 버튼 인터랙션 처리
     if (interaction.isButton()) {
