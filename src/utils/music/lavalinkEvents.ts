@@ -2,11 +2,12 @@ import {EmbedBuilder, Message, codeBlock} from 'discord.js';
 import {ManagerEventTypes, type Track} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
+import {createErrorEmbed} from '@/utils/discord/embeds';
 import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
 import {createPlayerControls} from '@/utils/music/buttons/controlsButton';
 import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
-import {getEmbedMeta} from '@/utils/music/playerUtils';
+import {destroyPlayerSafely, getEmbedMeta} from '@/utils/music/playerUtils';
 
 const logger = new Logger('Lavalink');
 
@@ -35,11 +36,11 @@ export const registerLavalinkEvents = (client: NMClient) => {
           logger.warn(`Voice channel ${player.voiceChannelId} no longer exists or is not accessible, destroying player`);
           if (textChannel?.isSendable()) {
             await textChannel.send({
-              embeds: [new EmbedBuilder().setTitle('⚠️ 세션 복원 실패').setDescription('이전에 사용하던 음성 채널이 더 이상 존재하지 않아요.').setColor(client.config.EMBED_COLOR_ERROR)],
+              embeds: [createErrorEmbed(client, '⚠️ 세션 복원 실패', '이전에 사용하던 음성 채널이 더 이상 존재하지 않아요.')],
             });
           }
           player.set('stoppedByCommand', true);
-          player.destroy();
+          destroyPlayerSafely(player, client, `Session restore failed: voice channel no longer exists (${player.voiceChannelId})`);
           return;
         }
       } catch {
@@ -47,11 +48,11 @@ export const registerLavalinkEvents = (client: NMClient) => {
         logger.warn(`Failed to fetch voice channel ${player.voiceChannelId}, destroying player`);
         if (textChannel?.isSendable()) {
           await textChannel.send({
-            embeds: [new EmbedBuilder().setTitle('⚠️ 세션 복원 실패').setDescription('이전에 사용하던 음성 채널에 접근할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+            embeds: [createErrorEmbed(client, '⚠️ 세션 복원 실패', '이전에 사용하던 음성 채널에 접근할 수 없어요.')],
           });
         }
         player.set('stoppedByCommand', true);
-        player.destroy();
+        destroyPlayerSafely(player, client, `Session restore failed: cannot access voice channel (${player.voiceChannelId})`);
         return;
       }
     } else {
@@ -59,11 +60,11 @@ export const registerLavalinkEvents = (client: NMClient) => {
       logger.warn(`Player ${player.guildId} has no voice channel, destroying player`);
       if (textChannel?.isSendable()) {
         await textChannel.send({
-          embeds: [new EmbedBuilder().setTitle('⚠️ 세션 복원 실패').setDescription('음성 채널 정보가 없어 세션을 복원할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+          embeds: [createErrorEmbed(client, '⚠️ 세션 복원 실패', '음성 채널 정보가 없어 세션을 복원할 수 없어요.')],
         });
       }
       player.set('stoppedByCommand', true);
-      player.destroy();
+      destroyPlayerSafely(player, client, `Session restore failed: no voice channel info (${player.guildId})`);
       return;
     }
 
@@ -134,7 +135,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
 
     try {
       await channel.send({
-        embeds: [new EmbedBuilder().setTitle('음악 재생 중 오류가 발생했어요.').setDescription(codeBlock('js', errorMessage)).setColor(client.config.EMBED_COLOR_ERROR)],
+        embeds: [createErrorEmbed(client, '음악 재생 중 오류가 발생했어요.', codeBlock('js', errorMessage))],
       });
     } catch (sendError) {
       logger.error(`Failed to send track error message: ${sendError}`);
@@ -178,7 +179,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
       if (channel?.isSendable()) {
         try {
           await channel.send({
-            embeds: [new EmbedBuilder().setTitle('자동 재생할 곡을 찾지 못했어요.').setDescription('비슷한 곡을 찾을 수 없어 재생을 종료할게요.').setColor(client.config.EMBED_COLOR_ERROR)],
+            embeds: [createErrorEmbed(client, '자동 재생할 곡을 찾지 못했어요.', '비슷한 곡을 찾을 수 없어 재생을 종료할게요.')],
           });
         } catch (e) {
           logger.warn(`Failed to send autoplay failure message: ${e}`);
@@ -200,8 +201,7 @@ export const registerLavalinkEvents = (client: NMClient) => {
       try {
         const queueSize = await player.queue.size();
         if (!player.playing && queueSize === 0) {
-          player.destroy();
-          logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed after 30 seconds of inactivity`);
+          destroyPlayerSafely(player, client, `Player destroyed after 30 seconds of inactivity (${player.guildId})`);
 
           if (message?.editable) {
             await message.edit({embeds: [embed.setDescription('30초가 지나 자동으로 연결을 종료했어요.')]});
