@@ -1,4 +1,4 @@
-import {ChatInputCommandInteraction, type PermissionResolvable} from 'discord.js';
+import {type BaseInteraction, ChatInputCommandInteraction, type GuildMember, type PermissionResolvable, type VoiceBasedChannel} from 'discord.js';
 
 import type {Command} from '@/client/types';
 
@@ -7,24 +7,27 @@ export interface PermissionResult {
   missing: string[];
 }
 
-export const checkPermissions = async (interaction: ChatInputCommandInteraction, command: Command): Promise<PermissionResult> => {
-  if (!command.permissions) return {result: true, missing: []};
-
+export const checkBotPermissions = async (interaction: BaseInteraction, requiredPermissions: PermissionResolvable[], voiceChannel?: VoiceBasedChannel | null): Promise<PermissionResult> => {
   const member = await interaction.guild!.members.fetch(interaction.client.user!.id);
-  const required = command.permissions as PermissionResolvable[];
-  let missing = member.permissions.missing(required);
+  let missing = member.permissions.missing(requiredPermissions);
 
-  // 사용자가 음성 채널에 있는 경우, 해당 음성 채널에서 봇의 권한도 확인
-  if (interaction.member && 'voice' in interaction.member && interaction.member.voice?.channel) {
-    const voiceChannel = interaction.member.voice.channel;
+  if (voiceChannel) {
     const botVoicePerms = voiceChannel.permissionsFor(member);
 
     if (botVoicePerms) {
-      const voiceMissing = botVoicePerms.missing(required);
+      const voiceMissing = botVoicePerms.missing(requiredPermissions);
       missing = [...missing, ...voiceMissing];
     }
   }
 
   missing = [...new Set(missing)];
   return {result: missing.length === 0, missing};
+};
+
+export const checkPermissions = async (interaction: ChatInputCommandInteraction, command: Command): Promise<PermissionResult> => {
+  if (!command.permissions) return {result: true, missing: []};
+
+  const voiceChannel = interaction.member && 'voice' in interaction.member && interaction.member.voice?.channel ? interaction.member.voice.channel : null;
+
+  return await checkBotPermissions(interaction, command.permissions as PermissionResolvable[], voiceChannel);
 };

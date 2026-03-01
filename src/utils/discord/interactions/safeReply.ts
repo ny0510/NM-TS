@@ -2,9 +2,10 @@ import {ButtonInteraction, CommandInteraction, type InteractionReplyOptions, Mes
 
 import {checkAndMarkInteraction} from './interactionManager';
 import type {NMClient} from '@/client/Client';
+import {getClient} from '@/utils/discord/client';
 
 export async function safeReply(interaction: CommandInteraction | ButtonInteraction, content: string | InteractionReplyOptions, options?: InteractionReplyOptions): Promise<void> {
-  const client = interaction.client as NMClient;
+  const client = getClient(interaction);
 
   // 이미 처리된 인터랙션인지 확인 및 마킹
   if (checkAndMarkInteraction(interaction.id)) {
