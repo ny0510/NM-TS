@@ -2,6 +2,8 @@ import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBu
 import type {Player} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
+import {getClient} from '@/utils/discord/client';
+import {createErrorEmbed} from '@/utils/discord/embeds';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/utils/music';
 import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 
@@ -23,12 +25,12 @@ export function createPlayerControls(player: Player, trackUri: string): ActionRo
 }
 
 export async function handlePlayerControlsButtons(interaction: ButtonInteraction): Promise<void> {
-  const client = interaction.client as NMClient;
+  const client = getClient(interaction);
   const player = client.manager.players.get(interaction.guildId!);
 
   if (!player) {
     await interaction.reply({
-      embeds: [new EmbedBuilder().setTitle('현재 재생 중인 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+      embeds: [createErrorEmbed(client, '현재 재생 중인 음악이 없어요.')],
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -40,7 +42,7 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
   const currentTrack = await player.queue.getCurrent();
   if (!currentTrack) {
     await interaction.reply({
-      embeds: [new EmbedBuilder().setTitle('현재 재생 중인 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+      embeds: [createErrorEmbed(client, '현재 재생 중인 음악이 없어요.')],
       flags: MessageFlags.Ephemeral,
     });
     return;
@@ -50,7 +52,7 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
   const embedUrl = interaction.message.embeds[0]?.url;
   if (embedUrl && embedUrl !== currentTrack.uri) {
     await interaction.reply({
-      embeds: [new EmbedBuilder().setTitle('만료된 컨트롤러에요.').setDescription('현재 재생 중인 음악의 컨트롤러를 사용해 주세요.').setColor(client.config.EMBED_COLOR_ERROR)],
+      embeds: [createErrorEmbed(client, '만료된 컨트롤러에요.', '현재 재생 중인 음악의 컨트롤러를 사용해 주세요.')],
       flags: MessageFlags.Ephemeral,
     });
     return;
