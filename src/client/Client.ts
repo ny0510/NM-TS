@@ -17,7 +17,7 @@ export class NMClient extends Client {
 
   public constructor() {
     super({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMembers],
+      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates], // GatewayIntentBits.GuildMembers
       allowedMentions: {parse: [], repliedUser: false},
       presence: {
         activities: [{name: 'NM | 초기화 중..', type: ActivityType.Custom}],
