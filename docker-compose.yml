@@ -55,6 +55,8 @@ services:
     depends_on:
       lavalink:
         condition: service_healthy
+    volumes:
+      - ./magmastream:/app/magmastream
     logging:
       driver: 'json-file'
       options:
