@@ -1,8 +1,8 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
 import getColors from 'get-image-colors';
 
-import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
+import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 import {msToTime, truncateWithEllipsis} from '@/utils/formatting';
 import {createProgressBar, ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
@@ -11,7 +11,7 @@ export default {
   data: new SlashCommandBuilder().setName('now').setDescription('현재 재생중인 음악을 확인해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
     const player = client.manager.players.get(interaction.guildId!);
 
     if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인

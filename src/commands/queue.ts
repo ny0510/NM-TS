@@ -5,6 +5,8 @@ import type {Player} from 'magmastream';
 import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
 import {slashCommandMention} from '@/utils/discord';
+import {getClient} from '@/utils/discord/client';
+import {createErrorEmbed} from '@/utils/discord/embeds';
 import {safeReply} from '@/utils/discord/interactions';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
 import {ensurePlaying} from '@/utils/music';
@@ -57,7 +59,7 @@ export default {
     .addNumberOption(option => option.setName('page').setDescription('페이지를 선택해 주세요.').setMinValue(1)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
     const player = client.manager.players.get(interaction.guildId!);
 
     if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
@@ -72,14 +74,14 @@ export default {
 
     if (totalTracks === 0) {
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('대기열이 비어있어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+        embeds: [createErrorEmbed(client, '대기열이 비어있어요.')],
         flags: MessageFlags.Ephemeral,
       });
     }
 
     if (page < 1 || page > totalPages) {
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('유효하지 않은 페이지에요.').setDescription(`페이지는 1 이상 ${totalPages} 이하여야 해요.`).setColor(client.config.EMBED_COLOR_ERROR)],
+        embeds: [createErrorEmbed(client, '유효하지 않은 페이지에요.', `페이지는 1 이상 ${totalPages} 이하여야 해요.`)],
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -104,12 +106,7 @@ export default {
           // 인터랙션이 이미 응답되었는지 확인
           if (!i.replied && !i.deferred) {
             await i.reply({
-              embeds: [
-                new EmbedBuilder()
-                  .setTitle('다른 사용자의 인터렉션이에요.')
-                  .setDescription(`${await slashCommandMention(interaction, 'queue')} 명령어로 대기열을 확인할 수 있어요.`)
-                  .setColor(client.config.EMBED_COLOR_ERROR),
-              ],
+              embeds: [createErrorEmbed(client, '다른 사용자의 인터렉션이에요.', `${await slashCommandMention(interaction, 'queue')} 명령어로 대기열을 확인할 수 있어요.`)],
               flags: MessageFlags.Ephemeral,
             });
           }
@@ -168,7 +165,7 @@ export default {
         const currentPlayer = client.manager.players.get(interaction.guildId!);
         if (!currentPlayer) {
           await i.reply({
-            embeds: [new EmbedBuilder().setTitle('플레이어를 찾을 수 없어요.').setDescription('음악 재생이 중단되었거나 봇이 음성 채널에서 나갔어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+            embeds: [createErrorEmbed(client, '플레이어를 찾을 수 없어요.', '음악 재생이 중단되었거나 봇이 음성 채널에서 나갔어요.')],
             flags: MessageFlags.Ephemeral,
           });
           collector.stop();
@@ -184,7 +181,7 @@ export default {
         // 대기열이 비어있는 경우
         if (currentTotalTracks === 0) {
           await i.editReply({
-            embeds: [new EmbedBuilder().setTitle('대기열이 비어있어요.').setDescription('더 이상 재생할 음악이 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+            embeds: [createErrorEmbed(client, '대기열이 비어있어요.', '더 이상 재생할 음악이 없어요.')],
             components: [],
           });
           return;
@@ -234,7 +231,7 @@ export default {
         try {
           if (!i.replied && !i.deferred) {
             await i.reply({
-              embeds: [new EmbedBuilder().setTitle('오류가 발생했어요.').setDescription('잠시 후 다시 시도해 주세요.').setColor(client.config.EMBED_COLOR_ERROR)],
+              embeds: [createErrorEmbed(client, '오류가 발생했어요.', '잠시 후 다시 시도해 주세요.')],
               flags: MessageFlags.Ephemeral,
             });
           }

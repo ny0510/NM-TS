@@ -1,14 +1,14 @@
 import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 import {DateTime} from 'luxon';
 
-import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
+import {getClient} from '@/utils/discord/client';
 
 export default {
   data: new SlashCommandBuilder().setName('ping').setDescription('봇의 지연시간을 확인해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
 
     const start = DateTime.now();
     await interaction.deferReply();

@@ -1,9 +1,9 @@
 import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 
 import type {Command} from '@/client/types';
-import type {NMClient} from '@/client/Client';
-import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
+import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
+import {ensurePlayerReady} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder()
@@ -12,12 +12,10 @@ export default {
     .addNumberOption(option => option.setName('level').setDescription('볼륨').setMinValue(0).setMaxValue(100).setRequired(true)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
-    const client = interaction.client as NMClient;
-    const player = client.manager.players.get(interaction.guildId!);
+    if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 
-    if (!(await ensureVoiceChannel(interaction))) return; // 음성 채널에 들어가 있는지 확인
-    if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
-    if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
+    const client = getClient(interaction);
+    const player = client.manager.players.get(interaction.guildId!);
     if (!player) return;
 
     const level = interaction.options.getNumber('level', true);

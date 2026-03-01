@@ -1,15 +1,15 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, SlashCommandBuilder, time, userMention} from 'discord.js';
 
 import {version} from '@/../package.json';
-import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
+import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 
 export default {
   data: new SlashCommandBuilder().setName('info').setDescription('봇의 상태를 확인해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
 
     // 상호작용이 이미 응답되었는지 확인
     if (interaction.replied || interaction.deferred) {

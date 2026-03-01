@@ -1,9 +1,10 @@
 import {ActionRowBuilder, ChatInputCommandInteraction, ComponentType, EmbedBuilder, GuildMember, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction, channelMention, codeBlock, italic} from 'discord.js';
 import {LoadTypes, SearchPlatform, StateTypes, type Track} from 'magmastream';
 
-import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
 import {slashCommandMention} from '@/utils/discord';
+import {getClient} from '@/utils/discord/client';
+import {createErrorEmbed} from '@/utils/discord/embeds';
 import {safeReply} from '@/utils/discord/interactions';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
 import {createPlayer, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
@@ -17,7 +18,7 @@ export default {
   permissions: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
 
     await interaction.deferReply();
 
@@ -33,7 +34,7 @@ export default {
 
     if (res.loadType === LoadTypes.Empty || res.loadType === LoadTypes.Error || !('tracks' in res))
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('음악을 찾을 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+        embeds: [createErrorEmbed(client, '음악을 찾을 수 없어요.')],
         flags: MessageFlags.Ephemeral,
       });
 
@@ -53,7 +54,7 @@ export default {
 
     if (optinos.length === 0)
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('음악을 찾을 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)],
+        embeds: [createErrorEmbed(client, '음악을 찾을 수 없어요.')],
         flags: MessageFlags.Ephemeral,
       });
 
@@ -71,19 +72,14 @@ export default {
     const filter = async (i: StringSelectMenuInteraction) => {
       if (i.user.id !== interaction.user.id) {
         i.reply({
-          embeds: [
-            new EmbedBuilder()
-              .setTitle('다른 사용자의 인터렉션이에요.')
-              .setDescription(`${await slashCommandMention(interaction, 'search')} 명령어로 검색할 수 있어요.`)
-              .setColor(client.config.EMBED_COLOR_ERROR),
-          ],
+          embeds: [createErrorEmbed(client, '다른 사용자의 인터렉션이에요.', `${await slashCommandMention(interaction, 'search')} 명령어로 검색할 수 있어요.`)],
           flags: MessageFlags.Ephemeral,
         });
         return false;
       }
 
       if (!i.values || i.values.length === 0) {
-        i.reply({embeds: [new EmbedBuilder().setTitle('재생할 음악을 선택해 주세요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
+        i.reply({embeds: [createErrorEmbed(client, '재생할 음악을 선택해 주세요.')], flags: MessageFlags.Ephemeral});
         return false;
       }
 

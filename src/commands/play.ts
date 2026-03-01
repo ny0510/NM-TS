@@ -1,8 +1,8 @@
 import {type AutocompleteInteraction, ChatInputCommandInteraction, DiscordAPIError, MessageFlags, PermissionsBitField, SlashCommandBuilder} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
 import {getGoogleSuggestions} from '@/utils/autocomplete/googleSuggest';
+import {getClient} from '@/utils/discord/client';
 import {ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
 import {addTrackToQueue} from '@/utils/music/playerUtils';
 
@@ -19,7 +19,7 @@ export default {
   permissions: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
 
     if (!(await ensureVoiceChannel(interaction))) return; // 음성 채널에 들어가 있는지 확인
     if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
@@ -46,7 +46,7 @@ export default {
   async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
     const focusedOption = interaction.options.getFocused(true);
 
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
 
     const respondSafely = async (choices: {name: string; value: string}[]) => {
       try {

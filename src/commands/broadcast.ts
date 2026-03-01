@@ -1,8 +1,8 @@
-import {EmbedBuilder, MessageFlags, SlashCommandBuilder, codeBlock, Team, User} from 'discord.js';
+import {EmbedBuilder, MessageFlags, SlashCommandBuilder, Team, User, codeBlock} from 'discord.js';
 import type {ChatInputCommandInteraction} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
+import {getClient} from '@/utils/discord/client';
 
 export default {
   data: new SlashCommandBuilder()
@@ -11,7 +11,7 @@ export default {
     .addStringOption(option => option.setName('message').setDescription('보낼 공지사항 내용').setRequired(true))
     .addBooleanOption(option => option.setName('preview').setDescription('전송 전 임베드 미리보기').setRequired(false)),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    const client = interaction.client as NMClient;
+    const client = getClient(interaction);
 
     try {
       if (client.application && typeof client.application.fetch === 'function') {
@@ -27,7 +27,6 @@ export default {
     } else if (owner instanceof Team) {
       isOwner = owner.members.some(m => m.user.id === interaction.user.id);
     }
-
 
     if (!isOwner) return;
 

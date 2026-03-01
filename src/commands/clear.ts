@@ -1,19 +1,18 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
 import type {Command} from '@/client/types';
+import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
-import {ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
+import {ensurePlayerReady} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder().setName('clear').setDescription('대기열을 비워요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
-    const client = interaction.client as NMClient;
-    const player = client.manager.players.get(interaction.guildId!);
+    if (!(await ensurePlayerReady(interaction))) return;
 
-    if (!(await ensureVoiceChannel(interaction))) return; // 음성 채널에 들어가 있는지 확인
-    if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
+    const client = getClient(interaction);
+    const player = client.manager.players.get(interaction.guildId!);
     if (!player) return;
 
     await player.queue.clear();
