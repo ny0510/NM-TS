@@ -1,6 +1,6 @@
 services:
   lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:4.1.2-alpine
+    image: ghcr.io/lavalink-devs/lavalink:latest-alpine
     container_name: lavalink
     restart: unless-stopped
     environment:
@@ -56,7 +56,7 @@ services:
       lavalink:
         condition: service_healthy
     volumes:
-      - ./magmastream:/app/magmastream
+      - ./shoukaku:/app/shoukaku
     logging:
       driver: 'json-file'
       options:

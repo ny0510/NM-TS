@@ -21,7 +21,7 @@ COPY --from=deps --chown=bun:bun /app/package.json ./package.json
 COPY --chown=bun:bun . .
 
 # Create necessary directories
-RUN mkdir -p lavalink/plugins magmastream
+RUN mkdir -p lavalink/plugins shoukaku
 
 ENV NODE_ENV=production
 
