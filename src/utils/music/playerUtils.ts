@@ -1,8 +1,9 @@
 import {ButtonInteraction, ChatInputCommandInteraction, EmbedBuilder, GuildMember, type HexColorString, MessageFlags, PermissionFlagsBits, channelMention, codeBlock, inlineCode} from 'discord.js';
 import getColors from 'get-image-colors';
-import {LoadTypes, type Player, StateTypes, type Track} from 'magmastream';
+import {LoadType, type Track} from 'shoukaku';
 
 import type {NMClient} from '@/client/Client';
+import type {Queue, QueueTrack} from '@/structures/Queue';
 import {config} from '@/utils/config';
 import {formatMissingPermissions, slashCommandMention} from '@/utils/discord';
 import {getClient} from '@/utils/discord/client';
@@ -29,11 +30,11 @@ export const ensureVoiceChannel = async (interaction: ChatInputCommandInteractio
 export const ensureSameVoiceChannel = async (interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<boolean> => {
   const client = getClient(interaction);
   const member = interaction.member as GuildMember;
-  const player = client.manager.players.get(interaction.guildId!);
+  const queue = client.queues.get(interaction.guildId!);
 
-  if (player && member.voice.channel?.id !== player.voiceChannelId) {
+  if (queue && member.voice.channel?.id !== queue.voiceChannelId) {
     await safeReply(interaction, {
-      embeds: [createErrorEmbed(client, '해당 명령어를 실행하기 위해서는 같은 음성 채널에 있어야 해요.', `${channelMention(player.voiceChannelId || '')} 음성 채널에 들어가 주세요.`)],
+      embeds: [createErrorEmbed(client, '해당 명령어를 실행하기 위해서는 같은 음성 채널에 있어야 해요.', `${channelMention(queue.voiceChannelId || '')} 음성 채널에 들어가 주세요.`)],
       flags: MessageFlags.Ephemeral,
     });
 
@@ -45,10 +46,10 @@ export const ensureSameVoiceChannel = async (interaction: ChatInputCommandIntera
 
 export const ensurePlaying = async (interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<boolean> => {
   const client = getClient(interaction);
-  const player = client.manager.players.get(interaction.guildId!);
-  const currentTrack = player ? await player.queue.getCurrent() : null;
+  const queue = client.queues.get(interaction.guildId!);
+  const currentTrack = queue ? queue.getCurrent() : null;
 
-  if (!player || (!player.playing && !player.paused) || !currentTrack) {
+  if (!queue || (!queue.playing && !queue.paused) || !currentTrack) {
     await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '현재 재생중인 음악이 없어요.', `${await slashCommandMention(interaction, 'play')} 명령어로 음악을 재생할 수 있어요.`)],
       flags: MessageFlags.Ephemeral,
@@ -66,13 +67,13 @@ export const ensurePlayerReady = async (interaction: ChatInputCommandInteraction
   if (options?.requirePlaying && !(await ensurePlaying(interaction))) return false;
 
   const client = getClient(interaction);
-  const player = client.manager.players.get(interaction.guildId!);
-  if (!player) return false;
+  const queue = client.queues.get(interaction.guildId!);
+  if (!queue) return false;
 
   return true;
 };
 
-export const createPlayer = async (interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<Player | undefined> => {
+export const createQueue = async (interaction: ChatInputCommandInteraction | ButtonInteraction): Promise<Queue | undefined> => {
   const client = getClient(interaction);
   const member = interaction.member as GuildMember;
   const channel = client.channels.cache.get(interaction.channelId);
@@ -108,18 +109,18 @@ export const createPlayer = async (interaction: ChatInputCommandInteraction | Bu
   }
 
   try {
-    const player = client.manager.create({
+    const queue = await client.services.lavalinkManager.createQueue({
       guildId: interaction.guildId!,
-      voiceChannelId: member.voice.channel?.id,
+      voiceChannelId: member.voice.channel!.id,
       textChannelId: interaction.channelId,
+      shardId: interaction.guild?.shardId ?? 0,
       volume: client.config.DEFAULT_VOLUME,
-      selfDeafen: true,
-      selfMute: true,
+      deaf: true,
+      mute: false,
     });
-    if (player.state !== StateTypes.Connected) player.connect();
-    return player;
+    return queue;
   } catch (e) {
-    client.logger.error(`Failed to create player: ${e}`);
+    client.logger.error(`Failed to create queue: ${e}`);
     let errorMessage = '플레이어를 생성하는 중 오류가 발생했어요.';
     let errorDescription = '';
 
@@ -142,8 +143,8 @@ export const createPlayer = async (interaction: ChatInputCommandInteraction | Bu
 
 export const ensurePaused = async (interaction: ChatInputCommandInteraction): Promise<boolean> => {
   const client = getClient(interaction);
-  const player = client.manager.players.get(interaction.guildId!);
-  if (!player || player.paused) {
+  const queue = client.queues.get(interaction.guildId!);
+  if (!queue || queue.paused) {
     await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '음악이 이미 일시정지 상태에요.', `${await slashCommandMention(interaction, 'resume')} 명령어로 다시 재생할 수 있어요.`)],
       flags: MessageFlags.Ephemeral,
@@ -155,8 +156,8 @@ export const ensurePaused = async (interaction: ChatInputCommandInteraction): Pr
 
 export const ensureResumed = async (interaction: ChatInputCommandInteraction): Promise<boolean> => {
   const client = getClient(interaction);
-  const player = client.manager.players.get(interaction.guildId!);
-  if (!player || !player.paused) {
+  const queue = client.queues.get(interaction.guildId!);
+  if (!queue || !queue.paused) {
     await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '음악이 이미 재생중이에요.', `${await slashCommandMention(interaction, 'pause')} 명령어로 일시 정지할 수 있어요.`)],
       flags: MessageFlags.Ephemeral,
@@ -166,51 +167,51 @@ export const ensureResumed = async (interaction: ChatInputCommandInteraction): P
   return true;
 };
 
-async function getQueueInfo(player: Player) {
-  const queueSize = await player.queue.size();
-  const queueDuration = await player.queue.duration();
-  const currentTrack = await player.queue.getCurrent();
-  const actualQueueDuration = currentTrack ? queueDuration - (currentTrack.duration || 0) : queueDuration;
+function getQueueInfo(queue: Queue) {
+  const queueSize = queue.size();
+  const queueDuration = queue.duration();
+  const currentTrack = queue.getCurrent();
+  const actualQueueDuration = currentTrack ? queueDuration - (currentTrack.info.length ?? 0) : queueDuration;
   return {queueSize, actualQueueDuration};
 }
 
-export const getEmbedMeta = async (trackOrTracks: Track | Track[], isPlaylist: boolean, player: Player, action?: 'play' | 'add') => {
+export const getEmbedMeta = async (trackOrTracks: QueueTrack | QueueTrack[], isPlaylist: boolean, queue: Queue, action?: 'play' | 'add') => {
   if (isPlaylist) {
-    const tracks = trackOrTracks as Track[];
+    const tracks = trackOrTracks as QueueTrack[];
     const firstTrack = tracks[0];
-    const colors = firstTrack?.artworkUrl ? await getColors(firstTrack.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
-    const playlistDuration = tracks.reduce((acc, track) => acc + (track.duration || 0), 0);
-    const {queueSize, actualQueueDuration} = await getQueueInfo(player);
+    const colors = firstTrack?.info.artworkUrl ? await getColors(firstTrack.info.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
+    const playlistDuration = tracks.reduce((acc, track) => acc + (track.info.length ?? 0), 0);
+    const {queueSize, actualQueueDuration} = getQueueInfo(queue);
     const footerText = `추가된 음악 ${tracks.length}곡 (${msToTime(playlistDuration)}) | 대기열에 ${queueSize}곡 (${msToTime(actualQueueDuration)})`;
     return {colors, footerText};
   } else {
-    const track = trackOrTracks as Track;
-    const colors = track.artworkUrl ? await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
+    const track = trackOrTracks as QueueTrack;
+    const colors = track.info.artworkUrl ? await getColors(track.info.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
     const actionText = action === 'add' ? '추가된' : '재생중인';
-    const {queueSize, actualQueueDuration} = await getQueueInfo(player);
-    const footerText = `${actionText} 음악 (${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)}) | 대기열에 ${queueSize}곡 (${msToTime(actualQueueDuration)})`;
+    const {queueSize, actualQueueDuration} = getQueueInfo(queue);
+    const footerText = `${actionText} 음악 (${track.info.isStream ? '실시간 스트리밍' : msToTime(track.info.length)}) | 대기열에 ${queueSize}곡 (${msToTime(actualQueueDuration)})`;
     return {colors, footerText};
   }
 };
 
-function isCoverTrack(track: Track): boolean {
-  return coverPattern.test(track.title) || coverPattern.test(track.author);
+function isCoverTrack(track: QueueTrack): boolean {
+  return coverPattern.test(track.info.title) || coverPattern.test(track.info.author);
 }
 
-function isShortsTrack(track: Track): boolean {
-  const isDurationShorts = track.duration !== undefined && track.duration > 0 && track.duration <= 60000;
-  const hasShortsTags = /#shorts/i.test(track.title);
+function isShortsTrack(track: QueueTrack): boolean {
+  const isDurationShorts = track.info.length !== undefined && track.info.length > 0 && track.info.length <= 60000;
+  const hasShortsTags = /#shorts/i.test(track.info.title);
 
   return isDurationShorts || hasShortsTags;
 }
 
 interface FilterResult {
-  tracks: Track[];
+  tracks: QueueTrack[];
   filteredCount: number;
   errorMessage: string;
 }
 
-function filterTracksWithOptions(tracks: Track[], excludeCover: boolean, excludeShorts: boolean, contextLabel: string = '검색된'): FilterResult {
+function filterTracksWithOptions(tracks: QueueTrack[], excludeCover: boolean, excludeShorts: boolean, contextLabel: string = '검색된'): FilterResult {
   const originalTracksCount = tracks.length;
   let filteredTracks = tracks;
 
@@ -260,19 +261,19 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
   let {query} = options;
   const {addFirst = false, index = null, ignorePlaylist = false, excludeCover = false, excludeShorts = false} = options;
 
-  let player = client.manager.players.get(interaction.guildId!);
+  let queue = client.queues.get(interaction.guildId!);
 
   // 옵션 상호작용 검증 및 플레이어 상태 확인
   if (index !== null) {
-    const queueSize = player ? await player.queue.size() : 0;
-    if (!player || (!player.playing && !player.paused && queueSize === 0)) {
+    const queueSize = queue ? queue.size() : 0;
+    if (!queue || (!queue.playing && !queue.paused && queueSize === 0)) {
       await safeReply(interaction, {
         embeds: [createErrorEmbed(client, '아무것도 재생중이지 않을 때는 인덱스를 설정할 수 없어요.')],
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
-    if (player && index > queueSize) {
+    if (queue && index > queueSize) {
       await safeReply(interaction, {
         embeds: [createErrorEmbed(client, '대기열보다 더 큰 인덱스를 설정할 수 없어요.', `대기열에 ${queueSize}곡이 있어요.`)],
         flags: MessageFlags.Ephemeral,
@@ -281,8 +282,8 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
     }
   }
 
-  const currentTrack = player ? await player.queue.getCurrent() : null;
-  if (ignorePlaylist && currentTrack?.isStream) {
+  const currentTrack = queue ? queue.getCurrent() : null;
+  if (ignorePlaylist && currentTrack?.info.isStream) {
     await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '스트리밍 음악인 경우에는 재생목록 무시 옵션을 사용할 수 없어요.')],
       flags: MessageFlags.Ephemeral,
@@ -307,9 +308,9 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
     }
   }
 
-  const res = await client.manager.search(query, interaction.user);
+  const res = await client.services.lavalinkManager.search(query, interaction.user);
 
-  if (res.loadType === LoadTypes.Empty || res.loadType === LoadTypes.Error) {
+  if (!res || res.loadType === LoadType.EMPTY || res.loadType === LoadType.ERROR) {
     await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '음악을 찾을 수 없어요.')],
       flags: MessageFlags.Ephemeral,
@@ -317,11 +318,24 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
     return;
   }
 
-  if ((excludeCover || excludeShorts) && 'tracks' in res && res.tracks.length > 0) {
-    const filterResult = filterTracksWithOptions(res.tracks, excludeCover, excludeShorts, '검색된');
-    res.tracks = filterResult.tracks;
+  let extractedTracks: QueueTrack[];
+  switch (res.loadType) {
+    case LoadType.TRACK:
+      extractedTracks = [res.data as QueueTrack];
+      break;
+    case LoadType.SEARCH:
+      extractedTracks = res.data as QueueTrack[];
+      break;
+    case LoadType.PLAYLIST:
+      extractedTracks = res.data.tracks as QueueTrack[];
+      break;
+  }
 
-    if (res.tracks.length === 0) {
+  if ((excludeCover || excludeShorts) && extractedTracks.length > 0 && res.loadType !== LoadType.PLAYLIST) {
+    const filterResult = filterTracksWithOptions(extractedTracks, excludeCover, excludeShorts, '검색된');
+    extractedTracks = filterResult.tracks;
+
+    if (extractedTracks.length === 0) {
       await safeReply(interaction, {
         embeds: [createErrorEmbed(client, '필터링된 결과가 없어요.', filterResult.errorMessage)],
         flags: MessageFlags.Ephemeral,
@@ -330,22 +344,20 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
     }
   }
 
-  // 플레이어 생성 (없는 경우)
-  player = player ?? (await createPlayer(interaction));
-  if (!player) return;
+  queue = queue ?? (await createQueue(interaction));
+  if (!queue) return;
 
   switch (res.loadType) {
-    case LoadTypes.Track:
-    case LoadTypes.Search: {
-      const track = res.tracks[0] as Track;
-      if (addFirst) await player.queue.add(track, 0);
-      else if (index !== null) await player.queue.add(track, index);
-      else await player.queue.add(track);
+    case LoadType.TRACK:
+    case LoadType.SEARCH: {
+      const track = extractedTracks[0] as QueueTrack;
+      if (addFirst) queue.add(track, 0);
+      else if (index !== null) queue.add(track, index);
+      else queue.add(track);
 
-      const trackQueueSize = await player.queue.size();
-      if (!player.playing && !player.paused && !trackQueueSize) await player.play();
+      if (!queue.playing && !queue.paused) await queue.play();
 
-      const trackMeta = await getEmbedMeta(track, false, player, 'add');
+      const trackMeta = await getEmbedMeta(track, false, queue, 'add');
       const [colors, footerText] = [trackMeta.colors, trackMeta.footerText];
 
       const queuePosition = getQueuePositionText(addFirst, index);
@@ -359,11 +371,11 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
       }
 
       const embed = new EmbedBuilder()
-        .setTitle(truncateWithEllipsis(`💿 ${track.title}`, 50))
+        .setTitle(truncateWithEllipsis(`💿 ${track.info.title}`, 50))
         .setDescription(trackTitle)
-        .setThumbnail(track.artworkUrl ?? null)
+        .setThumbnail(track.info.artworkUrl ?? null)
         .setFooter({text: footerText})
-        .setURL(track.uri)
+        .setURL(track.info.uri ?? null)
         .setColor((colors[0]?.hex?.() ?? client.config.EMBED_COLOR_NORMAL) as HexColorString);
 
       await safeReply(interaction, {
@@ -372,14 +384,14 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
       });
       break;
     }
-    case LoadTypes.Playlist: {
-      if (res.playlist && res.playlist.tracks) res.tracks = res.playlist.tracks;
+    case LoadType.PLAYLIST: {
+      let playlistTracks = extractedTracks;
 
-      if ((excludeCover || excludeShorts) && res.tracks.length > 0) {
-        const filterResult = filterTracksWithOptions(res.tracks, excludeCover, excludeShorts, '재생목록의');
-        res.tracks = filterResult.tracks;
+      if ((excludeCover || excludeShorts) && playlistTracks.length > 0) {
+        const filterResult = filterTracksWithOptions(playlistTracks, excludeCover, excludeShorts, '재생목록의');
+        playlistTracks = filterResult.tracks;
 
-        if (res.tracks.length === 0) {
+        if (playlistTracks.length === 0) {
           await safeReply(interaction, {
             embeds: [createErrorEmbed(client, '필터링된 결과가 없어요.', filterResult.errorMessage)],
             flags: MessageFlags.Ephemeral,
@@ -388,36 +400,39 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
         }
       }
 
-      if (addFirst) await player.queue.add(res.tracks, 0);
-      else if (index !== null) await player.queue.add(res.tracks, index);
-      else await player.queue.add(res.tracks);
+      if (addFirst) queue.add(playlistTracks, 0);
+      else if (index !== null) queue.add(playlistTracks, index);
+      else queue.add(playlistTracks);
 
-      const playlistQueueSize = await player.queue.size();
-      if (!player.playing && !player.paused && playlistQueueSize) await player.play();
+      const playlistQueueSize = queue.size();
+      if (!queue.playing && !queue.paused && playlistQueueSize) await queue.play();
 
-      const playlistMeta = await getEmbedMeta(res.tracks, true, player);
+      const playlistMeta = await getEmbedMeta(playlistTracks, true, queue);
       const [playlistColors, playlistFooterText] = [playlistMeta.colors, playlistMeta.footerText];
 
-      const queuePosition = getQueuePositionText(addFirst, index);
-      let playlistTitle = `재생목록에 포함된 음악 ${res.tracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+      const playlistInfo = res.data.info;
+      const originalPlaylistCount = res.data.tracks.length;
 
-      const originalPlaylistCount = res.playlist?.tracks.length || 0;
-      const isFiltered = res.tracks.length !== originalPlaylistCount;
+      const queuePosition = getQueuePositionText(addFirst, index);
+      let playlistTitle = `재생목록에 포함된 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+
+      const isFiltered = playlistTracks.length !== originalPlaylistCount;
 
       if (isFiltered) {
         if (excludeCover && excludeShorts) {
-          playlistTitle = `재생목록에서 커버 곡과 쇼츠를 제외한 음악 ${res.tracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+          playlistTitle = `재생목록에서 커버 곡과 쇼츠를 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
         } else if (excludeCover) {
-          playlistTitle = `재생목록에서 커버 곡을 제외한 음악 ${res.tracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+          playlistTitle = `재생목록에서 커버 곡을 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
         } else if (excludeShorts) {
-          playlistTitle = `재생목록에서 쇼츠를 제외한 음악 ${res.tracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+          playlistTitle = `재생목록에서 쇼츠를 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
         }
       }
 
+      const firstPlaylistTrack = res.data.tracks[0];
       const embed = new EmbedBuilder()
-        .setTitle(truncateWithEllipsis(`📜 ${res.playlist.name}`, 50))
+        .setTitle(truncateWithEllipsis(`📜 ${playlistInfo.name}`, 50))
         .setDescription(playlistTitle)
-        .setThumbnail(res.playlist?.tracks[0]?.artworkUrl ?? null)
+        .setThumbnail(firstPlaylistTrack?.info.artworkUrl ?? null)
         .setURL(query)
         .setFooter({text: `최대 100곡까지 한번에 추가할 수 있어요.\n${playlistFooterText}`})
         .setColor((playlistColors[0]?.hex?.() ?? client.config.EMBED_COLOR_NORMAL) as HexColorString);
@@ -431,28 +446,28 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
   }
 };
 
-export const destroyPlayerSafely = (player: Player, client: NMClient, reason?: string): void => {
+export const destroyQueueSafely = async (client: NMClient, guildId: string, reason?: string): Promise<void> => {
   try {
-    player.destroy();
+    await client.services.lavalinkManager.destroyQueue(guildId);
     if (reason) {
-      client.logger.info(`Player destroyed: ${reason}`);
+      client.logger.info(`Queue destroyed: ${reason}`);
     }
   } catch (error) {
-    client.logger.error(`Failed to destroy player: ${error}`);
+    client.logger.error(`Failed to destroy queue: ${error}`);
   }
 };
 
-export const createProgressBar = async (
-  player: Player,
+export const createProgressBar = (
+  queue: Queue,
   options?: {
     barLength?: number;
     useEmoji?: boolean;
   },
-): Promise<string> => {
-  const track = await player.queue.getCurrent();
-  if (!track || track.isStream) return '';
-  const total = track.duration;
-  const current = player.position;
+): string => {
+  const track = queue.getCurrent();
+  if (!track || track.info.isStream) return '';
+  const total = track.info.length;
+  const current = queue.position;
   const barLength = options?.barLength ?? 10;
   const useEmoji = options?.useEmoji ?? true;
 
