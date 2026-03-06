@@ -4,7 +4,7 @@ import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
 import {truncateWithEllipsis} from '@/utils';
 
-const updatePresence = async (client: NMClient) => {
+const updatePresence = (client: NMClient) => {
   const stats = client.getStats();
 
   let activityName = '';
@@ -12,12 +12,12 @@ const updatePresence = async (client: NMClient) => {
 
   if (stats.activePlayers) {
     // 재생 중인 플레이어가 있으면 랜덤으로 하나 선택
-    const players = Array.from(client.manager.players.values());
-    const randomPlayer = players[Math.floor(Math.random() * players.length)];
-    const currentTrack = randomPlayer ? await randomPlayer.queue.getCurrent() : null;
+    const queues = Array.from(client.queues.values());
+    const randomQueue = queues[Math.floor(Math.random() * queues.length)];
+    const currentTrack = randomQueue ? randomQueue.getCurrent() : null;
 
     if (currentTrack) {
-      activityName = truncateWithEllipsis(currentTrack.title, 50);
+      activityName = truncateWithEllipsis(currentTrack.info.title, 50);
       activityType = ActivityType.Listening;
     } else {
       activityName = `NM | ${stats.guilds}개의 서버에서 활동 중!`;
@@ -38,11 +38,7 @@ const updatePresence = async (client: NMClient) => {
 };
 
 const checkRequiredIntents = (client: NMClient): void => {
-  const requiredIntents = [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates,
-    GatewayIntentBits.GuildMembers,
-  ];
+  const requiredIntents = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates, GatewayIntentBits.GuildMembers];
 
   const clientIntents = client.options.intents;
   const missingIntents: string[] = [];
@@ -71,7 +67,6 @@ export default {
   once: true,
   async execute(client: NMClient): Promise<void> {
     try {
-      client.services.lavalinkManager.initialize(client.user!.id);
       client.services.lavalinkManager.registerEvents(client);
 
       updatePresence(client);

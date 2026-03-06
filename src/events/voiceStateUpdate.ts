@@ -1,9 +1,9 @@
 import {ActivityType, EmbedBuilder, Events, GuildMember, type MessageCreateOptions, MessagePayload, PresenceUpdateStatus, TextChannel, VoiceState} from 'discord.js';
-import type {Player} from 'magmastream';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
-import {destroyPlayerSafely} from '@/utils/music/playerUtils';
+import type {Queue} from '@/structures/Queue';
+import {destroyQueueSafely} from '@/utils/music/playerUtils';
 
 const activePlayers = new Map<string, NodeJS.Timeout>();
 
@@ -31,16 +31,16 @@ export default {
 
     if (isBotStateChange) {
       if (oldState.channelId && !newState.channelId) {
-        const player = client.manager.players.get(guildId);
-        if (player) {
+        const queue = client.queues.get(guildId);
+        if (queue) {
           client.logger.info(`Bot was kicked from voice channel in guild ${guild.name} (${guildId})`);
-          const textChannelId = player.textChannelId;
+          const textChannelId = queue.textChannelId;
 
           const botMember = guild.members.cache.get(client.user!.id);
           const isTimedOut = botMember?.communicationDisabledUntil !== null && botMember?.communicationDisabledUntil !== undefined && botMember.communicationDisabledUntil > new Date();
 
-          player.set('stoppedByCommand', true);
-          destroyPlayerSafely(player, client, `Bot was kicked from voice channel in guild ${guild.name} (${guildId})`);
+          queue.set('stoppedByCommand', true);
+          await destroyQueueSafely(client, guildId, `Bot was kicked from voice channel in guild ${guild.name} (${guildId})`);
           activePlayers.delete(guildId);
 
           if (!isTimedOut) {
@@ -53,33 +53,33 @@ export default {
     }
 
     // 여기서부터는 다른 멤버의 상태 변경 처리
-    const player = client.manager.players.get(guildId);
-    if (!player) return;
+    const queue = client.queues.get(guildId);
+    if (!queue) return;
 
     // 봇이 현재 연결된 음성 채널과 플레이어의 voiceChannelId가 일치하는지 확인
     const botVoiceChannel = guild.members.me?.voice?.channel;
-    const playerVoiceChannelId = player.voiceChannelId;
+    const queueVoiceChannelId = queue.voiceChannelId;
 
     // 플레이어가 설정된 음성 채널과 관련된 상태 변화가 아니면 무시
     const affectedChannelId = newState.channelId || oldState.channelId;
-    if (affectedChannelId !== playerVoiceChannelId) {
+    if (affectedChannelId !== queueVoiceChannelId) {
       return;
     }
 
     const getNonBotMembers = (voiceChannel: VoiceState['channel']) => voiceChannel?.members.filter((member: GuildMember) => !member.user.bot);
 
-    const handleEmptyChannel = async (guildId: string, guild: VoiceState['guild'], player: Player) => {
-      if (!player.paused) player.pause(true);
-      const endTime = Math.floor((Date.now() + 10 * 60 * 1000) / 1000); // 10분 후 Timestamp
+    const handleEmptyChannel = async (guildId: string, guild: VoiceState['guild'], queue: Queue) => {
+      if (!queue.paused) await queue.pause(true);
+      const endTime = Math.floor((Date.now() + 10 * 60 * 1000) / 1000);
       const embed = new EmbedBuilder().setTitle('아무도 없어서 음악을 일시정지했어요.').setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`).setColor(client.config.EMBED_COLOR_NORMAL);
 
-      const message = await sendMessage(guild, player.textChannelId, {embeds: [embed]});
+      const message = await sendMessage(guild, queue.textChannelId, {embeds: [embed]});
 
       if (!activePlayers.has(guildId)) {
         const timeout = setTimeout(
           async () => {
-            player.set('stoppedByCommand', true);
-            destroyPlayerSafely(player, client, `Player timeout in guild ${guild.name} (${guildId})`);
+            queue.set('stoppedByCommand', true);
+            await destroyQueueSafely(client, guildId, `Player timeout in guild ${guild.name} (${guildId})`);
             activePlayers.delete(guildId);
 
             if (message?.editable) {
@@ -97,10 +97,10 @@ export default {
       }
     };
 
-    const handleMemberJoin = async (guildId: string, guild: VoiceState['guild'], player: Player) => {
-      if (player.paused) {
-        await sendMessage(guild, player.textChannelId, {embeds: [new EmbedBuilder().setTitle('다시 음악을 재생할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
-        player.pause(false);
+    const handleMemberJoin = async (guildId: string, guild: VoiceState['guild'], queue: Queue) => {
+      if (queue.paused) {
+        await sendMessage(guild, queue.textChannelId, {embeds: [new EmbedBuilder().setTitle('다시 음악을 재생할게요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
+        await queue.pause(false);
       }
 
       if (activePlayers.has(guildId)) {
@@ -110,7 +110,7 @@ export default {
     };
 
     // 봇이 플레이어에 설정된 음성 채널에 없으면 무시
-    if (!botVoiceChannel || botVoiceChannel.id !== playerVoiceChannelId) {
+    if (!botVoiceChannel || botVoiceChannel.id !== queueVoiceChannelId) {
       return;
     }
 
@@ -118,9 +118,9 @@ export default {
     const members = getNonBotMembers(botVoiceChannel);
 
     if (members?.size === 0) {
-      handleEmptyChannel(guildId, guild, player);
+      handleEmptyChannel(guildId, guild, queue);
     } else {
-      handleMemberJoin(guildId, guild, player);
+      handleMemberJoin(guildId, guild, queue);
     }
   },
 } as Event;

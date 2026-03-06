@@ -2,7 +2,7 @@ import {Events, type GuildMember} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
-import {destroyPlayerSafely} from '@/utils/music/playerUtils';
+import {destroyQueueSafely} from '@/utils/music/playerUtils';
 
 export default {
   name: Events.GuildMemberUpdate,
@@ -16,11 +16,11 @@ export default {
       const isTimedOut = newMember.communicationDisabledUntil !== null && newMember.communicationDisabledUntil > new Date();
 
       if (!wasTimedOut && isTimedOut) {
-        const player = client.manager.players.get(newMember.guild.id);
+        const queue = client.queues.get(newMember.guild.id);
 
-        if (player) {
-          player.set('stoppedByCommand', true);
-          destroyPlayerSafely(player, client, `${newMember.user.tag} was timed out in guild ${newMember.guild.name} (${newMember.guild.id})`);
+        if (queue) {
+          queue.set('stoppedByCommand', true);
+          await destroyQueueSafely(client, newMember.guild.id, `${newMember.user.tag} was timed out in guild ${newMember.guild.name} (${newMember.guild.id})`);
         }
       }
     } catch (error) {

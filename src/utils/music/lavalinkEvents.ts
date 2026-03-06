@@ -1,136 +1,185 @@
 import {EmbedBuilder, Message, codeBlock} from 'discord.js';
-import {ManagerEventTypes, type Track} from 'magmastream';
+import type {TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, WebSocketClosedEvent} from 'shoukaku';
 
 import type {NMClient} from '@/client/Client';
+import type {Queue, QueueTrack} from '@/structures/Queue';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
 import {createPlayerControls} from '@/utils/music/buttons/controlsButton';
 import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
-import {destroyPlayerSafely, getEmbedMeta} from '@/utils/music/playerUtils';
+import {getEmbedMeta} from '@/utils/music/playerUtils';
 
 const logger = new Logger('Lavalink');
 
-export const registerLavalinkEvents = (client: NMClient) => {
-  // Debug 이벤트 활성화
-  client.manager.on(ManagerEventTypes.Debug, message => logger.debug(`${message}`));
+const MAX_AUTOPLAY_RETRIES = 3;
 
-  client.manager.on(ManagerEventTypes.NodeConnect, async node => logger.info(`Node ${node.options.identifier} connected`));
-
-  client.manager.on(ManagerEventTypes.NodeDisconnect, (node, reason) => logger.warn(`Node ${node.options.identifier} disconnected! Reason: ${reason.reason}`));
-  client.manager.on(ManagerEventTypes.NodeError, (node, error) => logger.error(`Node ${node.options.identifier} error: ${error}`));
-  client.manager.on(ManagerEventTypes.NodeReconnect, node => logger.info(`Node ${node.options.identifier} reconnecting...`));
-  client.manager.on(ManagerEventTypes.NodeDestroy, node => logger.info(`Node ${node.options.identifier} destroyed`));
-  client.manager.on(ManagerEventTypes.PlayerCreate, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) created`));
-
-  client.manager.on(ManagerEventTypes.PlayerDestroy, player => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) destroyed`));
-  client.manager.on(ManagerEventTypes.PlayerMove, (player, oldChannelId, newChannelId) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) moved from ${oldChannelId} to ${newChannelId}`));
-  client.manager.on(ManagerEventTypes.PlayerRestored, async player => {
-    const textChannel = client.channels.cache.get(player.textChannelId || '');
-
-    // 음성 채널 유효성 확인
-    if (player.voiceChannelId) {
-      try {
-        const voiceChannel = await client.channels.fetch(player.voiceChannelId);
-        if (!voiceChannel || !voiceChannel.isVoiceBased()) {
-          logger.warn(`Voice channel ${player.voiceChannelId} no longer exists or is not accessible, destroying player`);
-          if (textChannel?.isSendable()) {
-            await textChannel.send({
-              embeds: [createErrorEmbed(client, '⚠️ 세션 복원 실패', '이전에 사용하던 음성 채널이 더 이상 존재하지 않아요.')],
-            });
-          }
-          player.set('stoppedByCommand', true);
-          destroyPlayerSafely(player, client, `Session restore failed: voice channel no longer exists (${player.voiceChannelId})`);
-          return;
-        }
-      } catch {
-        // 채널을 가져올 수 없음 (삭제됨 또는 권한 없음)
-        logger.warn(`Failed to fetch voice channel ${player.voiceChannelId}, destroying player`);
-        if (textChannel?.isSendable()) {
-          await textChannel.send({
-            embeds: [createErrorEmbed(client, '⚠️ 세션 복원 실패', '이전에 사용하던 음성 채널에 접근할 수 없어요.')],
-          });
-        }
-        player.set('stoppedByCommand', true);
-        destroyPlayerSafely(player, client, `Session restore failed: cannot access voice channel (${player.voiceChannelId})`);
-        return;
-      }
-    } else {
-      // voiceChannelId가 없으면 플레이어 삭제
-      logger.warn(`Player ${player.guildId} has no voice channel, destroying player`);
-      if (textChannel?.isSendable()) {
-        await textChannel.send({
-          embeds: [createErrorEmbed(client, '⚠️ 세션 복원 실패', '음성 채널 정보가 없어 세션을 복원할 수 없어요.')],
-        });
-      }
-      player.set('stoppedByCommand', true);
-      destroyPlayerSafely(player, client, `Session restore failed: no voice channel info (${player.guildId})`);
-      return;
+function destroyQueueSafely(queue: Queue, client: NMClient, reason?: string): void {
+  try {
+    client.services.lavalinkManager.destroyQueue(queue.guildId);
+    if (reason) {
+      logger.info(`Queue destroyed: ${reason}`);
     }
+  } catch (error) {
+    logger.error(`Failed to destroy queue: ${error}`);
+  }
+}
 
-    if (!textChannel?.isSendable()) return;
+export const registerLavalinkEvents = (client: NMClient) => {
+  const shoukaku = client.services.lavalinkManager.getShoukaku();
 
-    logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) restored from previous session`);
+  shoukaku.on('ready', async (name, lavalinkResume, libraryResume) => {
+    logger.info(`Node ${name} connected (lavalinkResume: ${lavalinkResume}, libraryResume: ${libraryResume})`);
+
+    await client.services.lavalinkManager.persistSessionIds();
+
     try {
-      await textChannel.send({
-        embeds: [new EmbedBuilder().setTitle('🔄 세션이 복원되었어요!').setDescription('이전 세션에서 재생을 이어갈게요.').setColor(client.config.EMBED_COLOR_NORMAL)],
-      });
+      const restored = await client.services.lavalinkManager.restoreSessions(client, lavalinkResume);
+
+      for (const session of restored) {
+        const channel = client.channels.cache.get(session.textChannelId);
+        if (!channel?.isSendable()) continue;
+
+        const trackCount = session.tracks.length;
+        const currentTitle = session.current?.info.title;
+        const description = currentTitle ? `현재 재생 중: **${truncateWithEllipsis(currentTitle, 50)}**${trackCount > 0 ? ` 외 ${trackCount}곡` : ''}` : `대기열에 ${trackCount}곡이 복원되었어요.`;
+
+        try {
+          await channel.send({
+            embeds: [new EmbedBuilder().setTitle('🔄 세션이 복원되었어요!').setDescription(description).setColor(client.config.EMBED_COLOR_NORMAL)],
+          });
+        } catch {
+          logger.warn(`Failed to send restore message to guild ${session.guildId}`);
+        }
+      }
+
+      if (restored.length > 0) {
+        logger.info(`Restored ${restored.length} session(s)`);
+      }
     } catch (error) {
-      logger.warn(`Failed to send player restored message: ${error}`);
+      logger.error(`Session restore failed: ${error}`);
     }
   });
 
-  client.manager.on(ManagerEventTypes.TrackEnd, async (player, track) => logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track end. Track: ${track.title}`));
+  shoukaku.on('error', (name, error) => logger.error(`Node ${name} error: ${error}`));
+  shoukaku.on('close', (name, code, reason) => logger.warn(`Node ${name} closed (code: ${code}, reason: ${reason})`));
+  shoukaku.on('disconnect', (name, count) => logger.warn(`Node ${name} disconnected (${count} players affected)`));
+  shoukaku.on('reconnecting', (name, reconnectsLeft, interval) => logger.info(`Node ${name} reconnecting... (${reconnectsLeft} tries left, interval: ${interval}s)`));
+  shoukaku.on('debug', (name, info) => logger.debug(`[${name}] ${info}`));
+};
 
-  client.manager.on(ManagerEventTypes.TrackStart, async (player, track: Track) => {
-    logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track start. Track: ${track.title}`);
-    const channel = client.channels.cache.get(player.textChannelId || '');
+export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
+  const {player, guildId} = queue;
+  const guildName = client.guilds.cache.get(guildId)?.name ?? guildId;
 
-    const trackMeta = await getEmbedMeta(track, false, player, 'play');
-    const footerText = trackMeta.footerText;
-    const isRepeating = player.queueRepeat || player.trackRepeat;
+  logger.info(`Player ${guildName} (${guildId}) created`);
+
+  player.on('start', async (data: TrackStartEvent) => {
+    const track = data.track as QueueTrack;
+    logger.info(`Player ${guildName} (${guildId}) track start. Track: ${track.info.title}`);
+
+    const channel = client.channels.cache.get(queue.textChannelId);
+    const isRepeating = queue.queueRepeat || queue.trackRepeat;
 
     if (!channel?.isSendable() || isRepeating) return;
 
     try {
-      // 이전 메시지가 있다면 버튼 제거
-      const lastMessageId = player.get<string>('lastMessageId');
-      if (lastMessageId && channel?.isSendable()) {
+      const lastMessageId = queue.get<string>('lastMessageId');
+      if (lastMessageId && channel.isSendable()) {
         try {
           const lastMessage = await channel.messages.fetch(lastMessageId);
-          if (lastMessage && lastMessage.editable) {
-            await lastMessage.edit({
-              components: [createQuickAddButton()],
-            });
+          if (lastMessage?.editable) {
+            await lastMessage.edit({components: [createQuickAddButton()]});
           }
         } catch {
           // 메시지가 삭제되었거나 권한이 없는 경우 무시
         }
       }
 
+      const trackMeta = await getEmbedMeta(track, false, queue, 'play');
+
       const message = await channel.send({
         embeds: [
           new EmbedBuilder()
-            .setDescription(`♪ ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}`)
-            .setURL(track.uri)
-            .setFooter({text: footerText})
+            .setDescription(`♪ ${hyperlink(truncateWithEllipsis(track.info.title, 50), track.info.uri ?? '')}`)
+            .setURL(track.info.uri ?? null)
+            .setFooter({text: trackMeta.footerText})
             .setColor(client.config.EMBED_COLOR_NORMAL),
         ],
-        components: [createPlayerControls(player, track.uri)],
+        components: [createPlayerControls(queue, track.info.uri ?? '')],
       });
 
-      player.set('lastMessageId', message.id);
+      queue.set('lastMessageId', message.id);
     } catch (error) {
       logger.warn(`Failed to send track start message: ${error}`);
     }
   });
 
-  client.manager.on(ManagerEventTypes.TrackError, async (player, track, error) => {
-    const trackTitle = track?.title ?? 'Unknown Track';
-    const errorMessage = error?.exception?.message ?? 'Unknown Error';
-    logger.error(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track error. Track: ${trackTitle} Error: ${errorMessage}`);
+  player.on('end', async (data: TrackEndEvent) => {
+    const track = data.track as QueueTrack;
+    logger.info(`Player ${guildName} (${guildId}) track end. Track: ${track.info.title} (reason: ${data.reason})`);
 
-    const channel = client.channels.cache.get(player.textChannelId || '');
+    if (data.reason === 'replaced') return;
+
+    // 트랙 반복
+    if (queue.trackRepeat && data.reason === 'finished') {
+      await queue.player.playTrack({track: {encoded: track.encoded}});
+      return;
+    }
+
+    // 큐 반복: 현재 트랙을 대기열 끝에 다시 추가
+    if (queue.queueRepeat && data.reason === 'finished') {
+      queue.add(track);
+    }
+
+    // 현재 트랙을 이전 트랙 목록에 추가 (자동 재생 시드용)
+    if (track) {
+      queue.addToPrevious(track);
+    }
+
+    // 대기열에 트랙이 남아있으면 다음 재생
+    if (queue.size() > 0) {
+      await queue.play();
+      return;
+    }
+
+    // 자동 재생 시도
+    if (queue.isAutoplay && data.reason === 'finished') {
+      const autoplaySuccess = await handleAutoplay(queue, client);
+      if (autoplaySuccess) return;
+    }
+
+    // 대기열 종료 처리
+    await handleQueueEnd(queue, client);
+  });
+
+  player.on('stuck', async (data: TrackStuckEvent) => {
+    logger.warn(`Player ${guildName} (${guildId}) track stuck. Threshold: ${data.thresholdMs}ms`);
+
+    const channel = client.channels.cache.get(queue.textChannelId);
+    if (!channel?.isSendable()) return;
+
+    try {
+      await channel.send({
+        embeds: [
+          new EmbedBuilder()
+            .setTitle(`음악이 ${data.thresholdMs / 1000}초 동안 재생되지 않았어요.`)
+            .setDescription('다음 음악으로 넘어갈게요.')
+            .setColor(client.config.EMBED_COLOR_ERROR),
+        ],
+      });
+    } catch (sendError) {
+      logger.error(`Failed to send track stuck message: ${sendError}`);
+    }
+
+    await queue.stop();
+  });
+
+  player.on('exception', async (data: TrackExceptionEvent) => {
+    const errorMessage = data.exception?.message ?? 'Unknown Error';
+    logger.error(`Player ${guildName} (${guildId}) track exception: ${errorMessage}`);
+
+    const channel = client.channels.cache.get(queue.textChannelId);
     if (!channel?.isSendable()) return;
 
     try {
@@ -142,75 +191,104 @@ export const registerLavalinkEvents = (client: NMClient) => {
     }
   });
 
-  client.manager.on(ManagerEventTypes.TrackStuck, async (player, track, threshold) => {
-    const trackTitle = track?.title ?? 'Unknown Track';
-    const thresholdMs = typeof threshold === 'object' && threshold !== null && 'thresholdMs' in threshold ? (threshold as {thresholdMs: number}).thresholdMs : Number(threshold) || 10000;
-    logger.warn(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) track stuck. Track: ${trackTitle} Threshold: ${thresholdMs}ms`);
-
-    const channel = client.channels.cache.get(player.textChannelId || '');
-    if (!channel?.isSendable()) return;
-
-    try {
-      await channel.send({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(`음악이 ${thresholdMs / 1000}초 동안 재생되지 않았어요.`)
-            .setDescription('다음 음악으로 넘어갈게요.')
-            .setColor(client.config.EMBED_COLOR_ERROR),
-        ],
-      });
-    } catch (sendError) {
-      logger.error(`Failed to send track stuck message: ${sendError}`);
-    }
-
-    player.stop();
-  });
-
-  client.manager.on(ManagerEventTypes.QueueEnd, async player => {
-    logger.info(`Player ${client.guilds.cache.get(player.guildId)?.name} (${player.guildId}) queue end`);
-    const channel = client.channels.cache.get(player.textChannelId || '');
-
-    if (!channel?.isSendable()) return;
-    if (player.get('stoppedByCommand')) return;
-
-    // Autoplay가 켜져 있는데 큐가 끝났다면 곡을 찾지 못한 것임
-    if (player.isAutoplay) {
-      logger.warn(`Autoplay is enabled but queue ended for player ${player.guildId}`);
-      if (channel?.isSendable()) {
-        try {
-          await channel.send({
-            embeds: [createErrorEmbed(client, '자동 재생할 곡을 찾지 못했어요.', '비슷한 곡을 찾을 수 없어 재생을 종료할게요.')],
-          });
-        } catch (e) {
-          logger.warn(`Failed to send autoplay failure message: ${e}`);
-        }
-      }
-      player.setAutoplay(false); // 오토플레이 해제
-    }
-
-    const embed = new EmbedBuilder().setTitle('대기열에 있는 음악을 모두 재생했어요. 30초 후에 자동으로 연결을 종료해요.').setColor(client.config.EMBED_COLOR_NORMAL);
-    let message: Message | undefined;
-
-    try {
-      message = await channel.send({embeds: [embed]});
-    } catch (sendError) {
-      logger.warn(`Failed to send queue end message: ${sendError}`);
-    }
-
-    setTimeout(async () => {
-      try {
-        const queueSize = await player.queue.size();
-        if (!player.playing && queueSize === 0) {
-          destroyPlayerSafely(player, client, `Player destroyed after 30 seconds of inactivity (${player.guildId})`);
-
-          if (message?.editable) {
-            await message.edit({embeds: [embed.setDescription('30초가 지나 자동으로 연결을 종료했어요.')]});
-          }
-        }
-      } catch (error) {
-        // 메시지가 이미 삭제되었거나 채널이 캐시에 없는 경우 무시
-        logger.warn(`Failed to edit queue end message: ${error}`);
-      }
-    }, 30_000);
+  player.on('closed', async (data: WebSocketClosedEvent) => {
+    logger.warn(`Player ${guildName} (${guildId}) websocket closed (code: ${data.code}, reason: ${data.reason})`);
   });
 };
+
+async function handleAutoplay(queue: Queue, client: NMClient): Promise<boolean> {
+  const seed = queue.previous.at(-1);
+  if (!seed) return false;
+
+  const node = client.services.lavalinkManager.getNode();
+  if (!node) return false;
+
+  for (let attempt = 0; attempt < MAX_AUTOPLAY_RETRIES; attempt++) {
+    try {
+      const identifier = seed.info.identifier;
+      const randomIndex = Math.floor(Math.random() * 23) + 2;
+      const autoplayQuery = `https://youtube.com/watch?v=${identifier}&list=RD${identifier}&index=${randomIndex}`;
+
+      const result = await node.rest.resolve(autoplayQuery);
+      if (!result || result.loadType !== 'playlist') continue;
+
+      const candidates = result.data.tracks.filter(t => !isDuplicate(t as QueueTrack, queue.previous));
+      if (candidates.length === 0) continue;
+
+      const picked = candidates[Math.floor(Math.random() * candidates.length)]!;
+      const autoplayTrack: QueueTrack = {...picked, requester: queue.getAutoplayRequester()};
+
+      queue.add(autoplayTrack);
+      await queue.play();
+      return true;
+    } catch (error) {
+      logger.warn(`Autoplay attempt ${attempt + 1} failed: ${error}`);
+    }
+  }
+
+  return false;
+}
+
+function isDuplicate(candidate: QueueTrack, previous: QueueTrack[]): boolean {
+  return previous.some(prev => {
+    if (prev.info.identifier === candidate.info.identifier) return true;
+    if (prev.info.uri && prev.info.uri === candidate.info.uri) return true;
+    if (normalizeTitle(prev.info.title) === normalizeTitle(candidate.info.title)) return true;
+    return false;
+  });
+}
+
+function normalizeTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\(.*?\)/g, '')
+    .replace(/\[.*?\]/g, '')
+    .replace(/official|music|video|lyrics|hd|mv|audio/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function handleQueueEnd(queue: Queue, client: NMClient): Promise<void> {
+  const channel = client.channels.cache.get(queue.textChannelId);
+
+  queue.playing = false;
+  queue.setCurrent(null);
+
+  if (!channel?.isSendable()) return;
+  if (queue.get('stoppedByCommand')) return;
+
+  if (queue.isAutoplay) {
+    logger.warn(`Autoplay enabled but queue ended for ${queue.guildId}`);
+    try {
+      await channel.send({
+        embeds: [createErrorEmbed(client, '자동 재생할 곡을 찾지 못했어요.', '비슷한 곡을 찾을 수 없어 재생을 종료할게요.')],
+      });
+    } catch (e) {
+      logger.warn(`Failed to send autoplay failure message: ${e}`);
+    }
+    queue.setAutoplay(false);
+  }
+
+  const embed = new EmbedBuilder().setTitle('대기열에 있는 음악을 모두 재생했어요. 30초 후에 자동으로 연결을 종료해요.').setColor(client.config.EMBED_COLOR_NORMAL);
+  let message: Message | undefined;
+
+  try {
+    message = await channel.send({embeds: [embed]});
+  } catch (sendError) {
+    logger.warn(`Failed to send queue end message: ${sendError}`);
+  }
+
+  setTimeout(async () => {
+    try {
+      if (!queue.playing && queue.size() === 0) {
+        destroyQueueSafely(queue, client, `Queue destroyed after 30 seconds of inactivity (${queue.guildId})`);
+
+        if (message?.editable) {
+          await message.edit({embeds: [embed.setDescription('30초가 지나 자동으로 연결을 종료했어요.')]});
+        }
+      }
+    } catch (error) {
+      logger.warn(`Failed to edit queue end message: ${error}`);
+    }
+  }, 30_000);
+}
