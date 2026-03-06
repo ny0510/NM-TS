@@ -33,8 +33,8 @@ export default {
     const message = interaction.options.getString('message', true);
     const preview = interaction.options.getBoolean('preview') || false;
 
-    const players = Array.from(client.manager.players.values()).filter(p => p.playing);
-    if (players.length === 0) {
+    const queues = Array.from(client.queues.values()).filter(q => q.playing);
+    if (queues.length === 0) {
       await interaction.reply({content: '현재 재생중인 서버가 없습니다.', flags: [MessageFlags.Ephemeral]});
       return;
     }
@@ -51,21 +51,21 @@ export default {
     let fail = 0;
     const failedList: string[] = [];
 
-    const tasks = players.map(player =>
+    const tasks = queues.map(queue =>
       (async () => {
-        const channel = client.channels.cache.get(player.textChannelId || '');
+        const channel = client.channels.cache.get(queue.textChannelId || '');
         if (!channel || !channel.isSendable()) {
           throw new Error('Channel not sendable');
         }
         const embed = new EmbedBuilder().setTitle('📢 공지사항').setDescription(message).setColor(client.config.EMBED_COLOR_NORMAL);
         await channel.send({embeds: [embed]});
-        return player.guildId;
+        return queue.guildId;
       })(),
     );
 
     const settled = await Promise.allSettled(tasks);
     settled.forEach((r, i) => {
-      const guildId = players[i]?.guildId ?? 'unknown';
+      const guildId = queues[i]?.guildId ?? 'unknown';
       if (r.status === 'fulfilled') {
         success++;
       } else {
@@ -77,7 +77,7 @@ export default {
     const resultEmbed = new EmbedBuilder()
       .setTitle('📢 공지사항 전송 결과')
       .setColor(fail > 0 ? client.config.EMBED_COLOR_ERROR : client.config.EMBED_COLOR_NORMAL)
-      .setDescription(`총 **${players.length}개** 서버 중 **${success}개** 서버에 성공적으로 전송되었습니다. ${fail ? `(${fail}개 실패)` : ''}`);
+      .setDescription(`총 **${queues.length}개** 서버 중 **${success}개** 서버에 성공적으로 전송되었습니다. ${fail ? `(${fail}개 실패)` : ''}`);
 
     if (failedList.length > 0) {
       const shown = failedList.slice(0, 50);

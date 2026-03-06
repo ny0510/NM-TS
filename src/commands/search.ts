@@ -1,20 +1,29 @@
 import {ActionRowBuilder, ChatInputCommandInteraction, ComponentType, EmbedBuilder, GuildMember, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction, channelMention, codeBlock, italic} from 'discord.js';
-import {LoadTypes, SearchPlatform, StateTypes, type Track} from 'magmastream';
+import {LoadType, type Track} from 'shoukaku';
 
 import type {Command} from '@/client/types';
+import type {QueueTrack} from '@/structures/Queue';
 import {slashCommandMention} from '@/utils/discord';
 import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {safeReply} from '@/utils/discord/interactions';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
-import {createPlayer, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
+import {createQueue, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
+
+const SEARCH_PLATFORMS = {
+  ytsearch: '유튜브',
+  spsearch: '스포티파이',
+  scsearch: '사운드클라우드',
+} as const;
+
+type SearchPlatformKey = keyof typeof SEARCH_PLATFORMS;
 
 export default {
   data: new SlashCommandBuilder()
     .setName('search')
     .setDescription('음악을 검색해요.')
     .addStringOption(option => option.setName('query').setDescription('검색할 음악의 제목이나 URL을 입력해 주세요.').setRequired(true))
-    .addStringOption(option => option.setName('searchplatform').setDescription('검색할 플랫폼을 선택해 주세요.').addChoices({name: '유튜브', value: SearchPlatform.YouTube}, {name: '스포티파이', value: SearchPlatform.Spotify}, {name: '사운드클라우드', value: SearchPlatform.SoundCloud})),
+    .addStringOption(option => option.setName('searchplatform').setDescription('검색할 플랫폼을 선택해 주세요.').addChoices({name: '유튜브', value: 'ytsearch'}, {name: '스포티파이', value: 'spsearch'}, {name: '사운드클라우드', value: 'scsearch'})),
   permissions: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
@@ -23,31 +32,39 @@ export default {
     await interaction.deferReply();
 
     const query = interaction.options.getString('query', true);
-    const searchPlatform = (interaction.options.getString('searchplatform') as SearchPlatform) ?? SearchPlatform.YouTube;
-    const platformDisplayName = [
-      {name: '유튜브', value: SearchPlatform.YouTube},
-      {name: '스포티파이', value: SearchPlatform.Spotify},
-      {name: '사운드클라우드', value: SearchPlatform.SoundCloud},
-    ].find(option => option.value === searchPlatform)?.name;
+    const searchPlatform = (interaction.options.getString('searchplatform') as SearchPlatformKey | null) ?? 'ytsearch';
+    const platformDisplayName = SEARCH_PLATFORMS[searchPlatform];
 
-    let res = await client.manager.search({query, source: searchPlatform}, interaction.user);
+    const res = await client.services.lavalinkManager.search(`${searchPlatform}:${query}`, interaction.user);
 
-    if (res.loadType === LoadTypes.Empty || res.loadType === LoadTypes.Error || !('tracks' in res))
+    if (!res || res.loadType === LoadType.EMPTY || res.loadType === LoadType.ERROR)
       return await safeReply(interaction, {
         embeds: [createErrorEmbed(client, '음악을 찾을 수 없어요.')],
         flags: MessageFlags.Ephemeral,
       });
 
-    const tracks = res.tracks as Track[];
+    let tracks: Track[];
+    if (res.loadType === LoadType.TRACK) {
+      tracks = [res.data];
+    } else if (res.loadType === LoadType.SEARCH) {
+      tracks = res.data;
+    } else if (res.loadType === LoadType.PLAYLIST) {
+      tracks = res.data.tracks;
+    } else {
+      return await safeReply(interaction, {
+        embeds: [createErrorEmbed(client, '음악을 찾을 수 없어요.')],
+        flags: MessageFlags.Ephemeral,
+      });
+    }
 
     const optinos = tracks
-      .filter((track: Track) => !!track.title)
+      .filter((track: Track) => !!track.info.title)
       .map((track: Track, index: number) => {
         return {
-          label: truncateWithEllipsis(track.title, 100, ''),
-          value: track.uri,
+          label: truncateWithEllipsis(track.info.title, 100, ''),
+          value: track.info.uri ?? track.info.identifier,
           emoji: {name: ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'][index]},
-          description: `${truncateWithEllipsis(track.author, 20)} (${msToTime(track.duration)})`,
+          description: `${truncateWithEllipsis(track.info.author, 20)} (${msToTime(track.info.length)})`,
         };
       })
       .slice(0, 10);
@@ -108,22 +125,23 @@ export default {
       handled = true;
       collector.stop();
 
-      const selectedTracks = i.values.map(value => tracks.find((track: Track) => track.uri === value)).filter((track): track is Track => Boolean(track));
+      const selectedTracks = i.values.map(value => tracks.find((track: Track) => (track.info.uri ?? track.info.identifier) === value)).filter((track): track is Track => Boolean(track));
+      const queueTracks: QueueTrack[] = selectedTracks.map(track => ({...track, requester: interaction.user}));
 
-      let player = client.manager.players.get(interaction.guildId!);
+      let queue = client.queues.get(interaction.guildId!);
 
       const inVoice = await ensureVoiceChannel(interaction); // 음성 채널에 들어가 있는지 확인
       const inSameVoice = await ensureSameVoiceChannel(interaction); // 같은 음성 채널에 있는지 확인
       if (!inVoice || !inSameVoice) return;
 
-      player = await createPlayer(interaction);
-      if (!player) return;
+      queue = await createQueue(interaction);
+      if (!queue) return;
 
       const results: {track: Track; success: boolean; error?: string}[] = [];
-      for (const track of selectedTracks) {
+      for (const track of queueTracks) {
         if (track) {
           try {
-            await player.queue.add(track);
+            queue.add(track);
             results.push({track, success: true});
           } catch (e) {
             const errorMessage = e instanceof Error && e.message ? e.message : '알 수 없는 오류';
@@ -132,20 +150,20 @@ export default {
         }
       }
 
-      const searchQueueSize = await player.queue.size();
-      if (!player.playing && !player.paused && searchQueueSize + 1 === selectedTracks.length) await player.play();
+      const searchQueueSize = queue.size();
+      if (!queue.playing && !queue.paused && searchQueueSize + 1 === selectedTracks.length) await queue.play();
 
-      const tracksMeta = await getEmbedMeta(selectedTracks, true, player);
+      const tracksMeta = await getEmbedMeta(queueTracks, true, queue);
       const [tracksColor, tracksFooterText] = [tracksMeta.colors, tracksMeta.footerText];
       const description = results.length
         ? results
             .map(({track, success, error}, index) => {
-              return `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}`;
+              return `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(track.info.title, 50), track.info.uri ?? '')}`;
             })
             .join('\n')
         : '음악을 찾을 수 없어요.';
 
-      const firstTrackThumbnail = selectedTracks[0]?.artworkUrl || selectedTracks[0]?.thumbnail;
+      const firstTrackThumbnail = selectedTracks[0]?.info.artworkUrl;
 
       return await i.update({
         embeds: [

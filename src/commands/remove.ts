@@ -16,11 +16,11 @@ export default {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
-    if (!player) return;
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue) return;
 
     const index = interaction.options.getNumber('index')! - 1;
-    const queueSize = await player.queue.size();
+    const queueSize = queue.size();
 
     if (index < 0 || index >= queueSize) {
       return await safeReply(interaction, {
@@ -29,7 +29,7 @@ export default {
       });
     }
 
-    const tracks = await player.queue.getSlice(index, index + 1);
+    const tracks = queue.getSlice(index, index + 1);
     const track = tracks[0];
 
     if (!track) {
@@ -39,12 +39,12 @@ export default {
       });
     }
 
-    await player.queue.remove(index);
+    queue.remove(index);
     return await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()
           .setTitle(`${index + 1}번째 음악을 대기열에서 제거했어요.`)
-          .setDescription(codeBlock('diff', `- ${track.title}`))
+          .setDescription(codeBlock('diff', `- ${track.info.title}`))
           .setColor(client.config.EMBED_COLOR_NORMAL as HexColorString),
       ],
     });

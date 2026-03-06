@@ -12,27 +12,27 @@ export default {
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
+    const queue = client.queues.get(interaction.guildId!);
 
     if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
-    if (!player) return;
+    if (!queue) return;
 
-    const track = (await player.queue.getCurrent())!;
-    const colors = track.artworkUrl ? await getColors(track.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
-    const repeatState = player.queueRepeat ? '대기열 반복 중' : player.trackRepeat ? '현재 음악 반복 중' : '반복 중이 아님';
-    const progressBar = await createProgressBar(player);
-    const queueSize = await player.queue.size();
-    const queueDuration = await player.queue.duration();
+    const track = queue.getCurrent()!;
+    const colors = track.info.artworkUrl ? await getColors(track.info.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
+    const repeatState = queue.queueRepeat ? '대기열 반복 중' : queue.trackRepeat ? '현재 음악 반복 중' : '반복 중이 아님';
+    const progressBar = createProgressBar(queue);
+    const queueSize = queue.size();
+    const queueDuration = queue.duration();
 
     return await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()
-          .setDescription(`${player.playing ? '▶️' : '⏸️'} ${hyperlink(truncateWithEllipsis(track.title, 50), track.uri)}${!track.isStream ? `\n\n${progressBar}` : ''}`)
-          .setThumbnail(track.artworkUrl)
+          .setDescription(`${queue.playing ? '▶️' : '⏸️'} ${hyperlink(truncateWithEllipsis(track.info.title, 50), track.info.uri ?? '')}${!track.info.isStream ? `\n\n${progressBar}` : ''}`)
+          .setThumbnail(track.info.artworkUrl ?? null)
           .setFields([
             {
               name: '곡 길이',
-              value: inlineCode(`${track.isStream ? '실시간 스트리밍' : msToTime(track.duration)}`),
+              value: inlineCode(`${track.info.isStream ? '실시간 스트리밍' : msToTime(track.info.length)}`),
               inline: true,
             },
             {
@@ -42,7 +42,7 @@ export default {
             },
             {
               name: '볼륨',
-              value: inlineCode(`${player.volume}%`),
+              value: inlineCode(`${queue.volume}%`),
               inline: true,
             },
             {
@@ -52,7 +52,7 @@ export default {
             },
             {
               name: '추천 음악 자동 재생',
-              value: inlineCode(player.isAutoplay ? '활성화 됨' : '비활성화 됨'),
+              value: inlineCode(queue.isAutoplay ? '활성화 됨' : '비활성화 됨'),
               inline: true,
             },
             {

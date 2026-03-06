@@ -3,7 +3,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBui
 import type {Command} from '@/client/types';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
-import {ensurePlayerReady} from '@/utils/music';
+import {destroyQueueSafely, ensurePlayerReady} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder().setName('stop').setDescription('음악을 정지해요.'),
@@ -12,11 +12,11 @@ export default {
     if (!(await ensurePlayerReady(interaction))) return;
 
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
-    if (!player) return;
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue) return;
 
-    player.set('stoppedByCommand', true);
-    player.destroy();
+    queue.set('stoppedByCommand', true);
+    await destroyQueueSafely(client, queue.guildId);
 
     await safeReply(interaction, {
       embeds: [new EmbedBuilder().setTitle('음악을 정지했어요.').setColor(client.config.EMBED_COLOR_NORMAL)],

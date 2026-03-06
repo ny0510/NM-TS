@@ -19,20 +19,20 @@ export default {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
-    if (!player) return;
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue) return;
 
     if (subcommand === 'track') {
-      const enabled = !player.trackRepeat;
-      player.setTrackRepeat(enabled);
+      const enabled = !queue.trackRepeat;
+      queue.setTrackRepeat(enabled);
       return await safeReply(interaction, {
         embeds: [new EmbedBuilder().setTitle(`현재 음악 반복을 ${enabled ? '활성화' : '비활성화'}했어요.`).setColor(client.config.EMBED_COLOR_NORMAL)],
       });
     } else if (subcommand === 'queue') {
-      const enabled = !player.queueRepeat;
-      const description = enabled && player.trackRepeat ? '현재 음악 반복이 활성화된 상태여서 자동으로 비활성화했어요.' : ' ';
+      const enabled = !queue.queueRepeat;
+      const description = enabled && queue.trackRepeat ? '현재 음악 반복이 활성화된 상태여서 자동으로 비활성화했어요.' : ' ';
 
-      player.setQueueRepeat(enabled);
+      queue.setQueueRepeat(enabled);
       return await safeReply(interaction, {
         embeds: [
           new EmbedBuilder()
@@ -42,8 +42,8 @@ export default {
         ],
       });
     } else if (subcommand === 'off') {
-      const trackRepeat = player.trackRepeat;
-      const queueRepeat = player.queueRepeat;
+      const trackRepeat = queue.trackRepeat;
+      const queueRepeat = queue.queueRepeat;
 
       if (!trackRepeat && !queueRepeat) {
         return await safeReply(interaction, {
@@ -52,8 +52,8 @@ export default {
         });
       }
 
-      player.setTrackRepeat(false);
-      player.setQueueRepeat(false);
+      queue.setTrackRepeat(false);
+      queue.setQueueRepeat(false);
 
       return await safeReply(interaction, {
         embeds: [new EmbedBuilder().setTitle('반복 재생을 해제했어요.').setColor(client.config.EMBED_COLOR_NORMAL)],

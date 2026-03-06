@@ -12,10 +12,10 @@ export default {
     if (!(await ensurePlayerReady(interaction))) return;
 
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
-    if (!player) return;
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue) return;
 
-    await player.queue.clear();
+    queue.clear();
 
     return await safeReply(interaction, {
       embeds: [new EmbedBuilder().setTitle('대기열을 비웠어요.').setColor(client.config.EMBED_COLOR_NORMAL)],

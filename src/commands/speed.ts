@@ -15,12 +15,12 @@ export default {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
-    if (!player) return;
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue) return;
 
     const level = interaction.options.getNumber('level', true);
 
-    player.filters.setTimescale({
+    await queue.setTimescale({
       speed: level,
       pitch: 1.0,
       rate: 1.0,

@@ -15,12 +15,12 @@ export default {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
-    if (!player) return;
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue) return;
 
     const level = interaction.options.getNumber('level', true);
 
-    player.setVolume(level);
+    await queue.setVolume(level);
 
     await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`볼륨을 ${level}%로 설정했어요.`).setDescription('반영되기까지 약 10초 가량이 소요될 수 있어요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
   },

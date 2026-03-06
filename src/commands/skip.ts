@@ -16,11 +16,11 @@ export default {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
-    if (!player) return;
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue) return;
 
     const count = interaction.options.getInteger('count') ?? 1;
-    const queueSize = await player.queue.size();
+    const queueSize = queue.size();
 
     if (count < 1)
       return await safeReply(interaction, {
@@ -33,7 +33,7 @@ export default {
         flags: MessageFlags.Ephemeral,
       });
 
-    player.stop(count);
+    await queue.stop(count);
     await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${count}곡을 건너뛰었어요.`).setColor(client.config.EMBED_COLOR_NORMAL)]});
   },
 } as Command;

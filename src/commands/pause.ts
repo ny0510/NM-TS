@@ -12,13 +12,13 @@ export default {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 
     const client = getClient(interaction);
-    const player = client.manager.players.get(interaction.guildId!);
-    if (!player) return;
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue) return;
 
     const isPaused = await ensurePaused(interaction);
     if (!isPaused) return;
 
-    player.pause(true);
+    await queue.pause(true);
     await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('음악을 일시정지했어요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
   },
 } as Command;
