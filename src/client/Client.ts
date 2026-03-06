@@ -6,6 +6,7 @@ import {CooldownManager} from '@/managers/CooldownManager';
 import {EventManager} from '@/managers/EventManager';
 import {KoreanbotsManager} from '@/managers/KoreanbotsManager';
 import {LavalinkManager} from '@/managers/LavalinkManager';
+import type {Queue} from '@/structures/Queue';
 import {config} from '@/utils/config';
 import {type ILogger, Logger} from '@/utils/logger';
 
@@ -46,8 +47,8 @@ export class NMClient extends Client {
     return this.services.commandManager.getCommands();
   }
 
-  public get manager() {
-    return this.services.lavalinkManager.getManager();
+  public get queues(): Map<string, Queue> {
+    return this.services.lavalinkManager.getQueues();
   }
 
   public get cooldowns() {
@@ -57,7 +58,6 @@ export class NMClient extends Client {
   private setupEventHandlers(): void {
     this.on(Events.Error, error => this.logger.error(`Discord client error: ${error}`));
     this.on(Events.Warn, warning => this.logger.warn(`Discord client warning: ${warning}`));
-    this.on(Events.Raw, d => this.manager.updateVoiceState(d));
   }
 
   private async initialize(): Promise<void> {
@@ -67,7 +67,6 @@ export class NMClient extends Client {
       await this.login(this.config.DISCORD_TOKEN);
       this.logger.info('Successfully logged in to Discord');
 
-      // 로그인 후 logger에 클라이언트 설정
       this.logger.setClient(this);
 
       await this.loadModules();
@@ -88,9 +87,11 @@ export class NMClient extends Client {
   public getStats(): ClientStats {
     const guilds = this.guilds.cache;
     const users = guilds.reduce((acc, guild) => acc + guild.memberCount, 0);
-    const activePlayers = this.manager.players.size;
+    const activePlayers = this.queues.size;
 
-    const lavalinkStats = Array.from(this.manager.nodes.values())[0]?.stats;
+    const shoukaku = this.services.lavalinkManager.getShoukaku();
+    const node = Array.from(shoukaku.nodes.values())[0];
+    const lavalinkStats = node?.stats;
     const memoryUsage = lavalinkStats?.memory ? Math.round(lavalinkStats.memory.used / 1024 / 1024) : 0;
     const cpuUsage = lavalinkStats?.cpu ? Math.round(lavalinkStats.cpu.lavalinkLoad * 100) : 0;
 
