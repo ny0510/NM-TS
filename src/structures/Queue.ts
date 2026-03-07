@@ -11,28 +11,6 @@ export interface QueueTrack extends Track {
   requester?: User;
 }
 
-export interface SerializedTrack {
-  encoded: string;
-  info: Track['info'];
-  pluginInfo: unknown;
-  requesterId?: string;
-}
-
-export interface SerializedSession {
-  guildId: string;
-  textChannelId: string;
-  voiceChannelId: string;
-  volume: number;
-  current: SerializedTrack | null;
-  tracks: SerializedTrack[];
-  previous: SerializedTrack[];
-  repeatMode: RepeatMode;
-  autoplay: boolean;
-  autoplayRequesterId?: string;
-  playing: boolean;
-  position: number;
-}
-
 export class Queue {
   public readonly shoukaku: Shoukaku;
   public readonly player: Player;
@@ -260,53 +238,6 @@ export class Queue {
 
   public async setTimescale(options?: {speed?: number; pitch?: number; rate?: number}): Promise<void> {
     await this.player.setTimescale(options ?? undefined);
-  }
-
-  public toJSON(): SerializedSession {
-    const serializeTrack = (track: QueueTrack): SerializedTrack => ({
-      encoded: track.encoded,
-      info: track.info,
-      pluginInfo: track.pluginInfo,
-      requesterId: track.requester?.id,
-    });
-
-    return {
-      guildId: this.guildId,
-      textChannelId: this.textChannelId,
-      voiceChannelId: this.voiceChannelId,
-      volume: this._volume,
-      current: this.current ? serializeTrack(this.current) : null,
-      tracks: this.tracks.map(serializeTrack),
-      previous: this.previous.map(serializeTrack),
-      repeatMode: this.repeatMode,
-      autoplay: this.autoplay,
-      autoplayRequesterId: this.autoplayRequester?.id,
-      playing: this.playing,
-      position: this.player.position,
-    };
-  }
-
-  public restoreState(session: SerializedSession, resolveUser: (id: string) => User | undefined): void {
-    const deserializeTrack = (st: SerializedTrack): QueueTrack => ({
-      encoded: st.encoded,
-      info: st.info,
-      pluginInfo: st.pluginInfo,
-      requester: st.requesterId ? resolveUser(st.requesterId) : undefined,
-    });
-
-    if (session.current) {
-      this.current = deserializeTrack(session.current);
-    }
-    this.tracks = session.tracks.map(deserializeTrack);
-    this.previous = session.previous.map(deserializeTrack);
-    this.repeatMode = session.repeatMode;
-    this._volume = session.volume;
-    this.playing = session.playing;
-
-    if (session.autoplay) {
-      const requester = session.autoplayRequesterId ? resolveUser(session.autoplayRequesterId) : undefined;
-      this.setAutoplay(true, requester);
-    }
   }
 
   public async destroy(): Promise<void> {

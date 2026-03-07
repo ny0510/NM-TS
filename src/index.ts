@@ -12,15 +12,6 @@ const gracefulShutdown = async (signal: string) => {
 
   client.logger.info(`${signal} received. Shutting down gracefully...`);
 
-  try {
-    const savedCount = await client.services.lavalinkManager.saveSessions();
-    if (savedCount > 0) {
-      client.logger.info(`Saved ${savedCount} session(s) for restoration`);
-    }
-  } catch (error) {
-    client.logger.error(`Failed to save sessions: ${error}`);
-  }
-
   const notifyPromises = Array.from(client.queues.values()).map(async queue => {
     const channel = client.channels.cache.get(queue.textChannelId || '');
     if (channel?.isSendable()) {

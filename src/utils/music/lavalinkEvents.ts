@@ -28,37 +28,8 @@ function destroyQueueSafely(queue: Queue, client: NMClient, reason?: string): vo
 export const registerLavalinkEvents = (client: NMClient) => {
   const shoukaku = client.services.lavalinkManager.getShoukaku();
 
-  shoukaku.on('ready', async (name, lavalinkResume, libraryResume) => {
+  shoukaku.on('ready', (name, lavalinkResume, libraryResume) => {
     logger.info(`Node ${name} connected (lavalinkResume: ${lavalinkResume}, libraryResume: ${libraryResume})`);
-
-    await client.services.lavalinkManager.persistSessionIds();
-
-    try {
-      const restored = await client.services.lavalinkManager.restoreSessions(client, lavalinkResume);
-
-      for (const session of restored) {
-        const channel = client.channels.cache.get(session.textChannelId);
-        if (!channel?.isSendable()) continue;
-
-        const trackCount = session.tracks.length;
-        const currentTitle = session.current?.info.title;
-        const description = currentTitle ? `현재 재생 중: **${truncateWithEllipsis(currentTitle, 50)}**${trackCount > 0 ? ` 외 ${trackCount}곡` : ''}` : `대기열에 ${trackCount}곡이 복원되었어요.`;
-
-        try {
-          await channel.send({
-            embeds: [new EmbedBuilder().setTitle('🔄 세션이 복원되었어요!').setDescription(description).setColor(client.config.EMBED_COLOR_NORMAL)],
-          });
-        } catch {
-          logger.warn(`Failed to send restore message to guild ${session.guildId}`);
-        }
-      }
-
-      if (restored.length > 0) {
-        logger.info(`Restored ${restored.length} session(s)`);
-      }
-    } catch (error) {
-      logger.error(`Session restore failed: ${error}`);
-    }
   });
 
   shoukaku.on('error', (name, error) => logger.error(`Node ${name} error: ${error}`));
@@ -212,7 +183,7 @@ async function handleAutoplay(queue: Queue, client: NMClient): Promise<boolean> 
       const result = await node.rest.resolve(autoplayQuery);
       if (!result || result.loadType !== 'playlist') continue;
 
-      const candidates = result.data.tracks.filter(t => !isDuplicate(t as QueueTrack, queue.previous));
+      const candidates = result.data.tracks.filter((t: {info: {identifier: string; uri?: string; title: string}}) => !isDuplicate(t as QueueTrack, queue.previous));
       if (candidates.length === 0) continue;
 
       const picked = candidates[Math.floor(Math.random() * candidates.length)]!;
