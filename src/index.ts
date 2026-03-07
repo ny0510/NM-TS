@@ -1,5 +1,3 @@
-import {EmbedBuilder} from 'discord.js';
-
 import {NMClient} from '@/client/Client';
 
 const client = new NMClient();
@@ -12,21 +10,10 @@ const gracefulShutdown = async (signal: string) => {
 
   client.logger.info(`${signal} received. Shutting down gracefully...`);
 
-  const notifyPromises = Array.from(client.queues.values()).map(async queue => {
-    const channel = client.channels.cache.get(queue.textChannelId || '');
-    if (channel?.isSendable()) {
-      try {
-        await channel.send({
-          embeds: [new EmbedBuilder().setTitle('⚠️ 봇이 재시작 중이에요.').setDescription('잠시만 기다려 주세요. 곧 다시 돌아올게요!').setColor(client.config.EMBED_COLOR_NORMAL)],
-        });
-      } catch {
-        client.logger.warn(`Failed to send shutdown message to guild ${queue.guildId}`);
-      }
-    }
-  });
+  const destroyPromises = Array.from(client.services.lavalinkManager.getQueues().values()).map(queue => client.services.lavalinkManager.destroyQueue(queue.guildId));
+  await Promise.allSettled(destroyPromises);
 
-  await Promise.allSettled(notifyPromises);
-
+  client.destroy();
   process.exit(0);
 };
 
