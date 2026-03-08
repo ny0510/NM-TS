@@ -4,6 +4,7 @@ import {Connectors, type LavalinkResponse, LoadType, type Node, type NodeOption,
 import type {NMClient} from '@/client/Client';
 import type {Config} from '@/client/types';
 import {Queue, type QueueTrack} from '@/structures/Queue';
+import {isURL} from '@/utils/formatting/patterns';
 import type {ILogger} from '@/utils/logger';
 import {registerLavalinkEvents, registerPlayerEvents} from '@/utils/music/lavalinkEvents';
 
@@ -103,7 +104,8 @@ export class LavalinkManager {
       return undefined;
     }
 
-    const result = await node.rest.resolve(query);
+    const resolveQuery = isURL.test(query) ? query : `ytsearch:${query}`;
+    const result = await node.rest.resolve(resolveQuery);
     if (!result) return undefined;
 
     if (requester) {

@@ -62,11 +62,6 @@ services:
       options:
         max-size: '10m'
         max-file: '3'
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-          cpus: '1.0'
 
 networks:
   nm:
