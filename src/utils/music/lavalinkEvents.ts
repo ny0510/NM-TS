@@ -163,6 +163,10 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
   });
 
   player.on('closed', async (data: WebSocketClosedEvent) => {
+    if (data.code === 1000) {
+      logger.debug(`Player ${guildName} (${guildId}) websocket closed normally (code: 1000)`);
+      return;
+    }
     logger.warn(`Player ${guildName} (${guildId}) websocket closed (code: ${data.code}, reason: ${data.reason})`);
   });
 };
