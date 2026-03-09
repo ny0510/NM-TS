@@ -56,6 +56,11 @@ export default {
               inline: true,
             },
             {
+              name: '자동 셔플',
+              value: inlineCode(queue.isAutoShuffle ? '활성화 됨' : '비활성화 됨'),
+              inline: true,
+            },
+            {
               name: '요청자',
               value: `${typeof track.requester === 'string' ? track.requester : track.requester?.id ? `<@${track.requester.id}>` : '알 수 없음'}`,
               inline: true,
