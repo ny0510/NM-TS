@@ -50,9 +50,9 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
     logger.info(`Player ${guildName} (${guildId}) track start. Track: ${track.info.title}`);
 
     const channel = client.channels.cache.get(queue.textChannelId);
-    const isRepeating = queue.queueRepeat || queue.trackRepeat;
+    const isTrackRepeating = queue.trackRepeat;
 
-    if (!channel?.isSendable() || isRepeating) return;
+    if (!channel?.isSendable() || isTrackRepeating) return;
 
     try {
       const lastMessageId = queue.get<string>('lastMessageId');
