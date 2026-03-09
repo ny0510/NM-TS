@@ -355,6 +355,10 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
       else if (index !== null) queue.add(track, index);
       else queue.add(track);
 
+      if (queue.isAutoShuffle && !addFirst && index === null && queue.size() > 1) {
+        queue.shuffle();
+      }
+
       if (!queue.playing && !queue.paused) await queue.play();
 
       const trackMeta = await getEmbedMeta(track, false, queue, 'add');
@@ -403,6 +407,10 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
       if (addFirst) queue.add(playlistTracks, 0);
       else if (index !== null) queue.add(playlistTracks, index);
       else queue.add(playlistTracks);
+
+      if (queue.isAutoShuffle && !addFirst && index === null && queue.size() > 1) {
+        queue.shuffle();
+      }
 
       const playlistQueueSize = queue.size();
       if (!queue.playing && !queue.paused && playlistQueueSize) await queue.play();

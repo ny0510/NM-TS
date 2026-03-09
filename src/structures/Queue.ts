@@ -25,6 +25,7 @@ export class Queue {
   private repeatMode: RepeatMode = RepeatMode.OFF;
   private autoplay = false;
   private autoplayRequester: User | undefined;
+  private autoShuffle = false;
   private readonly metadata = new Map<string, unknown>();
   // 사용자 단위 0-100, Shoukaku 내부는 0-1000 스케일
   private _volume: number;
@@ -99,6 +100,14 @@ export class Queue {
 
   public getAutoplayRequester(): User | undefined {
     return this.autoplayRequester;
+  }
+
+  public get isAutoShuffle(): boolean {
+    return this.autoShuffle;
+  }
+
+  public setAutoShuffle(enabled: boolean): void {
+    this.autoShuffle = enabled;
   }
 
   public set<T>(key: string, value: T): void {
