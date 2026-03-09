@@ -98,9 +98,9 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
       return;
     }
 
-    // 큐 반복: 현재 트랙을 대기열 끝에 다시 추가
     if (queue.queueRepeat && data.reason === 'finished') {
-      queue.add(track);
+      const currentTrack = queue.getCurrent();
+      if (currentTrack) queue.add(currentTrack);
     }
 
     // 현재 트랙을 이전 트랙 목록에 추가 (자동 재생 시드용)
