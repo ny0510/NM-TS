@@ -2,37 +2,23 @@ import {ActivityType, Events, GatewayIntentBits, PresenceUpdateStatus} from 'dis
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/client/types';
-import {truncateWithEllipsis} from '@/utils';
+
+let presenceToggle = false;
 
 const updatePresence = (client: NMClient) => {
   const stats = client.getStats();
 
-  let activityName = '';
-  let activityType = ActivityType.Custom;
+  const messages = [`NM | ${stats.guilds}개의 서버에서 활동 중!`];
 
   if (stats.activePlayers) {
-    // 재생 중인 플레이어가 있으면 랜덤으로 하나 선택
-    const queues = Array.from(client.queues.values());
-    const randomQueue = queues[Math.floor(Math.random() * queues.length)];
-    const currentTrack = randomQueue ? randomQueue.getCurrent() : null;
-
-    if (currentTrack) {
-      activityName = truncateWithEllipsis(currentTrack.info.title, 50);
-      activityType = ActivityType.Listening;
-    } else {
-      activityName = `NM | ${stats.guilds}개의 서버에서 활동 중!`;
-    }
-  } else {
-    activityName = `NM | ${stats.guilds}개의 서버에서 활동 중!`;
+    messages.push(`NM | ${stats.activePlayers}개의 서버에서 음악 재생 중!`);
   }
 
+  const name = messages.length > 1 ? messages[presenceToggle ? 1 : 0] : messages[0];
+  presenceToggle = !presenceToggle;
+
   client.user?.setPresence({
-    activities: [
-      {
-        name: activityName,
-        type: activityType,
-      },
-    ],
+    activities: [{name: name ?? messages[0] ?? '', type: ActivityType.Custom}],
     status: PresenceUpdateStatus.Idle,
   });
 };
