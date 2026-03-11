@@ -1,7 +1,7 @@
 # NM-TS AGENT KNOWLEDGE BASE
 
 **Generated:** 2026-02-23
-**Context:** Discord Music Bot (TypeScript + Bun + Discord.js v14 + Magmastream)
+**Context:** Discord Music Bot (TypeScript + Bun + Discord.js v14 + Shoukaku)
 
 ---
 
@@ -9,11 +9,12 @@
 
 Discord music bot with **strict TypeScript** type safety, Korean localization, and Lavalink audio streaming. Built exclusively for **Bun runtime** (no Node.js compatibility).
 
-**Stack:** TypeScript + Bun + Discord.js v14 + Magmastream (Lavalink wrapper)
+**Stack:** TypeScript + Bun + Discord.js v14 + Shoukaku (Lavalink wrapper)
 
 ---
 
 ## COMMANDS
+
 ```bash
 # Development & Production
 bun run dev                    # Hot-reload with auto-install
@@ -38,6 +39,7 @@ bun build src/index.ts --outdir dist --target bun
 ## CODE STYLE GUIDELINES
 
 ### TypeScript Strictness
+
 - **`strict: true`** + `noUncheckedIndexedAccess: true` (tsconfig.json)
 - **NEVER use `any`** — Use `unknown` and type narrowing instead
 - **NEVER suppress errors** with `@ts-ignore`, `@ts-expect-error`, or `as any`
@@ -45,15 +47,17 @@ bun build src/index.ts --outdir dist --target bun
 - **Optional chaining**: Use `?.` for nullable properties
 
 ### Imports & Modules
+
 - **Path aliases**: Use `@/*` for all internal imports (maps to `./src/*`)
 - **Import order**: Auto-sorted by Prettier plugin (local imports separated)
 - **Type imports**: Use `import type` for type-only imports
 - **Extensions**: `.ts` extensions allowed but not required (bundler mode)
 
 **Example:**
+
 ```typescript
 import {ChatInputCommandInteraction, MessageFlags} from 'discord.js';
-import {type Player, LoadTypes} from 'magmastream';
+import {LoadType, type Track} from 'shoukaku';
 
 import type {NMClient} from '@/client/Client';
 import {getClient} from '@/utils/discord/client';
@@ -61,6 +65,7 @@ import {createErrorEmbed} from '@/utils/discord/embeds';
 ```
 
 ### Formatting (ESLint + Prettier)
+
 - **Quotes**: Single quotes (`'hello'`) — enforced by ESLint
 - **Semicolons**: Always required — enforced by ESLint
 - **Indentation**: 2 spaces (no tabs)
@@ -71,6 +76,7 @@ import {createErrorEmbed} from '@/utils/discord/embeds';
 - **Arrow functions**: No parens for single param (`x => x * 2`)
 
 **Example:**
+
 ```typescript
 // ✅ Correct
 const data = {name: 'test', value: 42};
@@ -87,6 +93,7 @@ const fn = async id => { return id }       // Missing type annotation
 ```
 
 ### Naming Conventions
+
 - **Files**: camelCase (`playerUtils.ts`, `safeReply.ts`)
 - **Types/Interfaces**: PascalCase (`NMClient`, `Command`)
 - **Functions/Variables**: camelCase (`createPlayer`, `addFirst`)
@@ -94,12 +101,14 @@ const fn = async id => { return id }       // Missing type annotation
 - **Private helpers**: No prefix (rely on module scope)
 
 ### Error Handling
+
 - **Never empty catch blocks** — Always log or handle errors
 - **Use Error objects**: `new Error(message)` not plain strings
 - **Type errors**: Check with `error instanceof Error`
 - **DiscordAPIError**: Catch specific error codes (e.g., `10062` for expired interactions)
 
 **Example:**
+
 ```typescript
 // ✅ Good
 try {
@@ -119,11 +128,13 @@ try {
 ```
 
 ### Async/Await
+
 - **Prefer async/await** over `.then()/.catch()`
 - **Always await** Discord API calls and Lavalink operations
 - **No floating promises** — Always await or explicitly ignore
 
 ### Comments & Localization
+
 - **Comments**: Korean (matches user-facing messages)
 - **User messages**: Korean (bot serves Korean users)
 - **Code/Types**: English acceptable for technical terms
@@ -154,22 +165,23 @@ lavalink/         # Lavalink server config & plugins
 
 ## WHERE TO LOOK
 
-| Task | Location | Key Files |
-|------|----------|-----------|
-| **Add/modify commands** | `src/commands/` | `play.ts`, `queue.ts`, `skip.ts` |
-| **Music player logic** | `src/utils/music/` | `playerUtils.ts` (helpers), `lavalinkEvents.ts` |
-| **Lavalink integration** | `src/managers/` | `LavalinkManager.ts` (Magmastream wrapper) |
-| **Permission checks** | `src/utils/discord/permissions/` | `checkPermissions.ts`, `locale/permission.ts` |
-| **Embed helpers** | `src/utils/discord/` | `embeds.ts` (error/success embeds) |
-| **Client setup** | `src/client/` | `Client.ts` (NMClient class, intents) |
-| **Event handlers** | `src/events/` | `voiceStateUpdate.ts`, `clientReady.ts` |
-| **Tests** | `tests/` | `utils/playerUtils.test.ts` |
+| Task                     | Location                         | Key Files                                       |
+| ------------------------ | -------------------------------- | ----------------------------------------------- |
+| **Add/modify commands**  | `src/commands/`                  | `play.ts`, `queue.ts`, `skip.ts`                |
+| **Music player logic**   | `src/utils/music/`               | `playerUtils.ts` (helpers), `lavalinkEvents.ts` |
+| **Lavalink integration** | `src/managers/`                  | `LavalinkManager.ts` (Shoukaku wrapper)         |
+| **Permission checks**    | `src/utils/discord/permissions/` | `checkPermissions.ts`, `locale/permission.ts`   |
+| **Embed helpers**        | `src/utils/discord/`             | `embeds.ts` (error/success embeds)              |
+| **Client setup**         | `src/client/`                    | `Client.ts` (NMClient class, intents)           |
+| **Event handlers**       | `src/events/`                    | `voiceStateUpdate.ts`, `clientReady.ts`         |
+| **Tests**                | `tests/`                         | `utils/playerUtils.test.ts`                     |
 
 ---
 
 ## KEY PATTERNS
 
 ### Command Structure
+
 All commands must implement the `Command` interface:
 
 ```typescript
@@ -187,6 +199,7 @@ export default {
 ```
 
 ### Validation Pattern
+
 Use helper functions from `@/utils/music/playerUtils`:
 
 ```typescript
@@ -199,6 +212,7 @@ if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 ```
 
 ### Client Type Casting
+
 Always use `getClient()` helper (never cast manually):
 
 ```typescript
@@ -210,6 +224,7 @@ const client = interaction.client as NMClient;
 ```
 
 ### Safe Replies
+
 Use `safeReply()` to handle deferred/replied states:
 
 ```typescript
@@ -226,6 +241,7 @@ await safeReply(interaction, {
 ## TESTING
 
 ### Test Structure (Bun-native)
+
 ```typescript
 import {beforeEach, describe, expect, it, mock} from 'bun:test';
 
@@ -242,6 +258,7 @@ describe('Feature Name', () => {
 ```
 
 ### Mocking
+
 - Use `mock()` from `bun:test`
 - Use `mock.module()` to mock entire modules
 - Use `@ts-ignore` sparingly in tests when mocking complex types
