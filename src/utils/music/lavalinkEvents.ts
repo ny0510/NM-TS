@@ -147,15 +147,18 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
   });
 
   player.on('exception', async (data: TrackExceptionEvent) => {
-    const errorMessage = data.exception?.message ?? 'Unknown Error';
-    logger.error(`Player ${guildName} (${guildId}) track exception: ${errorMessage}`);
+    const {exception} = data;
+    const errorMessage = exception.message ?? 'Unknown Error';
+    logger.error(`Player ${guildName} (${guildId}) track exception [${exception.severity}]: ${errorMessage}`);
 
     const channel = client.channels.cache.get(queue.textChannelId);
     if (!channel?.isSendable()) return;
 
+    const isPlaybackRestricted = exception.severity !== 'fault';
+
     try {
       await channel.send({
-        embeds: [createErrorEmbed(client, '음악 재생 중 오류가 발생했어요.', codeBlock('js', errorMessage))],
+        embeds: [isPlaybackRestricted ? createErrorEmbed(client, '재생이 불가능한 영상이에요.', '유튜브 정책에 의해 재생이 제한된 영상이에요.\n연령 제한, 지역 제한 등이 원인일 수 있어요.') : createErrorEmbed(client, '음악 재생 중 오류가 발생했어요.', codeBlock('js', errorMessage))],
       });
     } catch (sendError) {
       logger.error(`Failed to send track error message: ${sendError}`);
