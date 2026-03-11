@@ -26,6 +26,8 @@ export class NMClient extends Client {
       },
     });
 
+    this.ws.setMaxListeners(25);
+
     this.config = config;
     this.logger = new Logger(config.LOG_PREFIX, 'info', config.DISCORD_LOG_WEBHOOK_URL);
 

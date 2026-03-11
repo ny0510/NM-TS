@@ -65,6 +65,14 @@ export class LavalinkManager {
     const existing = this.queues.get(options.guildId);
     if (existing) return existing;
 
+    if (this.shoukaku.players.has(options.guildId)) {
+      try {
+        await this.shoukaku.leaveVoiceChannel(options.guildId);
+      } catch {
+        // ignore
+      }
+    }
+
     const player = await this.shoukaku.joinVoiceChannel({
       guildId: options.guildId,
       channelId: options.voiceChannelId,
@@ -93,8 +101,11 @@ export class LavalinkManager {
     const queue = this.queues.get(guildId);
     if (!queue) return;
 
-    await queue.destroy();
-    this.queues.delete(guildId);
+    try {
+      await queue.destroy();
+    } finally {
+      this.queues.delete(guildId);
+    }
   }
 
   public async search(query: string, requester?: User): Promise<LavalinkResponse | undefined> {

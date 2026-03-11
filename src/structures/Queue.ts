@@ -253,6 +253,7 @@ export class Queue {
     this.clear();
     this.current = null;
     this.playing = false;
+    this.player.removeAllListeners();
     await this.shoukaku.leaveVoiceChannel(this.guildId);
     this.metadata.clear();
   }
