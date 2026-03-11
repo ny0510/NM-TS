@@ -5,7 +5,22 @@ import type {Command} from '@/client/types';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 import {msToTime, truncateWithEllipsis} from '@/utils/formatting';
-import {createProgressBar, ensurePlaying, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
+import {createProgressBar, ensurePlaying} from '@/utils/music';
+
+const getVolumeIcon = (volume: number): string => {
+  if (volume === 0) return '🔇';
+  if (volume <= 30) return '🔈';
+  if (volume <= 70) return '🔉';
+  return '🔊';
+};
+
+const getRepeatDisplay = (queueRepeat: boolean, trackRepeat: boolean): string => {
+  if (queueRepeat) return '🔁 대기열 반복';
+  if (trackRepeat) return '🔂 현재 곡 반복';
+  return '➡️ 반복 없음';
+};
+
+const getToggleDisplay = (enabled: boolean): string => (enabled ? '🟢 활성화' : '🔴 비활성화');
 
 export default {
   data: new SlashCommandBuilder().setName('now').setDescription('현재 재생중인 음악을 확인해요.'),
@@ -19,10 +34,13 @@ export default {
 
     const track = queue.getCurrent()!;
     const colors = track.info.artworkUrl ? await getColors(track.info.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
-    const repeatState = queue.queueRepeat ? '대기열 반복 중' : queue.trackRepeat ? '현재 음악 반복 중' : '반복 중이 아님';
     const progressBar = createProgressBar(queue);
     const queueSize = queue.size();
     const queueDuration = queue.duration();
+
+    const volumeIcon = getVolumeIcon(queue.volume);
+    const repeatDisplay = getRepeatDisplay(queue.queueRepeat, queue.trackRepeat);
+    const requesterDisplay = typeof track.requester === 'string' ? track.requester : track.requester?.id ? `<@${track.requester.id}>` : '알 수 없음';
 
     return await safeReply(interaction, {
       embeds: [
@@ -31,38 +49,38 @@ export default {
           .setThumbnail(track.info.artworkUrl ?? null)
           .setFields([
             {
-              name: '곡 길이',
-              value: inlineCode(`${track.info.isStream ? '실시간 스트리밍' : msToTime(track.info.length)}`),
+              name: '🕐 곡 길이',
+              value: inlineCode(track.info.isStream ? '실시간 스트리밍' : msToTime(track.info.length)),
               inline: true,
             },
             {
-              name: '남은 대기열',
-              value: inlineCode(`${queueSize}곡 (${msToTime(queueDuration)})`),
-              inline: true,
-            },
-            {
-              name: '볼륨',
+              name: `${volumeIcon} 볼륨`,
               value: inlineCode(`${queue.volume}%`),
               inline: true,
             },
             {
-              name: '반복',
-              value: inlineCode(`${repeatState}`),
+              name: '👤 요청자',
+              value: requesterDisplay,
               inline: true,
             },
             {
-              name: '추천 음악 자동 재생',
-              value: inlineCode(queue.isAutoplay ? '활성화 됨' : '비활성화 됨'),
+              name: '📋 남은 대기열',
+              value: `${inlineCode(`${queueSize}곡`)} · ${inlineCode(msToTime(queueDuration))}`,
               inline: true,
             },
             {
-              name: '자동 셔플',
-              value: inlineCode(queue.isAutoShuffle ? '활성화 됨' : '비활성화 됨'),
+              name: '🔁 반복',
+              value: repeatDisplay,
               inline: true,
             },
             {
-              name: '요청자',
-              value: `${typeof track.requester === 'string' ? track.requester : track.requester?.id ? `<@${track.requester.id}>` : '알 수 없음'}`,
+              name: '✨ 자동 재생',
+              value: getToggleDisplay(queue.isAutoplay),
+              inline: true,
+            },
+            {
+              name: '🔀 자동 셔플',
+              value: getToggleDisplay(queue.isAutoShuffle),
               inline: true,
             },
           ])
