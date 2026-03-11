@@ -20,13 +20,13 @@ export default {
       const stats = client.getStats();
 
       const fields = [
-        {name: '개발자', value: `👨‍💻 ${userMention('690148325604720660')}`, inline: true},
-        {name: '버전', value: `📦 v${version}`, inline: true},
-        {name: '라이브러리', value: `📚 [Discord.js](https://discord.js.org), [Lavalink](https://github.com/lavalink-devs/Lavalink)`, inline: true},
-        {name: '서버 수', value: `📊 ${stats.guilds}개`, inline: true},
-        {name: '사용자 수', value: `👥 ${stats.users}명`, inline: true},
-        {name: '현재 재생중인 서버 수', value: `🎵 ${stats.activePlayers}개`, inline: true},
-        {name: '음악 서버 상태', value: `🎛 CPU ${stats.cpuUsage}% | 🛢️ RAM ${stats.memoryUsage}MB`},
+        {name: '👨‍💻 개발자', value: userMention('690148325604720660'), inline: true},
+        {name: '📦 버전', value: `v${version}`, inline: true},
+        {name: '📚 라이브러리', value: '[Discord.js](https://discord.js.org), [Lavalink](https://github.com/lavalink-devs/Lavalink)', inline: true},
+        {name: '📊 서버 수', value: `${stats.guilds}개`, inline: true},
+        {name: '👥 사용자 수', value: `${stats.users}명`, inline: true},
+        {name: '🎵 현재 재생중인 서버 수', value: `${stats.activePlayers}개`, inline: true},
+        {name: '🎛 음악 서버 상태', value: `CPU ${stats.cpuUsage}% | RAM ${stats.memoryUsage}MB`},
       ];
 
       await safeReply(interaction, {
