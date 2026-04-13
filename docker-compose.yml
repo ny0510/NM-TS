@@ -8,6 +8,7 @@ services:
     volumes:
       - ./lavalink/application.yml:/opt/Lavalink/application.yml
       - ./lavalink/plugins/:/opt/Lavalink/plugins/
+      - /run/udev:/run/udev:ro
     networks:
       - nm
     ports:
