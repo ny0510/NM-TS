@@ -22,7 +22,7 @@ services:
     logging:
       driver: 'json-file'
       options:
-        max-size: '10m'
+        max-size: '2m'
         max-file: '3'
 
   ejs-api:
@@ -38,7 +38,7 @@ services:
     logging:
       driver: 'json-file'
       options:
-        max-size: '10m'
+        max-size: '2m'
         max-file: '3'
 
   nm:
@@ -60,7 +60,7 @@ services:
     logging:
       driver: 'json-file'
       options:
-        max-size: '10m'
+        max-size: '2m'
         max-file: '3'
 
 networks:
