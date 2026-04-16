@@ -115,7 +115,9 @@ export class LavalinkManager {
       return undefined;
     }
 
-    const resolveQuery = isURL.test(query) ? query : `ytsearch:${query}`;
+    const normalizedQuery = query.trim();
+    const hasSearchPrefix = /^(ytsearch|spsearch|scsearch):/i.test(normalizedQuery);
+    const resolveQuery = isURL.test(normalizedQuery) || hasSearchPrefix ? normalizedQuery : `ytsearch:${normalizedQuery}`;
     const result = await node.rest.resolve(resolveQuery);
     if (!result) return undefined;
 
