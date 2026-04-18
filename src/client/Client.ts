@@ -6,6 +6,7 @@ import {CooldownManager} from '@/managers/CooldownManager';
 import {EventManager} from '@/managers/EventManager';
 import {KoreanbotsManager} from '@/managers/KoreanbotsManager';
 import {LavalinkManager} from '@/managers/LavalinkManager';
+import {PlayerStateManager} from '@/managers/PlayerStateManager';
 import type {Queue} from '@/structures/Queue';
 import {config} from '@/utils/config';
 import {type ILogger, Logger} from '@/utils/logger';
@@ -36,6 +37,7 @@ export class NMClient extends Client {
       eventManager: new EventManager(this, new Logger('Event', 'info', config.DISCORD_LOG_WEBHOOK_URL)),
       lavalinkManager: new LavalinkManager(this, new Logger('Lavalink', 'info', config.DISCORD_LOG_WEBHOOK_URL), this.config),
       cooldownManager: new CooldownManager(),
+      playerStateManager: new PlayerStateManager(this, new Logger('PlayerState', 'info', config.DISCORD_LOG_WEBHOOK_URL), this.config),
     };
 
     this.koreanbotsManager = new KoreanbotsManager(this, new Logger('Koreanbots', 'info', config.DISCORD_LOG_WEBHOOK_URL));

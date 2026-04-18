@@ -41,6 +41,7 @@ export interface AppConfig {
   DEFAULT_VOLUME: number;
   LOG_PREFIX: string;
   IS_DEV_MODE: boolean;
+  PLAYER_STATE_PATH: string;
 }
 
 export interface ProgressBarConfig {
@@ -66,6 +67,7 @@ export interface ClientServices {
   eventManager: import('@/managers/EventManager').EventManager;
   lavalinkManager: import('@/managers/LavalinkManager').LavalinkManager;
   cooldownManager: import('@/managers/CooldownManager').CooldownManager;
+  playerStateManager: import('@/managers/PlayerStateManager').PlayerStateManager;
 }
 
 export interface ClientStats {
