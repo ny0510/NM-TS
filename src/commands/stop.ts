@@ -3,13 +3,13 @@ import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBui
 import type {Command} from '@/client/types';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
-import {destroyQueueSafely, ensurePlayerReady} from '@/utils/music';
+import {destroyQueueSafely, ensurePlayerReady, ensurePlaying} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder().setName('stop').setDescription('음악을 정지해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    if (!(await ensurePlayerReady(interaction))) return;
+    if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
 
     const client = getClient(interaction);
     const queue = client.queues.get(interaction.guildId!);
