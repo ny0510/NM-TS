@@ -52,6 +52,9 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
     const channel = client.channels.cache.get(queue.textChannelId);
     const isTrackRepeating = queue.trackRepeat;
 
+    // 복구 중에는 track start embed 억제
+    if (queue.get<boolean>('isRestoring')) return;
+
     if (!channel?.isSendable() || isTrackRepeating) return;
 
     try {

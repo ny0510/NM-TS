@@ -55,6 +55,12 @@ export default {
     try {
       client.services.lavalinkManager.registerEvents(client);
 
+      try {
+        await client.services.playerStateManager.restoreAll();
+      } catch (error) {
+        client.logger.error(`Failed to restore player state: ${error instanceof Error ? error.message : String(error)}`);
+      }
+
       updatePresence(client);
 
       await client.deployCommands();
