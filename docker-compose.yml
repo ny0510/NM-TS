@@ -43,7 +43,10 @@ services:
         max-file: '3'
 
   nm:
-    build: .
+    build:
+      context: .
+      cache_from:
+        - ghcr.io/ny0510/nm:latest
     image: ghcr.io/ny0510/nm:latest
     container_name: nm
     restart: unless-stopped

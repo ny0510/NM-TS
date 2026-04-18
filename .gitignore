@@ -1,7 +1,9 @@
 magmastream
 shoukaku
+shoukaku/player-state.json
 data
 lavalink
+.sisyphus
 
 # dependencies (bun install)
 node_modules
