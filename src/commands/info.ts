@@ -1,7 +1,7 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, SlashCommandBuilder, time, userMention} from 'discord.js';
 
 import {version} from '@/../package.json';
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 
@@ -11,7 +11,6 @@ export default {
   async execute(interaction: ChatInputCommandInteraction) {
     const client = getClient(interaction);
 
-    // 상호작용이 이미 응답되었는지 확인
     if (interaction.replied || interaction.deferred) {
       return;
     }
@@ -39,8 +38,7 @@ export default {
         ],
       });
     } catch (error) {
-      client.logger.error(`Error in info command: ${error}`);
-      // 이미 응답된 경우 추가 응답하지 않음
+      client.logger.error(error instanceof Error ? error : new Error(`Error in info command: ${error}`));
       if (!interaction.replied && !interaction.deferred) {
         try {
           await safeReply(interaction, {
@@ -48,9 +46,9 @@ export default {
             flags: MessageFlags.Ephemeral,
           });
         } catch (replyError) {
-          client.logger.error(`Failed to send error reply: ${replyError}`);
+          client.logger.error(replyError instanceof Error ? replyError : new Error(`Failed to send error reply: ${replyError}`));
         }
       }
     }
   },
-} as Command;
+} satisfies Command;

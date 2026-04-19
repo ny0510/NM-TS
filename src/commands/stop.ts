@@ -1,9 +1,9 @@
-import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
-import {destroyQueueSafely, ensurePlayerReady, ensurePlaying} from '@/utils/music';
+import {destroyQueueSafely, ensurePlayerReady} from '@/utils/music';
 
 export default {
   data: new SlashCommandBuilder().setName('stop').setDescription('음악을 정지해요.'),
@@ -22,4 +22,4 @@ export default {
       embeds: [new EmbedBuilder().setTitle('음악을 정지했어요.').setColor(client.config.EMBED_COLOR_NORMAL)],
     });
   },
-} as Command;
+} satisfies Command;

@@ -1,8 +1,9 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, MessageComponentInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
-import type {Command} from '@/client/types';
-import type {Queue, QueueTrack} from '@/structures/Queue';
+import type {Queue} from '@/structures/Queue';
+import type {Command} from '@/types/client';
+import type {QueueTrack} from '@/types/music';
 import {slashCommandMention} from '@/utils/discord';
 import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
@@ -20,8 +21,8 @@ function buildQueueEmbed(client: NMClient, queue: Queue, page: number) {
   const totalTracks = queue.size();
   const totalPages = Math.max(1, Math.ceil(totalTracks / TRACKS_PER_PAGE));
   const queueDuration = queue.duration();
-
   const footer = totalPages > 1 ? `${page}/${totalPages} 페이지\n+${Math.max(0, totalTracks - page * TRACKS_PER_PAGE)}곡` : ' ';
+
   const trackList = tracks.map((track: QueueTrack, i: number) => ({
     name: `${start + i + 1}. ${truncateWithEllipsis(track.info.title, 50)}`,
     value: `┕ ${track.info.isStream ? '실시간 스트리밍' : msToTime(track.info.length)} | ${typeof track.requester === 'string' ? track.requester : track.requester?.id ? `<@${track.requester.id}>` : '알 수 없음'}`,
@@ -68,8 +69,6 @@ export default {
     const totalPages = Math.max(1, Math.ceil(totalTracks / TRACKS_PER_PAGE));
     let page = interaction.options.getNumber('page') ?? 1;
     page = Math.max(1, Math.min(page, totalPages));
-    const start = (page - 1) * TRACKS_PER_PAGE;
-    const end = start + TRACKS_PER_PAGE;
 
     if (totalTracks === 0) {
       return await safeReply(interaction, {
@@ -77,16 +76,6 @@ export default {
         flags: MessageFlags.Ephemeral,
       });
     }
-
-    if (page < 1 || page > totalPages) {
-      return await safeReply(interaction, {
-        embeds: [createErrorEmbed(client, '유효하지 않은 페이지에요.', `페이지는 1 이상 ${totalPages} 이하여야 해요.`)],
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    const remainingTracks = Math.max(0, totalTracks - end);
-    const footer = totalPages > 1 ? `${page}/${totalPages} 페이지\n+${remainingTracks}곡` : ' ';
 
     const embed = buildQueueEmbed(client, queue, page);
     const row = buildQueueButtons(page, totalPages);
@@ -138,7 +127,7 @@ export default {
         if (code === 10008 || code === 50001) {
           client.logger.debug(`Failed to edit message (known error ${code}): ${error}`);
         } else {
-          client.logger.error(`Failed to edit message: ${error}`);
+          client.logger.error(error instanceof Error ? error : new Error(`Failed to edit message: ${error}`));
         }
       } finally {
         if (!collector.ended) collector.stop();
@@ -188,7 +177,7 @@ export default {
           components: [buildQueueButtons(page, currentTotalPages)],
         });
       } catch (error) {
-        client.logger.error(`Error handling queue interaction: ${error}`);
+        client.logger.error(error instanceof Error ? error : new Error(`Error handling queue interaction: ${error}`));
 
         if (error && typeof error === 'object' && 'code' in error) {
           const discordError = error as {code: number};
@@ -219,7 +208,7 @@ export default {
             });
           }
         } catch (replyError) {
-          client.logger.error(`Failed to send error reply: ${replyError}`);
+          client.logger.error(replyError instanceof Error ? replyError : new Error(`Failed to send error reply: ${replyError}`));
         }
       }
     });
@@ -230,8 +219,8 @@ export default {
     });
 
     collector.on('error', error => {
-      client.logger.error(`Queue collector error: ${error}`);
+      client.logger.error(error instanceof Error ? error : new Error(`Queue collector error: ${error}`));
       disableComponents();
     });
   },
-} as Command;
+} satisfies Command;

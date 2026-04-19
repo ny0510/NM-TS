@@ -1,6 +1,6 @@
-import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
+import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 import {ensurePlayerReady} from '@/utils/music';
@@ -21,4 +21,4 @@ export default {
       embeds: [new EmbedBuilder().setTitle('대기열을 비웠어요.').setColor(client.config.EMBED_COLOR_NORMAL)],
     });
   },
-} as Command;
+} satisfies Command;

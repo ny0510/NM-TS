@@ -1,6 +1,6 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, inlineCode} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {safeReply} from '@/utils/discord/interactions';
@@ -57,11 +57,10 @@ export default {
       return safeReply(interaction, {
         embeds: [createErrorEmbed(client, '음악의 길이보다 긴 시간으로 건너뛸 수 없어요.', `현재 재생중인 음악의 길이는 ${msToTime(currentTrack.info.length)}에요.`)],
       });
-    if (queue.paused) return safeReply(interaction, {embeds: [createErrorEmbed(client, '일시 정지 상태에서는 건너뛰기를 할 수 없어요.')], flags: MessageFlags.Ephemeral});
     if (currentTrack.info.isStream) return safeReply(interaction, {embeds: [createErrorEmbed(client, '스트리밍 음악은 건너뛸 수 없어요.')], flags: MessageFlags.Ephemeral});
     if (!currentTrack.info.isSeekable) return safeReply(interaction, {embeds: [createErrorEmbed(client, '이 트랙은 건너뛰기를 지원하지 않아요.')], flags: MessageFlags.Ephemeral});
 
     await queue.seek(position);
     await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${formatTime(seconds)}(으)로 건너뛰었어요.`).setColor(client.config.EMBED_COLOR_NORMAL)]});
   },
-} as Command;
+} satisfies Command;

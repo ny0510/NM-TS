@@ -1,6 +1,6 @@
-import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 import {ensurePaused, ensurePlayerReady} from '@/utils/music';
@@ -21,4 +21,4 @@ export default {
     await queue.pause(true);
     await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('음악을 일시정지했어요.').setColor(client.config.EMBED_COLOR_NORMAL)]});
   },
-} as Command;
+} satisfies Command;

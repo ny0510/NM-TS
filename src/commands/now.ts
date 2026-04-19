@@ -1,7 +1,7 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
 import getColors from 'get-image-colors';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 import {msToTime, truncateWithEllipsis} from '@/utils/formatting';
@@ -29,7 +29,7 @@ export default {
     const client = getClient(interaction);
     const queue = client.queues.get(interaction.guildId!);
 
-    if (!(await ensurePlaying(interaction))) return; // 음악이 재생중인지 확인
+    if (!(await ensurePlaying(interaction))) return;
     if (!queue) return;
 
     const track = queue.getCurrent()!;
@@ -88,4 +88,4 @@ export default {
       ],
     });
   },
-} as Command;
+} satisfies Command;

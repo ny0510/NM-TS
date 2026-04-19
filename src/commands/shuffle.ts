@@ -1,6 +1,6 @@
-import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
+import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 import {ensurePlayerReady} from '@/utils/music';
@@ -27,9 +27,9 @@ export default {
       embeds: [
         new EmbedBuilder()
           .setTitle(`대기열을 ${mode === 'roundrobin' ? '라운드 로빈' : '랜덤'}으로 섞었어요.`)
-          .setDescription(mode === 'roundrobin' ? '라운드 로빈 모드는 모든 노래를 균등하게 요청자별로 섞어요.' : ' ')
+          .setDescription(mode === 'roundrobin' ? '라운드 로빈 모드는 모든 노래를 균등하게 요청자별로 섞어요.' : null)
           .setColor(client.config.EMBED_COLOR_NORMAL),
       ],
     });
   },
-} as Command;
+} satisfies Command;

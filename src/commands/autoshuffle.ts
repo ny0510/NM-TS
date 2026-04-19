@@ -1,6 +1,6 @@
 import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 import {ensurePlayerReady} from '@/utils/music';
@@ -18,14 +18,14 @@ export default {
     const enabled = queue.isAutoShuffle;
     queue.setAutoShuffle(!enabled);
 
-    if (!enabled) {
-      return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('자동 셔플을 활성화했어요.').setDescription('노래가 추가될 때마다 대기열을 자동으로 섞어요.').setColor(client.config.EMBED_COLOR_NORMAL)],
-      });
-    } else {
+    if (enabled) {
       return await safeReply(interaction, {
         embeds: [new EmbedBuilder().setTitle('자동 셔플을 비활성화했어요.').setDescription('더 이상 자동으로 대기열을 섞지 않아요.').setColor(client.config.EMBED_COLOR_NORMAL)],
       });
     }
+
+    return await safeReply(interaction, {
+      embeds: [new EmbedBuilder().setTitle('자동 셔플을 활성화했어요.').setDescription('노래가 추가될 때마다 대기열을 자동으로 섞어요.').setColor(client.config.EMBED_COLOR_NORMAL)],
+    });
   },
-} as Command;
+} satisfies Command;

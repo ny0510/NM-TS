@@ -1,7 +1,7 @@
 import {EmbedBuilder, MessageFlags, SlashCommandBuilder, Team, User, codeBlock} from 'discord.js';
 import type {ChatInputCommandInteraction} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 
 export default {
@@ -17,7 +17,9 @@ export default {
       if (client.application && typeof client.application.fetch === 'function') {
         await client.application.fetch();
       }
-    } catch {}
+    } catch (error) {
+      client.logger.debug(`Failed to fetch application: ${error instanceof Error ? error.message : String(error)}`);
+    }
 
     const owner = client.application?.owner;
     let isOwner = false;
@@ -87,4 +89,4 @@ export default {
 
     await interaction.editReply({embeds: [resultEmbed]});
   },
-} as Command;
+} satisfies Command;

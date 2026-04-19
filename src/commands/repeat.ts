@@ -1,6 +1,6 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 import {safeReply} from '@/utils/discord/interactions';
 import {ensurePlayerReady} from '@/utils/music';
@@ -30,14 +30,13 @@ export default {
       });
     } else if (subcommand === 'queue') {
       const enabled = !queue.queueRepeat;
-      const description = enabled && queue.trackRepeat ? '현재 음악 반복이 활성화된 상태여서 자동으로 비활성화했어요.' : ' ';
 
       queue.setQueueRepeat(enabled);
       return await safeReply(interaction, {
         embeds: [
           new EmbedBuilder()
             .setTitle(`대기열 반복을 ${enabled ? '활성화' : '비활성화'}했어요.`)
-            .setDescription(description)
+            .setDescription(enabled && queue.trackRepeat ? '현재 음악 반복이 활성화된 상태여서 자동으로 비활성화했어요.' : null)
             .setColor(client.config.EMBED_COLOR_NORMAL),
         ],
       });
@@ -60,4 +59,4 @@ export default {
       });
     }
   },
-} as Command;
+} satisfies Command;

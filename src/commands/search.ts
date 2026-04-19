@@ -1,8 +1,8 @@
-import {ActionRowBuilder, ChatInputCommandInteraction, ComponentType, EmbedBuilder, GuildMember, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction, channelMention, codeBlock, italic} from 'discord.js';
+import {ActionRowBuilder, ChatInputCommandInteraction, ComponentType, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction} from 'discord.js';
 import {LoadType, type Track} from 'shoukaku';
 
-import type {Command} from '@/client/types';
-import type {QueueTrack} from '@/structures/Queue';
+import type {Command} from '@/types/client';
+import type {QueueTrack} from '@/types/music';
 import {slashCommandMention} from '@/utils/discord';
 import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
@@ -57,7 +57,7 @@ export default {
       });
     }
 
-    const optinos = tracks
+    const options = tracks
       .filter((track: Track) => !!track.info.title)
       .map((track: Track, index: number) => {
         return {
@@ -69,14 +69,14 @@ export default {
       })
       .slice(0, 10);
 
-    if (optinos.length === 0)
+    if (options.length === 0)
       return await safeReply(interaction, {
         embeds: [createErrorEmbed(client, '음악을 찾을 수 없어요.')],
         flags: MessageFlags.Ephemeral,
       });
 
     const customId = `search:${interaction.id}`;
-    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId(customId).setPlaceholder('음악을 선택해 주세요.').setMinValues(1).setMaxValues(optinos.length).addOptions(optinos));
+    const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId(customId).setPlaceholder('음악을 선택해 주세요.').setMinValues(1).setMaxValues(options.length).addOptions(options));
 
     const embed = new EmbedBuilder().setTitle(`🔍 ${platformDisplayName}에서 ${query} 검색 결과`).setDescription('대기열에 추가할 음악을 선택해 주세요.').setColor(client.config.EMBED_COLOR_NORMAL);
 
@@ -103,7 +103,7 @@ export default {
       return true;
     };
 
-    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000 * 5, componentType: ComponentType.StringSelect}); // 5분 동안 대기
+    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000 * 5, componentType: ComponentType.StringSelect});
     const followUp = await interaction.fetchReply();
     if (!collector || !followUp) return;
 
@@ -128,25 +128,21 @@ export default {
       const selectedTracks = i.values.map(value => tracks.find((track: Track) => (track.info.uri ?? track.info.identifier) === value)).filter((track): track is Track => Boolean(track));
       const queueTracks: QueueTrack[] = selectedTracks.map(track => ({...track, requester: interaction.user}));
 
-      let queue = client.queues.get(interaction.guildId!);
-
-      const inVoice = await ensureVoiceChannel(interaction); // 음성 채널에 들어가 있는지 확인
-      const inSameVoice = await ensureSameVoiceChannel(interaction); // 같은 음성 채널에 있는지 확인
+      const inVoice = await ensureVoiceChannel(interaction);
+      const inSameVoice = await ensureSameVoiceChannel(interaction);
       if (!inVoice || !inSameVoice) return;
 
-      queue = await createQueue(interaction);
+      const queue = await createQueue(interaction);
       if (!queue) return;
 
       const results: {track: Track; success: boolean; error?: string}[] = [];
       for (const track of queueTracks) {
-        if (track) {
-          try {
-            queue.add(track);
-            results.push({track, success: true});
-          } catch (e) {
-            const errorMessage = e instanceof Error && e.message ? e.message : '알 수 없는 오류';
-            results.push({track, success: false, error: errorMessage});
-          }
+        try {
+          queue.add(track);
+          results.push({track, success: true});
+        } catch (e) {
+          const errorMessage = e instanceof Error && e.message ? e.message : '알 수 없는 오류';
+          results.push({track, success: false, error: errorMessage});
         }
       }
 
@@ -157,7 +153,7 @@ export default {
       const [tracksColor, tracksFooterText] = [tracksMeta.colors, tracksMeta.footerText];
       const description = results.length
         ? results
-            .map(({track, success, error}, index) => {
+            .map(({track, success, error}) => {
               return `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(track.info.title, 50), track.info.uri ?? '')}`;
             })
             .join('\n')
@@ -179,4 +175,4 @@ export default {
     });
     collector?.on('end', disableComponents);
   },
-} as Command;
+} satisfies Command;

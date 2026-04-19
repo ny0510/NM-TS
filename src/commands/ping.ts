@@ -1,7 +1,7 @@
 import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 import {DateTime} from 'luxon';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getClient} from '@/utils/discord/client';
 
 export default {
@@ -25,4 +25,4 @@ export default {
       ],
     });
   },
-} as Command;
+} satisfies Command;

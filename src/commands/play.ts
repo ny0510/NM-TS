@@ -1,6 +1,6 @@
 import {type AutocompleteInteraction, ChatInputCommandInteraction, DiscordAPIError, MessageFlags, PermissionsBitField, SlashCommandBuilder} from 'discord.js';
 
-import type {Command} from '@/client/types';
+import type {Command} from '@/types/client';
 import {getGoogleSuggestions} from '@/utils/autocomplete/googleSuggest';
 import {getClient} from '@/utils/discord/client';
 import {ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
@@ -21,8 +21,8 @@ export default {
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = getClient(interaction);
 
-    if (!(await ensureVoiceChannel(interaction))) return; // 음성 채널에 들어가 있는지 확인
-    if (!(await ensureSameVoiceChannel(interaction))) return; // 같은 음성 채널에 있는지 확인
+    if (!(await ensureVoiceChannel(interaction))) return;
+    if (!(await ensureSameVoiceChannel(interaction))) return;
 
     await interaction.deferReply();
 
@@ -64,7 +64,6 @@ export default {
     if (focusedOption.name === 'query') {
       const query = focusedOption.value;
 
-      // 빈 쿼리이거나 URL인 경우 자동완성 제안하지 않음
       if (!query || query.trim().length === 0 || /https?:\/\//i.test(query)) {
         await respondSafely([]);
         return;
@@ -90,4 +89,4 @@ export default {
       await respondSafely([]);
     }
   },
-} as Command;
+} satisfies Command;
