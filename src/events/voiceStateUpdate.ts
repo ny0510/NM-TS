@@ -1,8 +1,8 @@
-import {ActivityType, EmbedBuilder, Events, GuildMember, type MessageCreateOptions, MessagePayload, PresenceUpdateStatus, TextChannel, VoiceState} from 'discord.js';
+import {EmbedBuilder, Events, GuildMember, type MessageCreateOptions, TextChannel, VoiceState} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
-import type {Event} from '@/client/types';
 import type {Queue} from '@/structures/Queue';
+import type {Event} from '@/types/client';
 import {destroyQueueSafely} from '@/utils/music/playerUtils';
 
 const activePlayers = new Map<string, NodeJS.Timeout>();
@@ -17,7 +17,9 @@ export default {
 
     const sendMessage = async (guild: VoiceState['guild'], channelId: string | undefined | null, payload: string | MessageCreateOptions) => {
       try {
-        const textChannel = guild.channels.cache.get(channelId!) as TextChannel | undefined;
+        if (!channelId) return;
+
+        const textChannel = guild.channels.cache.get(channelId) as TextChannel | undefined;
         if (!textChannel) return;
         return await textChannel.send(payload);
       } catch (error) {
@@ -26,7 +28,6 @@ export default {
       }
     };
 
-    // 봇 자신의 voice state 변경인 경우 먼저 처리 (플레이어 체크 전에!)
     const isBotStateChange = newState.id === client.user?.id || oldState.id === client.user?.id;
 
     if (isBotStateChange) {
@@ -52,15 +53,12 @@ export default {
       return;
     }
 
-    // 여기서부터는 다른 멤버의 상태 변경 처리
     const queue = client.queues.get(guildId);
     if (!queue) return;
 
-    // 봇이 현재 연결된 음성 채널과 플레이어의 voiceChannelId가 일치하는지 확인
     const botVoiceChannel = guild.members.me?.voice?.channel;
     const queueVoiceChannelId = queue.voiceChannelId;
 
-    // 플레이어가 설정된 음성 채널과 관련된 상태 변화가 아니면 무시
     const affectedChannelId = newState.channelId || oldState.channelId;
     if (affectedChannelId !== queueVoiceChannelId) {
       return;
@@ -109,12 +107,10 @@ export default {
       }
     };
 
-    // 봇이 플레이어에 설정된 음성 채널에 없으면 무시
     if (!botVoiceChannel || botVoiceChannel.id !== queueVoiceChannelId) {
       return;
     }
 
-    // 플레이어가 설정된 음성 채널의 멤버 수 확인
     const members = getNonBotMembers(botVoiceChannel);
 
     if (members?.size === 0) {
@@ -123,4 +119,4 @@ export default {
       handleMemberJoin(guildId, guild, queue);
     }
   },
-} as Event;
+} satisfies Event<'voiceStateUpdate'>;

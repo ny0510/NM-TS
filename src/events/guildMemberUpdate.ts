@@ -1,7 +1,7 @@
 import {Events, type GuildMember} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
-import type {Event} from '@/client/types';
+import type {Event} from '@/types/client';
 import {destroyQueueSafely} from '@/utils/music/playerUtils';
 
 export default {
@@ -25,7 +25,7 @@ export default {
       }
     } catch (error) {
       const client = newMember.client as NMClient;
-      client.logger.error(`Error in GuildMemberUpdate event: ${error}`);
+      client.logger.error(error instanceof Error ? error : new Error(`Error in GuildMemberUpdate event: ${error}`));
     }
   },
-} as Event;
+} satisfies Event<'guildMemberUpdate'>;

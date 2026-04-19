@@ -1,9 +1,10 @@
-import {ActivityType, Events, GatewayIntentBits, PresenceUpdateStatus} from 'discord.js';
+import {ActivityType, type Client, Events, GatewayIntentBits, PresenceUpdateStatus} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
-import type {Event} from '@/client/types';
+import type {Event} from '@/types/client';
 
 let presenceToggle = false;
+let presenceInterval: ReturnType<typeof setInterval> | undefined;
 
 const updatePresence = (client: NMClient) => {
   const stats = client.getStats();
@@ -51,33 +52,42 @@ const checkRequiredIntents = (client: NMClient): void => {
 export default {
   name: Events.ClientReady,
   once: true,
-  async execute(client: NMClient): Promise<void> {
+  async execute(client: Client<true>): Promise<void> {
+    const nmClient = client as NMClient;
+
     try {
-      client.services.lavalinkManager.registerEvents(client);
+      nmClient.services.lavalinkManager.registerEvents(nmClient);
 
       try {
-        await client.services.playerStateManager.restoreAll();
+        await nmClient.services.playerStateManager.restoreAll();
       } catch (error) {
-        client.logger.error(`Failed to restore player state: ${error instanceof Error ? error.message : String(error)}`);
+        nmClient.logger.error(error instanceof Error ? error : new Error(`Failed to restore player state: ${error}`));
       }
 
-      updatePresence(client);
+      updatePresence(nmClient);
 
-      await client.deployCommands();
+      await nmClient.deployCommands();
 
-      const stats = client.getStats();
-      client.logger.info(`Ready! Logged in as ${client.user?.tag}`);
-      client.logger.info(`Running on ${stats.guilds} servers with ${stats.users} members`);
+      const stats = nmClient.getStats();
+      nmClient.logger.info(`Ready! Logged in as ${nmClient.user?.tag}`);
+      nmClient.logger.info(`Running on ${stats.guilds} servers with ${stats.users} members`);
 
-      if (client.config.IS_DEV_MODE) {
-        client.logger.warn('🦔 🔪 Running in development mode!!');
+      if (nmClient.config.IS_DEV_MODE) {
+        nmClient.logger.warn('🦔 🔪 Running in development mode!!');
       }
 
-      checkRequiredIntents(client);
+      checkRequiredIntents(nmClient);
 
-      setInterval(() => void updatePresence(client), 10_000);
+      presenceInterval = setInterval(() => void updatePresence(nmClient), 10_000);
     } catch (error) {
-      client.logger.error(`Error in clientReady event: ${error}`);
+      nmClient.logger.error(error instanceof Error ? error : new Error(`Error in clientReady event: ${error}`));
     }
   },
-} as Event;
+} satisfies Event<'clientReady'>;
+
+export function clearPresenceInterval(): void {
+  if (presenceInterval) {
+    clearInterval(presenceInterval);
+    presenceInterval = undefined;
+  }
+}

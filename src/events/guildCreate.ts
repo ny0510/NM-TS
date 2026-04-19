@@ -10,14 +10,12 @@ export default {
     client.logger.guildJoined(guild, client);
 
     try {
-      // 봇의 권한 확인
       const botMember = await guild.members.fetch(client.user!.id);
       const missingPermissions = checkMissingPermissions(botMember.permissions);
 
       if (missingPermissions.length > 0) {
         client.logger.warn(`Bot is missing permissions in guild ${guild.name}: ${missingPermissions.join(', ')}`);
 
-        // 서버 소유자에게 알림
         try {
           const owner = await guild.fetchOwner();
           const inviteLink = generateInviteLink(client.user!.id);
@@ -43,12 +41,10 @@ export default {
                 .setFooter({text: '이 알림은 봇이 정상 작동하기 위해 전송되었습니다.'}),
             ],
           });
-        } catch {
-          // DM 실패시 무시
-        }
+        } catch {}
       }
     } catch (error) {
-      client.logger.error(`Failed to check permissions: ${error}`);
+      client.logger.error(error instanceof Error ? error : new Error(`Failed to check permissions: ${error}`));
     }
   },
 };

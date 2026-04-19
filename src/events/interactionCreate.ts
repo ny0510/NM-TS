@@ -1,7 +1,6 @@
-import {type AutocompleteInteraction, BaseInteraction, ChatInputCommandInteraction, EmbedBuilder, Events, MessageFlags, type PermissionsString, codeBlock} from 'discord.js';
+import {type AutocompleteInteraction, type ChatInputCommandInteraction, EmbedBuilder, Events, type Interaction, MessageFlags, type PermissionsString, codeBlock} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
-import type {Event} from '@/client/types';
+import type {Event} from '@/types/client';
 import {slashCommandMention} from '@/utils/discord';
 import {getClient} from '@/utils/discord/client';
 import {isInteractionProcessed} from '@/utils/discord/interactions';
@@ -13,10 +12,9 @@ import {handleQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 
 export default {
   name: Events.InteractionCreate,
-  async execute(interaction: BaseInteraction): Promise<void> {
+  async execute(interaction: Interaction): Promise<void> {
     const client = getClient(interaction);
 
-    // 버튼 인터랙션 처리
     if (interaction.isButton()) {
       if (interaction.customId === 'quick_add') {
         await handleQuickAddButton(interaction);
@@ -26,7 +24,6 @@ export default {
       return;
     }
 
-    // Autocomplete 인터랙션 처리
     if (interaction.isAutocomplete()) {
       const command = client.services.commandManager.getCommand(interaction.commandName);
 
@@ -34,7 +31,7 @@ export default {
         try {
           await command.autocomplete(interaction as AutocompleteInteraction);
         } catch (error) {
-          client.logger.error(`Error executing autocomplete for ${interaction.commandName}: ${error}`);
+          client.logger.error(error instanceof Error ? error : new Error(`Error executing autocomplete for ${interaction.commandName}: ${error}`));
         }
       }
       return;
@@ -45,7 +42,6 @@ export default {
     if (!interaction.client.user) return;
     if (!interaction.guild) return await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('DM에서는 사용할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
 
-    // 이미 처리된 인터랙션인지 확인
     if (isInteractionProcessed(interaction.id)) {
       client.logger.warn(`Duplicate interaction detected: ${interaction.id}`);
       return;
@@ -55,7 +51,6 @@ export default {
 
     if (!command) return;
 
-    // Cooldown Check
     const cooldownResult = client.services.cooldownManager.checkCooldown(command.data.name, interaction.user.id, command.cooldown);
 
     if (cooldownResult.onCooldown) {
@@ -70,7 +65,6 @@ export default {
       });
     }
 
-    // Permission Check
     const {result, missing} = await checkPermissions(interaction as ChatInputCommandInteraction, command);
     if (!result) {
       const missingPermissions = missing.map(permission => `+ ${PermissionTranslations[permission as PermissionsString]} (${permission})`).join('\n');
@@ -83,10 +77,9 @@ export default {
     try {
       await command.execute(interaction);
     } catch (e) {
-      client.logger.error(`Error executing command ${interaction.commandName}: ${e}`);
+      client.logger.error(e instanceof Error ? e : new Error(`Error executing command ${interaction.commandName}: ${e}`));
       console.error(e);
 
-      // 이미 응답되었는지 확인 후 응답
       if (!interaction.replied && !interaction.deferred) {
         if (client.config.IS_DEV_MODE) {
           await safeReply(interaction, {
@@ -99,4 +92,4 @@ export default {
       }
     }
   },
-} as Event;
+} satisfies Event<'interactionCreate'>;
