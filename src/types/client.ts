@@ -1,22 +1,19 @@
-import {type AutocompleteInteraction, type ChatInputCommandInteraction, type ClientEvents, type HexColorString, PermissionsBitField, SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder} from 'discord.js';
+import {type AutocompleteInteraction, type ChatInputCommandInteraction, type ClientEvents, type HexColorString, PermissionsBitField, SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder, type SlashCommandSubcommandsOnlyBuilder} from 'discord.js';
 
-// Command 인터페이스
 export interface Command {
-  data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder;
+  data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder;
   permissions?: PermissionsBitField[] | bigint[];
   cooldown?: number;
   execute(interaction: ChatInputCommandInteraction): Promise<void>;
   autocomplete?(interaction: AutocompleteInteraction): Promise<void>;
 }
 
-// Event 인터페이스
 export interface Event<K extends keyof ClientEvents = keyof ClientEvents> {
   name: K;
   once?: boolean;
   execute(...args: ClientEvents[K]): Promise<void> | void;
 }
 
-// Config 인터페이스들
 export interface DiscordConfig {
   DISCORD_TOKEN: string;
   DISCORD_CLIENT_ID: string;
@@ -61,7 +58,6 @@ export interface KoreanbotsConfig {
 
 export interface Config extends DiscordConfig, LavalinkConfig, EmbedConfig, AppConfig, ProgressBarConfig, KoreanbotsConfig {}
 
-// Client 인터페이스들
 export interface ClientServices {
   commandManager: import('@/managers/CommandManager').CommandManager;
   eventManager: import('@/managers/EventManager').EventManager;
