@@ -45,7 +45,7 @@ async function deployCommands() {
       }
     }
   } catch (error) {
-    logger.error(`Failed to refresh/delete application (/) commands: ${error}`);
+    logger.error(error instanceof Error ? error : new Error(`Failed to refresh/delete application (/) commands: ${error}`));
     process.exit(1);
   }
 }
