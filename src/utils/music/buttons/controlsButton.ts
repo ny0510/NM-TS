@@ -1,7 +1,7 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, GuildMember, MessageFlags} from 'discord.js';
+import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, MessageFlags} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
 import type {Queue} from '@/structures/Queue';
+import {safeReply} from '@/utils/discord';
 import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/utils/music';
@@ -69,7 +69,14 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
       break;
 
     case 'control_next':
-      await queue.stop();
+      if (!queue.size()) {
+        return await safeReply(interaction, {
+          embeds: [createErrorEmbed(client, '대기열에 있는 음악보다 더 많은 곡을 건너뛸 수 없어요.', `대기열에 ${queue.size()}곡이 있어요.`)],
+          flags: MessageFlags.Ephemeral,
+        });
+      } else {
+        await queue.stop();
+      }
       break;
   }
 }

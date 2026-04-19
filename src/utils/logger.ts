@@ -1,22 +1,12 @@
 import chalk from 'chalk';
-import {EmbedBuilder, Guild, WebhookClient, type WebhookClientOptions, type WebhookCreateOptions, type WebhookEditOptions, type WebhookMessageCreateOptions, userMention} from 'discord.js';
+import {type ColorResolvable, EmbedBuilder, Guild, WebhookClient, type WebhookMessageCreateOptions, userMention} from 'discord.js';
 import {DateTime} from 'luxon';
 
 import type {NMClient} from '@/client/Client';
+import type {ILogger, LogLevel} from '@/types/logger';
 import {truncateWithEllipsis} from '@/utils/formatting';
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-
-export interface ILogger {
-  info(message: string): void;
-  warn(message: string): void;
-  error(error: unknown): void;
-  debug(message: string): void;
-  setLevel(level: LogLevel): void;
-  setClient(client: NMClient): void;
-  guildJoined(guild: Guild, client?: NMClient): void;
-  guildLeft(guild: Guild, client?: NMClient): void;
-}
+export type {LogLevel, ILogger} from '@/types/logger';
 
 export class Logger implements ILogger {
   private readonly _prefix?: string;
@@ -75,14 +65,13 @@ export class Logger implements ILogger {
     if (!this._webhook) return;
 
     try {
-      // Defensive: ensure color and message are defined and valid for EmbedBuilder
-      const color = (this._client?.config?.EMBED_COLOR_ERROR as any) ?? '#ff3333';
+      const color = this._client?.config?.EMBED_COLOR_ERROR ?? '#ff3333';
       const safeMessage = message ?? 'An error occurred';
 
       const embed = new EmbedBuilder()
         .setTimestamp()
         .setTitle('An error occurred')
-        .setColor(typeof color === 'string' || typeof color === 'number' ? (color as any) : '#ff3333')
+        .setColor((typeof color === 'string' || typeof color === 'number' ? color : '#ff3333') as ColorResolvable)
         .addFields({name: 'Message', value: safeMessage});
 
       if (error instanceof Error && error.stack) {
@@ -96,7 +85,7 @@ export class Logger implements ILogger {
           const detailedError = Bun.inspect(error, {colors: false, sorted: true});
           const truncatedError = truncateWithEllipsis(detailedError, 1024);
           embed.addFields({name: 'Detailed Error', value: `\`\`\`${truncatedError}\`\`\``});
-        } catch (inspectError) {}
+        } catch {}
       }
 
       const webhookOptions = this.createWebhookOptions([embed]);

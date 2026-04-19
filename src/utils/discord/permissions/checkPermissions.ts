@@ -1,11 +1,7 @@
-import {type BaseInteraction, ChatInputCommandInteraction, type GuildMember, type PermissionResolvable, type VoiceBasedChannel} from 'discord.js';
+import {type BaseInteraction, ChatInputCommandInteraction, type PermissionResolvable, type VoiceBasedChannel} from 'discord.js';
 
-import type {Command} from '@/client/types';
-
-export interface PermissionResult {
-  result: boolean;
-  missing: string[];
-}
+import type {Command} from '@/types/client';
+import type {PermissionResult} from '@/types/discord';
 
 export const checkBotPermissions = async (interaction: BaseInteraction, requiredPermissions: PermissionResolvable[], voiceChannel?: VoiceBasedChannel | null): Promise<PermissionResult> => {
   const member = await interaction.guild!.members.fetch(interaction.client.user!.id);

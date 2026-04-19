@@ -2,7 +2,8 @@ import {EmbedBuilder, Message, codeBlock} from 'discord.js';
 import type {TrackEndEvent, TrackExceptionEvent, TrackStartEvent, TrackStuckEvent, WebSocketClosedEvent} from 'shoukaku';
 
 import type {NMClient} from '@/client/Client';
-import type {Queue, QueueTrack} from '@/structures/Queue';
+import type {Queue} from '@/structures/Queue';
+import type {QueueTrack} from '@/types/music';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
@@ -21,22 +22,22 @@ function destroyQueueSafely(queue: Queue, client: NMClient, reason?: string): vo
       logger.info(`Queue destroyed: ${reason}`);
     }
   } catch (error) {
-    logger.error(`Failed to destroy queue: ${error}`);
+    logger.error(error instanceof Error ? error : new Error(`Failed to destroy queue: ${error}`));
   }
 }
 
 export const registerLavalinkEvents = (client: NMClient) => {
   const shoukaku = client.services.lavalinkManager.getShoukaku();
 
-  shoukaku.on('ready', (name, lavalinkResume, libraryResume) => {
+  shoukaku.on('ready', (name: string, lavalinkResume: boolean, libraryResume: boolean) => {
     logger.info(`Node ${name} connected (lavalinkResume: ${lavalinkResume}, libraryResume: ${libraryResume})`);
   });
 
-  shoukaku.on('error', (name, error) => logger.error(`Node ${name} error: ${error}`));
-  shoukaku.on('close', (name, code, reason) => logger.warn(`Node ${name} closed (code: ${code}, reason: ${reason})`));
-  shoukaku.on('disconnect', (name, count) => logger.warn(`Node ${name} disconnected (${count} players affected)`));
-  shoukaku.on('reconnecting', (name, reconnectsLeft, interval) => logger.info(`Node ${name} reconnecting... (${reconnectsLeft} tries left, interval: ${interval}s)`));
-  shoukaku.on('debug', (name, info) => logger.debug(`[${name}] ${info}`));
+  shoukaku.on('error', (name: string, error: unknown) => logger.error(error instanceof Error ? error : new Error(`Node ${name} error: ${error}`)));
+  shoukaku.on('close', (name: string, code: number, reason: string) => logger.warn(`Node ${name} closed (code: ${code}, reason: ${reason})`));
+  shoukaku.on('disconnect', (name: string, count: number) => logger.warn(`Node ${name} disconnected (${count} players affected)`));
+  shoukaku.on('reconnecting', (name: string, reconnectsLeft: number, interval: number) => logger.info(`Node ${name} reconnecting... (${reconnectsLeft} tries left, interval: ${interval}s)`));
+  shoukaku.on('debug', (name: string, info: string) => logger.debug(`[${name}] ${info}`));
 };
 
 export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
@@ -95,7 +96,6 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
 
     if (data.reason === 'replaced') return;
 
-    // 트랙 반복
     if (queue.trackRepeat && data.reason === 'finished') {
       await queue.player.playTrack({track: {encoded: track.encoded}});
       return;
@@ -106,24 +106,20 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
       if (currentTrack) queue.add(currentTrack);
     }
 
-    // 현재 트랙을 이전 트랙 목록에 추가 (자동 재생 시드용)
     if (track) {
       queue.addToPrevious(track);
     }
 
-    // 대기열에 트랙이 남아있으면 다음 재생
     if (queue.size() > 0) {
       await queue.play();
       return;
     }
 
-    // 자동 재생 시도
     if (queue.isAutoplay && data.reason === 'finished') {
       const autoplaySuccess = await handleAutoplay(queue, client);
       if (autoplaySuccess) return;
     }
 
-    // 대기열 종료 처리
     await handleQueueEnd(queue, client);
   });
 
@@ -143,7 +139,7 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
         ],
       });
     } catch (sendError) {
-      logger.error(`Failed to send track stuck message: ${sendError}`);
+      logger.error(sendError instanceof Error ? sendError : new Error(`Failed to send track stuck message: ${sendError}`));
     }
 
     await queue.stop();
@@ -164,7 +160,7 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
         embeds: [isPlaybackRestricted ? createErrorEmbed(client, '재생이 불가능한 영상이에요.', '유튜브 정책에 의해 재생이 제한된 영상이에요.\n연령 제한, 지역 제한 등이 원인일 수 있어요.') : createErrorEmbed(client, '음악 재생 중 오류가 발생했어요.', codeBlock('js', errorMessage))],
       });
     } catch (sendError) {
-      logger.error(`Failed to send track error message: ${sendError}`);
+      logger.error(sendError instanceof Error ? sendError : new Error(`Failed to send track error message: ${sendError}`));
     }
   });
 

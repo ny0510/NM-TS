@@ -1,19 +1,21 @@
 import {ButtonInteraction, CommandInteraction, type InteractionReplyOptions, MessageFlags} from 'discord.js';
 
 import {checkAndMarkInteraction} from './interactionManager';
-import type {NMClient} from '@/client/Client';
 import {getClient} from '@/utils/discord/client';
+
+const hasDiscordCode = (value: unknown): value is {code: number} => {
+  if (typeof value !== 'object' || value === null || !('code' in value)) return false;
+  return typeof (value as {code?: unknown}).code === 'number';
+};
 
 export async function safeReply(interaction: CommandInteraction | ButtonInteraction, content: string | InteractionReplyOptions, options?: InteractionReplyOptions): Promise<void> {
   const client = getClient(interaction);
 
-  // 이미 처리된 인터랙션인지 확인 및 마킹
   if (checkAndMarkInteraction(interaction.id)) {
     client.logger.warn(`Attempted to reply to already processed interaction: ${interaction.id}`);
     return;
   }
 
-  // 이미 응답되었는지 확인
   if (interaction.replied) {
     client.logger.warn(`Attempted to reply to already replied interaction: ${interaction.id}`);
     return;
@@ -30,15 +32,12 @@ export async function safeReply(interaction: CommandInteraction | ButtonInteract
       await interaction.reply(replyOptions);
     }
   } catch (error) {
-    // Treat Unknown interaction (10062) as non-fatal and log at debug level
-    const err = error as any;
-    if (err?.code === 10062) {
-      client.logger.debug(`Interaction ${interaction.id} expired/unknown before reply could be sent: ${err}`);
+    if (hasDiscordCode(error) && error.code === 10062) {
+      client.logger.debug(`Interaction ${interaction.id} expired/unknown before reply could be sent: ${error}`);
     } else {
-      client.logger.error(`Failed to reply to interaction ${interaction.id}: ${error}`);
+      client.logger.error(error instanceof Error ? error : new Error(`Failed to reply to interaction ${interaction.id}: ${error}`));
     }
 
-    // 마지막 시도: 오류 메시지 전송 (단, 이미 응답되지 않은 경우만)
     if (!interaction.replied && !interaction.deferred) {
       try {
         await interaction.reply({
@@ -46,11 +45,10 @@ export async function safeReply(interaction: CommandInteraction | ButtonInteract
           flags: MessageFlags.Ephemeral,
         });
       } catch (finalError) {
-        const finalErr = finalError as any;
-        if (finalErr?.code === 10062) {
+        if (hasDiscordCode(finalError) && finalError.code === 10062) {
           client.logger.debug(`Final reply attempt failed for interaction ${interaction.id}: Unknown interaction`);
         } else {
-          client.logger.error(`Final reply attempt failed for interaction ${interaction.id}: ${finalError}`);
+          client.logger.error(finalError instanceof Error ? finalError : new Error(`Final reply attempt failed for interaction ${interaction.id}: ${finalError}`));
         }
       }
     }

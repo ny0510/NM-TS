@@ -20,7 +20,7 @@ const PermissionTranslations: Record<PermissionsString, string> = {
   ManageThreads: '스레드 관리',
   ManageWebhooks: '웹훅 관리',
   MentionEveryone: '@everyone 언급',
-  ModerateMembers: '회원 타임아웃',
+  ModerateMembers: '사용자 타임아웃',
   MoveMembers: '사용자 이동',
   MuteMembers: '사용자 음소거',
   PrioritySpeaker: '우선 발언자',

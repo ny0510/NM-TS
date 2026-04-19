@@ -1,9 +1,9 @@
 import type {HexColorString} from 'discord.js';
 
-import type {Config} from '@/client/types';
+import type {Config} from '@/types/client';
 
 if (!process.env.DISCORD_TOKEN || !process.env.DISCORD_CLIENT_ID || !process.env.DISCORD_GUILD_ID || !process.env.EMBED_COLOR_NORMAL || !process.env.EMBED_COLOR_ERROR || !process.env.LOG_PREFIX) {
-  throw new Error('Missing required environment variables. Please check your .env file.');
+  throw new Error('Missing required environment variables.');
 }
 
 const DEFAULT_KOREANBOTS_INTERVAL = 600_000;
