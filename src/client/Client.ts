@@ -1,6 +1,6 @@
 import {ActivityType, Client, Events, GatewayIntentBits, PresenceUpdateStatus} from 'discord.js';
 
-import type {ClientServices, ClientStats, Config} from './types';
+import {clearPresenceInterval} from '@/events/clientReady';
 import {CommandManager} from '@/managers/CommandManager';
 import {CooldownManager} from '@/managers/CooldownManager';
 import {EventManager} from '@/managers/EventManager';
@@ -8,8 +8,10 @@ import {KoreanbotsManager} from '@/managers/KoreanbotsManager';
 import {LavalinkManager} from '@/managers/LavalinkManager';
 import {PlayerStateManager} from '@/managers/PlayerStateManager';
 import type {Queue} from '@/structures/Queue';
+import type {ClientServices, ClientStats, Config} from '@/types/client';
+import type {ILogger} from '@/types/logger';
 import {config} from '@/utils/config';
-import {type ILogger, Logger} from '@/utils/logger';
+import {Logger} from '@/utils/logger';
 
 export class NMClient extends Client {
   public readonly logger: ILogger;
@@ -19,7 +21,7 @@ export class NMClient extends Client {
 
   public constructor() {
     super({
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates], // GatewayIntentBits.GuildMembers
+      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildVoiceStates],
       allowedMentions: {parse: [], repliedUser: false},
       presence: {
         activities: [{name: 'NM | 초기화 중..', type: ActivityType.Custom}],
@@ -60,7 +62,7 @@ export class NMClient extends Client {
   }
 
   private setupEventHandlers(): void {
-    this.on(Events.Error, error => this.logger.error(`Discord client error: ${error}`));
+    this.on(Events.Error, error => this.logger.error(error instanceof Error ? error : new Error(`Discord client error: ${error}`)));
     this.on(Events.Warn, warning => this.logger.warn(`Discord client warning: ${warning}`));
   }
 
@@ -75,7 +77,7 @@ export class NMClient extends Client {
 
       await this.loadModules();
     } catch (error) {
-      this.logger.error(`Failed to initialize client: ${error}`);
+      this.logger.error(error instanceof Error ? error : new Error(`Failed to initialize client: ${error}`));
       throw error;
     }
   }
@@ -94,7 +96,7 @@ export class NMClient extends Client {
     const activePlayers = this.queues.size;
 
     const shoukaku = this.services.lavalinkManager.getShoukaku();
-    const node = Array.from(shoukaku.nodes.values())[0];
+    const node = Array.from(shoukaku.nodes.values())[0] as import('shoukaku').Node | undefined;
     const lavalinkStats = node?.stats;
     const memoryUsage = lavalinkStats?.memory ? Math.round(lavalinkStats.memory.used / 1024 / 1024) : 0;
     const cpuUsage = lavalinkStats?.cpu ? Math.round(lavalinkStats.cpu.lavalinkLoad * 100) : 0;
@@ -113,13 +115,14 @@ export class NMClient extends Client {
       await this.services.eventManager.loadEvents();
       await this.services.commandManager.loadCommands();
     } catch (error) {
-      this.logger.error(`Failed to load modules: ${error}`);
+      this.logger.error(error instanceof Error ? error : new Error(`Failed to load modules: ${error}`));
       throw error;
     }
   }
 
   public override async destroy(): Promise<void> {
     this.koreanbotsManager.stop();
+    clearPresenceInterval();
 
     await super.destroy();
   }

@@ -1,15 +1,9 @@
 import type {User} from 'discord.js';
-import type {Player, Shoukaku, Track} from 'shoukaku';
+import type {Player, Shoukaku} from 'shoukaku';
 
-export enum RepeatMode {
-  OFF = 'off',
-  TRACK = 'track',
-  QUEUE = 'queue',
-}
+import {type QueueTrack, RepeatMode} from '@/types/music';
 
-export interface QueueTrack extends Track {
-  requester?: User;
-}
+export const MAX_QUEUE_SIZE = 10_000;
 
 export class Queue {
   public readonly shoukaku: Shoukaku;
@@ -27,7 +21,6 @@ export class Queue {
   private autoplayRequester: User | undefined;
   private autoShuffle = false;
   private readonly metadata = new Map<string, unknown>();
-  // 사용자 단위 0-100, Shoukaku 내부는 0-1000 스케일
   private _volume: number;
 
   constructor(options: {shoukaku: Shoukaku; player: Player; guildId: string; textChannelId: string; voiceChannelId: string; volume?: number}) {
@@ -122,7 +115,6 @@ export class Queue {
     return this.tracks.length;
   }
 
-  // 현재 재생 중인 트랙 + 대기열 합산 (ms)
   public duration(): number {
     const currentDuration = this.current?.info.length ?? 0;
     const queueDuration = this.tracks.reduce((acc, track) => acc + (track.info.length ?? 0), 0);
@@ -148,11 +140,19 @@ export class Queue {
   public add(trackOrTracks: QueueTrack | QueueTrack[], position?: number): void {
     const tracksToAdd = Array.isArray(trackOrTracks) ? trackOrTracks : [trackOrTracks];
 
+    if (this.tracks.length + tracksToAdd.length > MAX_QUEUE_SIZE) {
+      return;
+    }
+
     if (position !== undefined && position >= 0) {
       this.tracks.splice(position, 0, ...tracksToAdd);
     } else {
       this.tracks.push(...tracksToAdd);
     }
+  }
+
+  public isFull(): boolean {
+    return this.tracks.length >= MAX_QUEUE_SIZE;
   }
 
   public remove(index: number): QueueTrack | undefined {
@@ -164,7 +164,6 @@ export class Queue {
     this.tracks = [];
   }
 
-  // Fisher-Yates 알고리즘
   public shuffle(): void {
     for (let i = this.tracks.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -172,7 +171,6 @@ export class Queue {
     }
   }
 
-  // 요청자별 균등 분배 셔플
   public roundRobinShuffle(): void {
     const byRequester = new Map<string, QueueTrack[]>();
 
@@ -228,7 +226,6 @@ export class Queue {
     await this.player.setGlobalVolume(this._volume);
   }
 
-  // stopTrack → end 이벤트 트리거 → lavalinkEvents에서 다음 트랙 처리
   public async stop(count?: number): Promise<void> {
     if (count && count > 1) {
       const removeCount = Math.min(count - 1, this.tracks.length);
@@ -237,7 +234,6 @@ export class Queue {
     await this.player.stopTrack();
   }
 
-  // 자동 재생 시드용, 최대 25개 유지
   public addToPrevious(track: QueueTrack): void {
     this.previous.push(track);
     if (this.previous.length > 25) {
