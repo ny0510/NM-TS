@@ -73,7 +73,9 @@ export class KoreanbotsManager {
         try {
           const parsed = JSON.parse(rawBody);
           message = parsed?.message ?? message;
-        } catch {}
+        } catch {
+          // JSON 파싱 실패 시 원본 메시지 사용
+        }
 
         throw new Error(message);
       }
@@ -92,7 +94,7 @@ export class KoreanbotsManager {
         return;
       }
 
-      this.logger.error(`Failed to update Koreanbots stats: ${message}`);
+      this.logger.error(error instanceof Error ? error : new Error(`Failed to update Koreanbots stats: ${message}`));
     }
   }
 }

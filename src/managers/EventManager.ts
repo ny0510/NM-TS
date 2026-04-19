@@ -1,7 +1,7 @@
 import type {Client} from 'discord.js';
 import path from 'node:path';
 
-import type {Event} from '@/client/types';
+import type {Event} from '@/types/client';
 import type {ILogger} from '@/utils/logger';
 import {readdir} from 'node:fs/promises';
 

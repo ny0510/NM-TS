@@ -2,26 +2,13 @@ import type {Client, User} from 'discord.js';
 import {Connectors, type LavalinkResponse, LoadType, type Node, type NodeOption, Shoukaku} from 'shoukaku';
 
 import type {NMClient} from '@/client/Client';
-import type {Config} from '@/client/types';
-import {Queue, type QueueTrack} from '@/structures/Queue';
+import {Queue} from '@/structures/Queue';
+import type {Config} from '@/types/client';
+import type {QueueTrack} from '@/types/music';
+import type {CreateQueueOptions} from '@/types/music';
 import {isURL} from '@/utils/formatting/patterns';
 import type {ILogger} from '@/utils/logger';
 import {registerLavalinkEvents, registerPlayerEvents} from '@/utils/music/lavalinkEvents';
-
-export interface CreateQueueOptions {
-  guildId: string;
-  voiceChannelId: string;
-  textChannelId: string;
-  shardId: number;
-  volume?: number;
-  deaf?: boolean;
-  mute?: boolean;
-}
-
-export interface SearchResult {
-  response: LavalinkResponse;
-  tracks: QueueTrack[];
-}
 
 export class LavalinkManager {
   private readonly shoukaku: Shoukaku;
@@ -68,9 +55,7 @@ export class LavalinkManager {
     if (this.shoukaku.players.has(options.guildId)) {
       try {
         await this.shoukaku.leaveVoiceChannel(options.guildId);
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
 
     const player = await this.shoukaku.joinVoiceChannel({

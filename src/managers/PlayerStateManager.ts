@@ -2,9 +2,10 @@ import {type Client, EmbedBuilder} from 'discord.js';
 import {dirname} from 'node:path';
 
 import type {NMClient} from '@/client/Client';
-import type {Config} from '@/client/types';
-import type {Queue, QueueTrack} from '@/structures/Queue';
-import {PLAYER_STATE_VERSION, type PersistedQueueState, type PersistedTrackInfo, type PlayerStateFile} from '@/types/playerState';
+import type {Queue} from '@/structures/Queue';
+import type {Config} from '@/types/client';
+import type {QueueTrack} from '@/types/music';
+import {PLAYER_STATE_VERSION, type PersistedQueueState, type PlayerStateFile} from '@/types/playerState';
 import type {ILogger} from '@/utils/logger';
 import {mkdir, rename} from 'node:fs/promises';
 
@@ -37,9 +38,7 @@ export class PlayerStateManager {
       if (queues.size === 0) {
         try {
           await Bun.file(this.getSnapshotPath()).delete();
-        } catch {
-          // 파일이 없으면 무시
-        }
+        } catch {}
         this.logger.info('No active queues, deleted snapshot file if it existed');
         return;
       }
@@ -87,7 +86,6 @@ export class PlayerStateManager {
         guilds: states,
       };
 
-      // 원자적 쓰기: 임시 파일 작성 후 rename
       const snapshotPath = this.getSnapshotPath();
       const dir = dirname(snapshotPath);
       await mkdir(dir, {recursive: true});
@@ -98,7 +96,7 @@ export class PlayerStateManager {
 
       this.logger.info(`Saved player state for ${states.length} guild(s)`);
     } catch (error) {
-      this.logger.error(`Failed to save player state: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(error instanceof Error ? error : new Error(`Failed to save player state: ${error}`));
     }
   }
 
@@ -138,14 +136,14 @@ export class PlayerStateManager {
           }
         } catch (error) {
           result.failed++;
-          this.logger.error(`Failed to restore guild ${state.guildId}: ${error instanceof Error ? error.message : String(error)}`);
+          this.logger.error(error instanceof Error ? error : new Error(`Failed to restore guild ${state.guildId}: ${error}`));
         }
       }
 
       await this.clearSnapshot();
       this.logger.info(`Restore complete: ${result.restored}/${result.total} succeeded, ${result.failed} failed`);
     } catch (error) {
-      this.logger.error(`Failed to restore player state: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(error instanceof Error ? error : new Error(`Failed to restore player state: ${error}`));
     }
 
     return result;
@@ -157,7 +155,7 @@ export class PlayerStateManager {
     const guild = nmClient.guilds.cache.get(state.guildId);
     if (!guild) {
       this.logger.debug(`Guild ${state.guildId} not found in cache, skipping restore`);
-      return 'skipped'; // 스킵은 실패가 아님
+      return 'skipped';
     }
 
     const voiceChannel = nmClient.channels.cache.get(state.voiceChannelId);
@@ -177,7 +175,7 @@ export class PlayerStateManager {
         volume: state.volume,
       });
     } catch (error) {
-      this.logger.error(`Failed to create queue for guild ${state.guildId}: ${error instanceof Error ? error.message : String(error)}`);
+      this.logger.error(error instanceof Error ? error : new Error(`Failed to create queue for guild ${state.guildId}: ${error}`));
       return 'skipped';
     }
 
@@ -193,12 +191,16 @@ export class PlayerStateManager {
     }
 
     const requesterMap = new Map<string, Awaited<ReturnType<typeof nmClient.users.fetch>>>();
-    for (const id of requesterIds) {
-      try {
+    const fetchResults = await Promise.allSettled(
+      [...requesterIds].map(async id => {
         const user = await nmClient.users.fetch(id);
-        requesterMap.set(id, user);
-      } catch {
-        // 사용자를 찾을 수 없으면 undefined로 처리
+        return {id, user};
+      }),
+    );
+
+    for (const result of fetchResults) {
+      if (result.status === 'fulfilled') {
+        requesterMap.set(result.value.id, result.value.user);
       }
     }
 
@@ -226,9 +228,7 @@ export class PlayerStateManager {
       if (state.currentTrack.position > 0) {
         try {
           await queue.player.seekTo(state.currentTrack.position);
-        } catch {
-          // 시크 실패 무시
-        }
+        } catch {}
       }
 
       await queue.player.setGlobalVolume(state.volume);
@@ -257,7 +257,6 @@ export class PlayerStateManager {
 
     queue.set('isRestoring', false);
 
-    // 복구 후 빈 음성채널 검사
     const restoreVoiceChannel = nmClient.channels.cache.get(state.voiceChannelId);
     if (restoreVoiceChannel?.isVoiceBased()) {
       const nonBotMembers = restoreVoiceChannel.members.filter(m => !m.user.bot);
@@ -271,9 +270,7 @@ export class PlayerStateManager {
             await textChannel.send({
               embeds: [new EmbedBuilder().setTitle('아무도 없어서 음악을 일시정지했어요.').setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`).setColor(nmClient.config.EMBED_COLOR_NORMAL)],
             });
-          } catch {
-            // 임베드 전송 실패 무시
-          }
+          } catch {}
         }
       }
     }
@@ -287,9 +284,7 @@ export class PlayerStateManager {
           .setColor(nmClient.config.EMBED_COLOR_NORMAL);
 
         await textChannel.send({embeds: [embed]});
-      } catch {
-        // 임베드 전송 실패 무시
-      }
+      } catch {}
     }
 
     this.logger.info(`Successfully restored queue for guild ${state.guildId}`);
@@ -299,8 +294,6 @@ export class PlayerStateManager {
   public async clearSnapshot(): Promise<void> {
     try {
       await Bun.file(this.getSnapshotPath()).delete();
-    } catch {
-      // 파일이 없으면 무시
-    }
+    } catch {}
   }
 }
