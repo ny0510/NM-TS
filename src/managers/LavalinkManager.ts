@@ -56,6 +56,7 @@ export class LavalinkManager {
       try {
         await this.shoukaku.leaveVoiceChannel(options.guildId);
       } catch {}
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
     const player = await this.shoukaku.joinVoiceChannel({

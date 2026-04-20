@@ -120,6 +120,9 @@ export const createQueue = async (interaction: ChatInputCommandInteraction | But
       if (e.message.includes('User limit')) {
         errorMessage = '음성 채널이 가득 찼어요.';
         errorDescription = '다른 음성 채널을 이용해 주세요.';
+      } else if (e.message.includes('voice connection is not established')) {
+        errorMessage = '음성 채널 연결에 실패했어요.';
+        errorDescription = '잠시 후 다시 시도해 주세요.';
       } else if (client.config.IS_DEV_MODE) {
         errorDescription = codeBlock('js', e.message);
       }
