@@ -52,7 +52,7 @@ export class LavalinkManager {
     const existing = this.queues.get(options.guildId);
     if (existing) return existing;
 
-    if (this.shoukaku.players.has(options.guildId)) {
+    if (this.shoukaku.players.has(options.guildId) || this.shoukaku.connections.has(options.guildId)) {
       try {
         await this.shoukaku.leaveVoiceChannel(options.guildId);
       } catch {}
