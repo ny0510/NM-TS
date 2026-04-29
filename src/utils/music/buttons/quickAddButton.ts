@@ -2,6 +2,7 @@ import {ButtonInteraction, MessageFlags, PermissionsBitField, codeBlock} from 'd
 
 import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
+import {safeDeferReply, safeEditReply, safeReply} from '@/utils/discord/interactions';
 import {checkBotPermissions, formatMissingPermissions} from '@/utils/discord/permissions';
 import {Logger} from '@/utils/logger';
 import {createQuickAddButton} from '@/utils/music/buttons/quickAddButtonComponent';
@@ -22,7 +23,7 @@ export async function handleQuickAddButton(interaction: ButtonInteraction): Prom
 
   if (!result) {
     const missingPermissionsText = formatMissingPermissions(missing);
-    await interaction.reply({
+    await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.', codeBlock('diff', missingPermissionsText))],
       flags: MessageFlags.Ephemeral,
     });
@@ -31,7 +32,7 @@ export async function handleQuickAddButton(interaction: ButtonInteraction): Prom
 
   const url = interaction.message.embeds[0]?.url;
   if (!url) {
-    await interaction.reply({
+    await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '음악 URL을 찾을 수 없어요.')],
       flags: MessageFlags.Ephemeral,
     });
@@ -39,20 +40,21 @@ export async function handleQuickAddButton(interaction: ButtonInteraction): Prom
   }
 
   if (!voiceChannel) {
-    await interaction.reply({
+    await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '먼저 음성 채널에 들어가 주세요.')],
       flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
-  await interaction.deferReply({flags: MessageFlags.Ephemeral});
+  const deferred = await safeDeferReply(interaction, {flags: MessageFlags.Ephemeral});
+  if (!deferred) return;
 
   try {
     await addTrackToQueue(client, interaction, {query: url, source: 'quick_add'});
   } catch (error) {
     logger.error(error instanceof Error ? error : new Error(`Quick add error: ${error}`));
-    await interaction.editReply({
+    await safeEditReply(interaction, {
       embeds: [createErrorEmbed(client, '음악을 추가하는 중 오류가 발생했어요.')],
     });
   }

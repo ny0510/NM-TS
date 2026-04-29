@@ -1,7 +1,7 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, MessageFlags} from 'discord.js';
 
 import type {Queue} from '@/structures/Queue';
-import {safeReply} from '@/utils/discord';
+import {safeDeferUpdate, safeEditReply, safeReply} from '@/utils/discord';
 import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/utils/music';
@@ -29,7 +29,7 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
   const queue = client.queues.get(interaction.guildId!);
 
   if (!queue) {
-    await interaction.reply({
+    await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '현재 재생 중인 음악이 없어요.')],
       flags: MessageFlags.Ephemeral,
     });
@@ -41,7 +41,7 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
 
   const currentTrack = queue.getCurrent();
   if (!currentTrack) {
-    await interaction.reply({
+    await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '현재 재생 중인 음악이 없어요.')],
       flags: MessageFlags.Ephemeral,
     });
@@ -51,19 +51,20 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
   // 현재 재생 중인 트랙과 버튼이 생성된 시점의 트랙(임베드 URL)이 같은지 확인
   const embedUrl = interaction.message.embeds[0]?.url;
   if (embedUrl && embedUrl !== currentTrack.info.uri) {
-    await interaction.reply({
+    await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '만료된 컨트롤러에요.', '현재 재생 중인 음악의 컨트롤러를 사용해 주세요.')],
       flags: MessageFlags.Ephemeral,
     });
     return;
   }
 
-  await interaction.deferUpdate();
+  const deferred = await safeDeferUpdate(interaction);
+  if (!deferred) return;
 
   switch (interaction.customId) {
     case 'control_pause':
       await queue.pause(!queue.paused);
-      await interaction.editReply({
+      await safeEditReply(interaction, {
         components: [createPlayerControls(queue, currentTrack.info.uri ?? '')],
       });
       break;

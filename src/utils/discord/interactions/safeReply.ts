@@ -1,4 +1,4 @@
-import {ButtonInteraction, CommandInteraction, type InteractionReplyOptions, MessageFlags} from 'discord.js';
+import {ButtonInteraction, CommandInteraction, type InteractionDeferReplyOptions, type InteractionEditReplyOptions, type InteractionReplyOptions, MessageFlags} from 'discord.js';
 
 import {checkAndMarkInteraction} from './interactionManager';
 import {getClient} from '@/utils/discord/client';
@@ -6,6 +6,16 @@ import {getClient} from '@/utils/discord/client';
 const hasDiscordCode = (value: unknown): value is {code: number} => {
   if (typeof value !== 'object' || value === null || !('code' in value)) return false;
   return typeof (value as {code?: unknown}).code === 'number';
+};
+
+const logInteractionError = (interaction: CommandInteraction | ButtonInteraction, action: string, error: unknown): void => {
+  const client = getClient(interaction);
+
+  if (hasDiscordCode(error) && error.code === 10062) {
+    client.logger.debug(`Interaction ${interaction.id} expired/unknown before ${action}: ${error}`);
+  } else {
+    client.logger.error(error instanceof Error ? error : new Error(`Failed to ${action} for interaction ${interaction.id}: ${error}`));
+  }
 };
 
 export async function safeReply(interaction: CommandInteraction | ButtonInteraction, content: string | InteractionReplyOptions, options?: InteractionReplyOptions): Promise<void> {
@@ -32,11 +42,7 @@ export async function safeReply(interaction: CommandInteraction | ButtonInteract
       await interaction.reply(replyOptions);
     }
   } catch (error) {
-    if (hasDiscordCode(error) && error.code === 10062) {
-      client.logger.debug(`Interaction ${interaction.id} expired/unknown before reply could be sent: ${error}`);
-    } else {
-      client.logger.error(error instanceof Error ? error : new Error(`Failed to reply to interaction ${interaction.id}: ${error}`));
-    }
+    logInteractionError(interaction, 'reply', error);
 
     if (!interaction.replied && !interaction.deferred) {
       try {
@@ -45,12 +51,38 @@ export async function safeReply(interaction: CommandInteraction | ButtonInteract
           flags: MessageFlags.Ephemeral,
         });
       } catch (finalError) {
-        if (hasDiscordCode(finalError) && finalError.code === 10062) {
-          client.logger.debug(`Final reply attempt failed for interaction ${interaction.id}: Unknown interaction`);
-        } else {
-          client.logger.error(finalError instanceof Error ? finalError : new Error(`Final reply attempt failed for interaction ${interaction.id}: ${finalError}`));
-        }
+        logInteractionError(interaction, 'send final fallback reply', finalError);
       }
     }
+  }
+}
+
+export async function safeDeferReply(interaction: CommandInteraction | ButtonInteraction, options?: InteractionDeferReplyOptions): Promise<boolean> {
+  try {
+    await interaction.deferReply(options);
+    return true;
+  } catch (error) {
+    logInteractionError(interaction, 'defer reply', error);
+    return false;
+  }
+}
+
+export async function safeDeferUpdate(interaction: ButtonInteraction): Promise<boolean> {
+  try {
+    await interaction.deferUpdate();
+    return true;
+  } catch (error) {
+    logInteractionError(interaction, 'defer update', error);
+    return false;
+  }
+}
+
+export async function safeEditReply(interaction: CommandInteraction | ButtonInteraction, options: string | InteractionEditReplyOptions): Promise<boolean> {
+  try {
+    await interaction.editReply(options);
+    return true;
+  } catch (error) {
+    logInteractionError(interaction, 'edit reply', error);
+    return false;
   }
 }
