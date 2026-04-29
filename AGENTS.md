@@ -1,353 +1,45 @@
-# NM-TS AGENT KNOWLEDGE BASE
+# NM-TS Agent Guide
 
-**Generated:** 2026-04-19
-**Context:** Discord Music Bot (TypeScript + Bun + Discord.js v14 + Shoukaku)
+## Runtime and entrypoints
 
----
+- Bun is the runtime. `package.json` runs the app directly from `src/index.ts`; there is no Node wrapper.
+- Real bootstrap flow: `src/index.ts` → `src/client/Client.ts` → `clientReady` / `interactionCreate` events.
+- `src/index.ts` handles graceful shutdown, saves player state, notifies active text channels, destroys queues, then exits.
+- Required env vars are enforced at import time in `src/utils/config.ts`. Missing `DISCORD_TOKEN`, `DISCORD_CLIENT_ID`, `DISCORD_GUILD_ID`, `EMBED_COLOR_NORMAL`, `EMBED_COLOR_ERROR`, or `LOG_PREFIX` aborts startup immediately.
 
-## PROJECT OVERVIEW
+## Commands you can trust
 
-Discord music bot with **strict TypeScript** type safety, Korean localization, and Lavalink audio streaming. Built exclusively for **Bun runtime** (no Node.js compatibility).
+- Dev: `bun run dev` → `NODE_ENV=development bun --watch --install=auto --no-clear-screen src/index.ts`
+- Start: `bun run start` → `NODE_ENV=production bun src/index.ts`
+- Lint: `bun run lint`
+- Typecheck is not a package script; run `bunx tsc --noEmit` directly.
+- `bun test` is a Bun capability, not a repo script. No checked-in `tests/` or `*.test.ts` files were found in this repo snapshot, so do not assume a test suite exists.
 
-**Stack:** TypeScript + Bun + Discord.js v14 + Shoukaku (Lavalink wrapper)
+## Architecture map
 
----
+- `src/client/Client.ts` is the wiring hub. It constructs `CommandManager`, `EventManager`, `LavalinkManager`, `CooldownManager`, `PlayerStateManager`, and `KoreanbotsManager`.
+- `src/managers/CommandManager.ts` and `src/managers/EventManager.ts` dynamically load only `.ts` files from `src/commands` and `src/events`. Keep new commands/events in those folders as source `.ts` files.
+- `src/events/interactionCreate.ts` is the main command path: duplicate-interaction guard, cooldown check, permission check, then `command.execute(...)`.
+- `src/events/clientReady.ts` registers Lavalink events, restores persisted player state, deploys slash commands, then starts presence updates.
+- `src/managers/CommandManager.ts` merges existing remote commands with local ones during deployment so non-local commands are preserved.
+- `src/deploy-commands.ts` is the manual slash-command entrypoint. Usage is `bun src/deploy-commands.ts [delete] (--global | --guild)`.
 
-## COMMANDS
+## Repo-specific conventions worth keeping
 
-```bash
-# Development & Production
-bun run dev                    # Hot-reload with auto-install
-bun run start                  # Production start
+- TypeScript is strict, `noUncheckedIndexedAccess` is on, module resolution is `bundler`, and `@/*` maps to `./src/*`.
+- Prettier disables bracket spacing and sorts imports with `@trivago/prettier-plugin-sort-imports`; ESLint enforces single quotes, semicolons, 2-space indent, and Stroustrup brace style.
+- User-facing text is Korean throughout the command/event flow.
+- Root guidance should stay high-level. There are nested instruction files at `src/commands/AGENTS.md` and `src/utils/AGENTS.md` for area-specific rules.
 
-# Code Quality
-bun run lint                   # Run ESLint
+## Discord / music gotchas
 
-# Testing
-bun test                       # Run all tests
-bun test tests/utils/playerUtils.test.ts  # Run single test file
-bun test --watch               # Watch mode
+- `NMClient` only requests `Guilds` and `GuildVoiceStates` intents in code. `clientReady` separately warns if `GuildMembers` is missing, so member-dependent behavior should be treated carefully.
+- Interaction responses are funneled through `safeReply` in `src/utils/discord/interactions/safeReply.ts`; prefer that helper over ad hoc reply-state branching.
+- Music/runtime work usually crosses `src/managers/LavalinkManager.ts`, `src/managers/PlayerStateManager.ts`, and `src/utils/music/*`, not just command files.
+- Player state is persisted across restarts; changes to queue/player lifecycle should consider both startup restore and shutdown save paths.
 
-# Deployment
-bun src/deploy-commands.ts     # Sync slash commands to Discord
+## Release workflow
 
-# Build (bundler)
-bun build src/index.ts --outdir dist --target bun
-
-# Type check
-bunx tsc --noEmit              # TypeScript 타입 검사
-```
-
----
-
-## CODE STYLE GUIDELINES
-
-### TypeScript Strictness
-
-- **`strict: true`** + `noUncheckedIndexedAccess: true` (tsconfig.json)
-- **NEVER use `any`** — Use `unknown` and type narrowing instead
-- **NEVER suppress errors** with `@ts-ignore`, `@ts-expect-error`, or `as any`
-- **Array access**: Always check bounds (`array[index]` may be `undefined`)
-- **Optional chaining**: Use `?.` for nullable properties
-- **Type assertion**: Use `satisfies` instead of `as` for type checking exports
-
-### Imports & Modules
-
-- **Path aliases**: Use `@/*` for all internal imports (maps to `./src/*`)
-- **Import order**: Auto-sorted by Prettier plugin (local imports separated)
-- **Type imports**: Use `import type` for type-only imports
-- **Extensions**: `.ts` extensions allowed but not required (bundler mode)
-- **Direct imports**: Import directly from source files, NO barrel re-export files
-  - `@/types/client` not `@/client/types`
-  - `@/utils/music/playerValidation` not `@/utils/music/playerUtils`
-
-**Example:**
-
-```typescript
-import {ChatInputCommandInteraction, MessageFlags} from 'discord.js';
-import {LoadType, type Track} from 'shoukaku';
-
-import type {NMClient} from '@/client/Client';
-import type {Command} from '@/types/client';
-import {getClient} from '@/utils/discord/client';
-import {createErrorEmbed} from '@/utils/discord/embeds';
-```
-
-### Formatting (ESLint + Prettier)
-
-- **Quotes**: Single quotes (`'hello'`) — enforced by ESLint
-- **Semicolons**: Always required — enforced by ESLint
-- **Indentation**: 2 spaces (no tabs)
-- **Line length**: 350 chars (Prettier config)
-- **Trailing commas**: Always in multiline structures
-- **Brace style**: Stroustrup (else/catch on new line)
-- **Object spacing**: No spaces (`{key: value}` not `{ key: value }`)
-- **Arrow functions**: No parens for single param (`x => x * 2`)
-
-**Example:**
-
-```typescript
-// ✅ Correct
-const data = {name: 'test', value: 42};
-const fn = async (id: string) => {
-  if (!id) {
-    throw new Error('Missing ID');
-  }
-  return id;
-};
-
-// ❌ Wrong
-const data = { name: "test", value: 42 }  // Double quotes, spaces in braces, no semicolon
-const fn = async id => { return id }       // Missing type annotation
-```
-
-### Naming Conventions
-
-- **Files**: camelCase (`playerUtils.ts`, `safeReply.ts`)
-- **Types/Interfaces**: PascalCase (`NMClient`, `Command`)
-- **Functions/Variables**: camelCase (`createPlayer`, `addFirst`)
-- **Constants**: SCREAMING_SNAKE_CASE (`EMBED_COLOR_ERROR`)
-- **Private helpers**: No prefix (rely on module scope)
-
-### Error Handling
-
-- **Never empty catch blocks** — Always log or handle errors
-- **Use Error objects**: `new Error(message)` not plain strings in logger calls
-- **Type errors**: Check with `error instanceof Error`
-- **DiscordAPIError**: Catch specific error codes (e.g., `10062` for expired interactions)
-
-**Example:**
-
-```typescript
-// ✅ Good
-try {
-  await interaction.respond(choices);
-} catch (error) {
-  if (error instanceof DiscordAPIError && error.code === 10062) {
-    client.logger.debug('Autocomplete interaction expired');
-    return;
-  }
-  client.logger.error(new Error(`Failed: ${error instanceof Error ? error.message : String(error)}`));
-}
-
-// ❌ Bad
-try {
-  await interaction.respond(choices);
-} catch (e) {} // Empty catch
-```
-
-### Async/Await
-
-- **Prefer async/await** over `.then()/.catch()`
-- **Always await** Discord API calls and Lavalink operations
-- **No floating promises** — Always await or explicitly ignore
-
-### Comments & Localization
-
-- **Comments**: Korean (matches user-facing messages)
-- **User messages**: Korean (bot serves Korean users)
-- **Code/Types**: English acceptable for technical terms
-
----
-
-## PROJECT STRUCTURE
-
-```
-src/
-├── client/       # NMClient (extends Discord.js Client)
-├── commands/     # Slash commands (20 files, satisfies Command)
-├── events/       # Discord event handlers (6 files, satisfies Event)
-├── managers/     # Core logic (CommandManager, EventManager, LavalinkManager, etc.)
-├── structures/   # Data structures (Queue with MAX_QUEUE_SIZE)
-├── types/        # Centralized type definitions
-│   ├── client.ts       # Command, Event, Config, ClientServices, ClientStats
-│   ├── discord.ts      # PermissionResult
-│   ├── logger.ts       # LogLevel, ILogger
-│   ├── music.ts        # RepeatMode, QueueTrack, CreateQueueOptions, AddTrackOptions
-│   └── playerState.ts  # PersistedTrackInfo, PersistedQueueState
-└── utils/
-    ├── music/        # Player helpers (split modules), buttons, Lavalink events
-    │   ├── playerUtils.ts            # Barrel re-export (유틸리티 전체 재export)
-    │   ├── playerValidation.ts       # 음성 채널/플레이어 검증 함수
-    │   ├── trackAdder.ts             # 트랙 추가 로직 + 필터 + 임베드 메타
-    │   ├── queueOperations.ts        # 대기열 파괴 + 진행 바 생성
-    │   ├── lavalinkEvents.ts         # 플레이어/노드 이벤트 핸들러
-    │   └── buttons/                  # 버튼 인터랙션 핸들러 + 컴포넌트
-    ├── discord/      # Embeds, permissions, interactions, client utils
-    ├── formatting/   # Text formatting (time, hyperlinks, truncation)
-    ├── autocomplete/ # Google Suggest integration
-    ├── logger.ts     # Logger 클래스 (ILogger 구현)
-    └── config.ts     # Environment variable loading
-
-tests/            # Bun-native tests (bun:test)
-lavalink/         # Lavalink server config & plugins
-```
-
----
-
-## WHERE TO LOOK
-
-| Task                     | Location                         | Key Files                                                            |
-| ------------------------ | -------------------------------- | -------------------------------------------------------------------- |
-| **Add/modify commands**  | `src/commands/`                  | `play.ts`, `queue.ts`, `skip.ts`                                     |
-| **Music player logic**   | `src/utils/music/`               | `playerValidation.ts`, `trackAdder.ts`, `queueOperations.ts`         |
-| **Lavalink integration** | `src/managers/`                  | `LavalinkManager.ts` (Shoukaku wrapper)                              |
-| **Player state persist** | `src/managers/`                  | `PlayerStateManager.ts` (저장/복구, 배치 fetch)                      |
-| **Permission checks**    | `src/utils/discord/permissions/` | `checkPermissions.ts`, `locale/permission.ts`                        |
-| **Embed helpers**        | `src/utils/discord/`             | `embeds.ts` (`createErrorEmbed`)                                     |
-| **Client setup**         | `src/client/`                    | `Client.ts` (NMClient class, intents)                                |
-| **Event handlers**       | `src/events/`                    | `voiceStateUpdate.ts`, `clientReady.ts`                              |
-| **Queue structure**      | `src/structures/`                | `Queue.ts` (MAX_QUEUE_SIZE = 10000)                                  |
-| **Type definitions**     | `src/types/`                     | `client.ts`, `music.ts`, `discord.ts`, `logger.ts`, `playerState.ts` |
-| **Logger**               | `src/utils/`                     | `logger.ts` (Logger 클래스, LogLevel, ILogger)                       |
-| **Tests**                | `tests/`                         | `utils/playerUtils.test.ts`                                          |
-
----
-
-## KEY PATTERNS
-
-### Command Structure
-
-All commands use `satisfies Command` for type-safe exports:
-
-```typescript
-import type {Command} from '@/types/client';
-
-export default {
-  data: new SlashCommandBuilder().setName('example').setDescription('설명'),
-  permissions: [PermissionsBitField.Flags.Connect],
-  cooldown: 3,
-  async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    const client = getClient(interaction);
-    // Command logic
-  },
-} satisfies Command;
-```
-
-### Event Structure
-
-All events use `satisfies Event<'eventName'>`:
-
-```typescript
-import type {Event} from '@/types/client';
-
-export default {
-  async execute(client, ...args) {
-    // Event logic
-  },
-} satisfies Event<'voiceStateUpdate'>;
-```
-
-### Validation Pattern
-
-Import validation functions directly from their source modules:
-
-```typescript
-import {ensurePlayerReady, ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music/playerValidation';
-
-// Simple validation
-if (!(await ensureVoiceChannel(interaction))) return;
-if (!(await ensureSameVoiceChannel(interaction))) return;
-
-// Combined validation
-if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
-```
-
-### Queue Operations
-
-```typescript
-import {createProgressBar, destroyQueueSafely} from '@/utils/music/queueOperations';
-import {addTrackToQueue} from '@/utils/music/trackAdder';
-```
-
-### Client Type Casting
-
-Always use `getClient()` helper (never cast manually):
-
-```typescript
-// ✅ Correct
-const client = getClient(interaction);
-
-// ❌ Wrong
-const client = interaction.client as NMClient;
-```
-
-### Safe Replies
-
-Use `safeReply()` to handle deferred/replied states:
-
-```typescript
-import {safeReply} from '@/utils/discord/interactions/safeReply';
-
-await safeReply(interaction, {
-  embeds: [createErrorEmbed(client, '제목', '설명')],
-  flags: MessageFlags.Ephemeral,
-});
-```
-
----
-
-## TESTING
-
-### Test Structure (Bun-native)
-
-```typescript
-import {beforeEach, describe, expect, it, mock} from 'bun:test';
-
-describe('Feature Name', () => {
-  beforeEach(() => {
-    // Setup mocks
-  });
-
-  it('should do something', async () => {
-    const result = await functionUnderTest();
-    expect(result).toBe(expectedValue);
-  });
-});
-```
-
-### Mocking
-
-- Use `mock()` from `bun:test`
-- Use `mock.module()` to mock entire modules
-- Use `@ts-ignore` sparingly in tests when mocking complex types
-
----
-
-## ANTI-PATTERNS (NEVER DO)
-
-❌ **Type suppression**: `as any`, `@ts-ignore`, `@ts-expect-error`
-❌ **`as` for export typing**: Use `satisfies` instead of `as Command` / `as Event`
-❌ **Node.js APIs**: `fs`, `path` (use Bun equivalents like `Bun.file`)
-❌ **Prefix commands**: Only slash commands allowed
-❌ **Global state**: Use Managers or pass via Client instance
-❌ **Empty catch blocks**: Always log errors
-❌ **Manual client casting**: Use `getClient(interaction)` helper
-❌ **Inline permissions**: Use `formatMissingPermissions()` helper
-❌ **Direct player access without validation**: Use `ensurePlayerReady()`
-❌ **Barrel re-export for new code**: Import directly from source files
-❌ **String interpolation in logger**: Always use `new Error(message)` for `logger.error()`
-
----
-
-## ENVIRONMENT
-
-- **Runtime**: Bun only (NOT Node.js)
-- **TypeScript**: 5.8.3+ with strict mode
-- **Target**: ESNext (latest ECMAScript features)
-- **Module resolution**: Bundler mode (verbatimModuleSyntax)
-
----
-
-## NOTES FOR AGENTS
-
-1. **Always check types** — This project has strict null checks and index access checks
-2. **Voice channel validation** — Most music commands require voice channel checks
-3. **Korean messages** — All user-facing messages are in Korean
-4. **Lavalink dependency** — Music features require a running Lavalink server
-5. **Permissions** — Commands specify required bot permissions in `permissions` array
-6. **Cooldowns** — Commands can specify `cooldown` in seconds (managed by CooldownManager)
-7. **Build verification** — Always run `bun build` or `tsc --noEmit` after file changes
-8. **Test before commit** — Run `bun test` to ensure no regressions
-9. **Import from source** — Import types from `@/types/*`, utilities from their actual module file
-10. **Queue size limit** — `Queue.MAX_QUEUE_SIZE = 10_000`, check `queue.isFull()` before adding tracks
+- The only checked-in GitHub Actions workflow is `.github/workflows/docker-build.yml`.
+- Releases are tag-driven: pushing `v*.*.*` builds and pushes GHCR images tagged as both `latest` and the version.
+- The workflow expects `GHCR_TOKEN`; there is no general CI file here for lint/test/typecheck enforcement.
