@@ -23,11 +23,18 @@ export default {
     if (!queue) return;
 
     const trackValue = interaction.options.getString('track', true);
-    const index = parseInt(trackValue, 10);
+    const userIndex = parseInt(trackValue, 10);
+    const index = userIndex - 1;
 
-    if (isNaN(index) || index < 0 || index >= queue.size()) {
+    if (isNaN(userIndex) || userIndex < 1 || index >= queue.size()) {
       return await safeReply(interaction, {
-        embeds: [createErrorEmbed(client, '유효하지 않은 음악이에요.', '자동완성 목록에서 제거할 음악을 선택해 주세요.')],
+        embeds: [
+          createErrorEmbed(
+            client,
+            '유효하지 않은 음악 번호예요.',
+            `대기열 범위 내의 번호(1 ~ ${queue.size()})를 입력하거나 자동완성 목록에서 선택해 주세요.`
+          ),
+        ],
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -37,7 +44,7 @@ export default {
 
     if (!track) {
       return await safeReply(interaction, {
-        embeds: [createErrorEmbed(client, `${index + 1}번째 음악이 없어요.`)],
+        embeds: [createErrorEmbed(client, `${userIndex}번째 음악이 없어요.`)],
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -46,7 +53,7 @@ export default {
     return await safeReply(interaction, {
       embeds: [
         new EmbedBuilder()
-          .setTitle(`${index + 1}번째 음악을 대기열에서 제거했어요.`)
+          .setTitle(`${userIndex}번째 음악을 대기열에서 제거했어요.`)
           .setDescription(codeBlock('diff', `- ${track.info.title}`))
           .setColor(client.config.EMBED_COLOR_NORMAL as HexColorString),
       ],
@@ -74,23 +81,24 @@ export default {
     }
 
     const focused = interaction.options.getFocused();
-    const tracks = queue.getSlice(0, MAX_AUTOCOMPLETE_RESULTS);
+    const allTracks = queue.getSlice(0, queue.size());
 
-    const choices = tracks
+    const choices = allTracks
       .map((track, i) => {
         const label = `${i + 1}. ${track.info.title}`;
         return {
           name: truncateWithEllipsis(label, 100),
-          value: String(i),
+          value: String(i + 1),
           title: track.info.title,
           index: i,
         };
       })
       .filter(choice => {
-        if (!focused) return true;
+        if (!focused) return choice.index < MAX_AUTOCOMPLETE_RESULTS;
         const query = focused.toLowerCase();
-        return choice.title.toLowerCase().includes(query) || String(choice.index + 1) === focused;
+        return choice.title.toLowerCase().includes(query) || String(choice.index + 1) === query;
       })
+      .slice(0, MAX_AUTOCOMPLETE_RESULTS)
       .map(({name, value}) => ({name, value}));
 
     await respondSafely(choices);
