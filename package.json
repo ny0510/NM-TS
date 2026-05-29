@@ -8,12 +8,15 @@
   "scripts": {
     "lint": "eslint . --ext .ts",
     "start": "NODE_ENV=production bun src/index.ts",
-    "dev": "NODE_ENV=development bun --watch --install=auto --no-clear-screen src/index.ts"
+    "dev": "NODE_ENV=development bun --watch --install=auto --no-clear-screen src/index.ts",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "db:migrate": "drizzle-kit migrate --config drizzle.config.ts"
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
     "@types/bun": "^1.3.12",
     "@types/get-image-colors": "^4.0.5",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^10.2.1",
     "prettier": "^3.8.3"
   },
@@ -24,9 +27,11 @@
     "@types/luxon": "^3.7.1",
     "chalk": "^5.6.2",
     "discord.js": "^14.26.3",
+    "drizzle-orm": "^0.45.2",
     "get-image-colors": "^4.0.1",
     "koreanbots": "^3.2.1",
     "luxon": "^3.7.2",
+    "postgres": "^3.4.9",
     "shoukaku": "^4.3.0",
     "undici": "^8.1.0"
   }
