@@ -1,4 +1,6 @@
-import {date, index, integer, pgTable, serial, text, timestamp, uniqueIndex} from 'drizzle-orm/pg-core';
+import {boolean, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex} from 'drizzle-orm/pg-core';
+
+import type {PersistedQueueState} from '@/types/playerState';
 
 export const tracks = pgTable(
   'tracks',
@@ -7,6 +9,8 @@ export const tracks = pgTable(
     source: text('source').notNull(),
     identifier: text('identifier').notNull(),
     title: text('title').notNull(),
+    artist: text('artist').notNull(),
+    durationMs: integer('duration_ms').notNull(),
     uri: text('uri'),
     artworkUrl: text('artwork_url'),
     createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
@@ -18,8 +22,8 @@ export const tracks = pgTable(
   ],
 );
 
-export const monthlyTrackPlays = pgTable(
-  'monthly_track_plays',
+export const trackPlayEvents = pgTable(
+  'track_play_events',
   {
     id: serial('id').primaryKey(),
     guildId: text('guild_id').notNull(),
@@ -27,15 +31,26 @@ export const monthlyTrackPlays = pgTable(
     trackId: integer('track_id')
       .notNull()
       .references(() => tracks.id, {onDelete: 'cascade'}),
-    month: date('month', {mode: 'date'}).notNull(),
-    playCount: integer('play_count').notNull().default(1),
+    playedAt: timestamp('played_at', {withTimezone: true}).defaultNow().notNull(),
+    isAutoplay: boolean('is_autoplay').notNull().default(false),
+    endedReason: text('ended_reason').notNull(),
+    requestChannelId: text('request_channel_id'),
+    playContext: text('play_context').notNull(),
+    queueType: text('queue_type').notNull(),
     createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
-    updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
   },
   table => [
-    uniqueIndex('monthly_track_plays_unique').on(table.guildId, table.userId, table.trackId, table.month),
-    index('monthly_track_plays_guild_month_track_idx').on(table.guildId, table.month, table.trackId),
-    index('monthly_track_plays_guild_month_idx').on(table.guildId, table.month),
-    index('monthly_track_plays_user_idx').on(table.userId),
+    index('track_play_events_guild_played_at_idx').on(table.guildId, table.playedAt),
+    index('track_play_events_guild_user_played_at_idx').on(table.guildId, table.userId, table.playedAt),
+    index('track_play_events_guild_track_played_at_idx').on(table.guildId, table.trackId, table.playedAt),
+    index('track_play_events_user_played_at_idx').on(table.userId, table.playedAt),
   ],
 );
+
+export const playerStates = pgTable('player_states', {
+  guildId: text('guild_id').primaryKey(),
+  version: integer('version').notNull(),
+  state: jsonb('state').$type<PersistedQueueState>().notNull(),
+  createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
+});

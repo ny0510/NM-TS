@@ -1,6 +1,6 @@
 {
-  "id": "01744c65-0f9f-4e70-875b-d8a4d416c7c7",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "ac086c50-14bd-4c6b-9f0a-b74edf689f8c",
+  "prevId": "01744c65-0f9f-4e70-875b-d8a4d416c7c7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -115,12 +115,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "month": {
-          "name": "month",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -216,48 +210,6 @@
             },
             {
               "expression": "played_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "track_play_events_guild_month_idx": {
-          "name": "track_play_events_guild_month_idx",
-          "columns": [
-            {
-              "expression": "guild_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "month",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "track_play_events_user_month_idx": {
-          "name": "track_play_events_user_month_idx",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "month",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
