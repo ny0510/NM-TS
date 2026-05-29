@@ -185,6 +185,7 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
     case LoadType.TRACK:
     case LoadType.SEARCH: {
       const track = extractedTracks[0] as QueueTrack;
+      track.playContext = {playContext: 'play', requestChannelId: interaction.channelId ?? undefined};
       if (addFirst) queue.add(track, 0);
       else if (index !== null) queue.add(track, index);
       else queue.add(track);
@@ -235,6 +236,10 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
           });
           return;
         }
+      }
+
+      for (const track of playlistTracks) {
+        track.playContext = {playContext: 'play', requestChannelId: interaction.channelId ?? undefined};
       }
 
       if (addFirst) queue.add(playlistTracks, 0);

@@ -29,8 +29,6 @@ export const config: Config = {
   LOG_PREFIX: process.env.LOG_PREFIX || 'NM',
   IS_DEV_MODE: process.env.NODE_ENV == 'development',
 
-  PLAYER_STATE_PATH: process.env.PLAYER_STATE_PATH ?? './data/shoukaku/player-state.json',
-
   KOREANBOTS_TOKEN: process.env.KOREANBOTS_TOKEN || '',
   KOREANBOTS_CLIENT_ID: process.env.KOREANBOTS_CLIENT_ID || process.env.DISCORD_CLIENT_ID || '',
   KOREANBOTS_UPDATE_INTERVAL: resolvedKoreanbotsInterval,

@@ -129,6 +129,10 @@ export class Queue {
     this.current = track;
   }
 
+  public getCurrentPlayContext(): QueueTrack['playContext'] | undefined {
+    return this.current?.playContext;
+  }
+
   public getSlice(start: number, end: number): QueueTrack[] {
     return this.tracks.slice(start, end);
   }
@@ -218,6 +222,13 @@ export class Queue {
   public async play(): Promise<void> {
     const track = this.tracks.shift();
     if (!track) return;
+
+    if (!track.playContext) {
+      track.playContext = {
+        playContext: 'play',
+        requestChannelId: this.textChannelId,
+      };
+    }
 
     this.current = track;
     this.playing = true;

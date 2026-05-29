@@ -7,10 +7,10 @@ import type {QueueTrack} from '@/types/music';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
-import {recordMonthlyTrackPlay} from '@/utils/music/monthlyStats';
 import {createPlayerControls} from '@/utils/music/buttons/controlsButton';
 import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 import {getEmbedMeta} from '@/utils/music/playerUtils';
+import {recordTrackPlayEvent} from '@/utils/music/trackPlayEvents';
 
 const logger = new Logger('Lavalink');
 
@@ -97,15 +97,17 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
 
     if (data.reason === 'replaced') return;
 
-    if (data.reason === 'finished') {
-      const currentTrack = queue.getCurrent();
-      const requesterId = currentTrack?.requester?.id ?? track.requester?.id;
+    const currentTrack = queue.getCurrent();
+    const requesterId = currentTrack?.requester?.id ?? track.requester?.id;
+    const playContext = currentTrack?.playContext ?? track.playContext ?? {playContext: 'play', requestChannelId: queue.textChannelId, endedReason: data.reason};
 
-      if (currentTrack) {
-        await recordMonthlyTrackPlay(queue.guildId, currentTrack, requesterId);
-      } else {
-        await recordMonthlyTrackPlay(queue.guildId, track, requesterId);
-      }
+    if (currentTrack) currentTrack.playContext = {...playContext, endedReason: data.reason};
+    track.playContext = {...playContext, endedReason: data.reason};
+
+    if (currentTrack) {
+      await recordTrackPlayEvent(queue.guildId, currentTrack, requesterId);
+    } else {
+      await recordTrackPlayEvent(queue.guildId, track, requesterId);
     }
 
     if (queue.trackRepeat && data.reason === 'finished') {
@@ -205,7 +207,7 @@ async function handleAutoplay(queue: Queue, client: NMClient): Promise<boolean> 
       if (candidates.length === 0) continue;
 
       const picked = candidates[Math.floor(Math.random() * candidates.length)]!;
-      const autoplayTrack: QueueTrack = {...picked, requester: queue.getAutoplayRequester()};
+      const autoplayTrack: QueueTrack = {...picked, requester: queue.getAutoplayRequester(), isAutoplay: true, playContext: {playContext: 'autoplay', requestChannelId: queue.textChannelId}};
 
       queue.add(autoplayTrack);
       await queue.play();

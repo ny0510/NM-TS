@@ -1,9 +1,6 @@
 import {EmbedBuilder} from 'discord.js';
 
 import {NMClient} from '@/client/Client';
-import {runDbMigrations} from '@/db';
-
-await runDbMigrations();
 
 const client = new NMClient();
 

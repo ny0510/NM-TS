@@ -39,7 +39,7 @@ export class NMClient extends Client {
       eventManager: new EventManager(this, new Logger('Event', 'info', config.DISCORD_LOG_WEBHOOK_URL)),
       lavalinkManager: new LavalinkManager(this, new Logger('Lavalink', 'info', config.DISCORD_LOG_WEBHOOK_URL), this.config),
       cooldownManager: new CooldownManager(),
-      playerStateManager: new PlayerStateManager(this, new Logger('PlayerState', 'info', config.DISCORD_LOG_WEBHOOK_URL), this.config),
+      playerStateManager: new PlayerStateManager(this, new Logger('PlayerState', 'info', config.DISCORD_LOG_WEBHOOK_URL)),
     };
 
     this.koreanbotsManager = new KoreanbotsManager(this, new Logger('Koreanbots', 'info', config.DISCORD_LOG_WEBHOOK_URL));

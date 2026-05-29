@@ -9,6 +9,12 @@ export enum RepeatMode {
 
 export interface QueueTrack extends Track {
   requester?: User;
+  isAutoplay?: boolean;
+  playContext?: {
+    requestChannelId?: string;
+    playContext?: 'play' | 'quick_add' | 'restore' | 'autoplay';
+    endedReason?: 'finished' | 'skipped' | 'stopped' | 'replaced' | 'stuck' | 'exception' | 'loadFailed' | 'cleanup';
+  };
 }
 
 export interface CreateQueueOptions {

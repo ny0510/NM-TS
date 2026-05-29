@@ -1,13 +1,11 @@
 import {type Client, EmbedBuilder} from 'discord.js';
-import {dirname} from 'node:path';
 
 import type {NMClient} from '@/client/Client';
 import type {Queue} from '@/structures/Queue';
-import type {Config} from '@/types/client';
 import type {QueueTrack} from '@/types/music';
-import {PLAYER_STATE_VERSION, type PersistedQueueState, type PlayerStateFile} from '@/types/playerState';
+import {PLAYER_STATE_VERSION, type PersistedQueueState} from '@/types/playerState';
 import type {ILogger} from '@/utils/logger';
-import {mkdir, rename} from 'node:fs/promises';
+import {clearPlayerStates, loadPlayerStates, replacePlayerStates} from '@/utils/music/playerStatePersistence';
 
 const RESTORE_TIMEOUT_MS = 3_000;
 
@@ -18,16 +16,10 @@ function sleep(ms: number): Promise<void> {
 export class PlayerStateManager {
   private readonly client: Client;
   private readonly logger: ILogger;
-  private readonly config: Config;
 
-  constructor(client: Client, logger: ILogger, config: Config) {
+  constructor(client: Client, logger: ILogger) {
     this.client = client;
     this.logger = logger;
-    this.config = config;
-  }
-
-  public getSnapshotPath(): string {
-    return this.config.PLAYER_STATE_PATH;
   }
 
   public async saveAll(): Promise<void> {
@@ -36,10 +28,8 @@ export class PlayerStateManager {
 
     try {
       if (queues.size === 0) {
-        try {
-          await Bun.file(this.getSnapshotPath()).delete();
-        } catch {}
-        this.logger.info('No active queues, deleted snapshot file if it existed');
+        await clearPlayerStates();
+        this.logger.info('No active queues, deleted persisted player states if they existed');
         return;
       }
 
@@ -81,49 +71,34 @@ export class PlayerStateManager {
         });
       }
 
-      const file: PlayerStateFile = {
-        version: PLAYER_STATE_VERSION,
-        guilds: states,
-      };
-
-      const snapshotPath = this.getSnapshotPath();
-      const dir = dirname(snapshotPath);
-      await mkdir(dir, {recursive: true});
-
-      const tmpPath = `${snapshotPath}.tmp`;
-      await Bun.write(tmpPath, JSON.stringify(file, null, 2));
-      await rename(tmpPath, snapshotPath);
-
-      this.logger.info(`Saved player state for ${states.length} guild(s)`);
+      await replacePlayerStates(states);
     } catch (error) {
       this.logger.error(error instanceof Error ? error : new Error(`Failed to save player state: ${error}`));
     }
   }
 
   public async restoreAll(): Promise<{restored: number; total: number; failed: number}> {
-    const snapshotPath = this.getSnapshotPath();
     const result = {restored: 0, total: 0, failed: 0};
 
     try {
-      let raw: string;
-      try {
-        raw = await Bun.file(snapshotPath).text();
-      } catch {
-        this.logger.info('No player state snapshot found, skipping restore');
+      const states = await loadPlayerStates();
+
+      const validStates = states.filter(state => state.version === PLAYER_STATE_VERSION).map(state => state.state);
+      const skippedStates = states.length - validStates.length;
+
+      if (states.length === 0) {
+        this.logger.info('No persisted player state found, skipping restore');
         return result;
       }
 
-      const file: PlayerStateFile = JSON.parse(raw);
-
-      if (file.version !== PLAYER_STATE_VERSION) {
-        this.logger.warn(`Player state version mismatch: expected ${PLAYER_STATE_VERSION}, got ${file.version}. Skipping restore.`);
-        return result;
+      if (skippedStates > 0) {
+        this.logger.warn(`Skipped ${skippedStates} player state record(s) due to version mismatch.`);
       }
 
-      result.total = file.guilds.length;
+      result.total = validStates.length;
       this.logger.info(`Restoring player state for ${result.total} guild(s)`);
 
-      for (const state of file.guilds) {
+      for (const state of validStates) {
         try {
           const restored = await Promise.race([this.restoreQueue(state), sleep(RESTORE_TIMEOUT_MS)]);
           if (restored === 'restored') {
@@ -140,7 +115,7 @@ export class PlayerStateManager {
         }
       }
 
-      await this.clearSnapshot();
+      await clearPlayerStates();
       this.logger.info(`Restore complete: ${result.restored}/${result.total} succeeded, ${result.failed} failed`);
     } catch (error) {
       this.logger.error(error instanceof Error ? error : new Error(`Failed to restore player state: ${error}`));
@@ -209,6 +184,7 @@ export class PlayerStateManager {
       info: persisted.info,
       pluginInfo: undefined,
       requester: persisted.requesterId ? requesterMap.get(persisted.requesterId) : undefined,
+      playContext: {playContext: 'restore', requestChannelId: state.textChannelId},
     });
 
     queue.previous = state.previous.map(t => makeTrack(t));
@@ -293,7 +269,7 @@ export class PlayerStateManager {
 
   public async clearSnapshot(): Promise<void> {
     try {
-      await Bun.file(this.getSnapshotPath()).delete();
+      await clearPlayerStates();
     } catch {}
   }
 }
