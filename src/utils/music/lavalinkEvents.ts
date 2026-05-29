@@ -7,6 +7,7 @@ import type {QueueTrack} from '@/types/music';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {hyperlink, truncateWithEllipsis} from '@/utils/formatting';
 import {Logger} from '@/utils/logger';
+import {recordMonthlyTrackPlay} from '@/utils/music/monthlyStats';
 import {createPlayerControls} from '@/utils/music/buttons/controlsButton';
 import {createQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 import {getEmbedMeta} from '@/utils/music/playerUtils';
@@ -95,6 +96,17 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient) => {
     logger.info(`Player ${guildName} (${guildId}) track end. Track: ${track.info.title} (reason: ${data.reason})`);
 
     if (data.reason === 'replaced') return;
+
+    if (data.reason === 'finished') {
+      const currentTrack = queue.getCurrent();
+      const requesterId = currentTrack?.requester?.id ?? track.requester?.id;
+
+      if (currentTrack) {
+        await recordMonthlyTrackPlay(queue.guildId, currentTrack, requesterId);
+      } else {
+        await recordMonthlyTrackPlay(queue.guildId, track, requesterId);
+      }
+    }
 
     if (queue.trackRepeat && data.reason === 'finished') {
       await queue.player.playTrack({track: {encoded: track.encoded}});
