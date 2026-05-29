@@ -30,5 +30,9 @@ declare namespace NodeJS {
     PROGRESS_FILLED_MIDDLE?: string;
     PROGRESS_UNFILLED_MIDDLE?: string;
     PROGRESS_UNFILLED_END?: string;
+
+    POSTGRES_DB?: string;
+    POSTGRES_USER?: string;
+    POSTGRES_PASSWORD?: string;
   }
 }

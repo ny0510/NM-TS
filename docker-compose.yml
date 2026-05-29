@@ -67,6 +67,25 @@ services:
         max-size: '2m'
         max-file: '3'
 
+  migrate:
+    build:
+      context: .
+      cache_from:
+        - ghcr.io/ny0510/nm:latest
+    image: ghcr.io/ny0510/nm:latest
+    container_name: nm-migrate
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+    command: bun run db:migrate:once
+    networks:
+      - nm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
   nm:
     build:
       context: .
@@ -83,6 +102,8 @@ services:
     networks:
       - nm
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       lavalink:

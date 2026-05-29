@@ -1,9 +1,11 @@
+# syntax=docker/dockerfile:1.7
 FROM oven/bun:1 AS base
 WORKDIR /app
 
 FROM base AS deps
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production 
+RUN --mount=type=cache,id=bun-install-cache,target=/root/.bun/install/cache \
+  bun install --frozen-lockfile --production --no-progress
 
 FROM base AS release
 WORKDIR /app
