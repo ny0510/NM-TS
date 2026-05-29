@@ -19,6 +19,7 @@ Flat directory. Each file exports a single command object using `satisfies Comma
 | **Config**        | `volume.ts`, `speed.ts`                                             | Player settings        |
 | **Broadcast**     | `broadcast.ts`                                                      | 공지 명령어            |
 | **Search**        | `search.ts`                                                         | 검색 명령어            |
+| **Chart**         | `chart.ts`                                                          | 음악 차트/순위         |
 
 ## CONVENTIONS
 

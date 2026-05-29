@@ -33,7 +33,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName('seek')
     .setDescription('지정한 시간으로 건너뛰어요.')
-    .addStringOption(option => option.setName('time').setDescription('건너뛸 시간 (시:분:초)').setRequired(true)),
+    .addStringOption(option => option.setName('time').setDescription('⏱️ 건너뛸 시간 (시:분:초)').setRequired(true)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;

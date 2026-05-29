@@ -38,7 +38,6 @@ export interface AppConfig {
   DEFAULT_VOLUME: number;
   LOG_PREFIX: string;
   IS_DEV_MODE: boolean;
-  PLAYER_STATE_PATH: string;
 }
 
 export interface ProgressBarConfig {

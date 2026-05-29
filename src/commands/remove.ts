@@ -1,16 +1,19 @@
-import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, SlashCommandBuilder, codeBlock} from 'discord.js';
+import {type AutocompleteInteraction, ChatInputCommandInteraction, DiscordAPIError, EmbedBuilder, type HexColorString, MessageFlags, SlashCommandBuilder, codeBlock} from 'discord.js';
 
 import type {Command} from '@/types/client';
+import {truncateWithEllipsis} from '@/utils';
 import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {safeReply} from '@/utils/discord/interactions';
 import {ensurePlayerReady} from '@/utils/music';
 
+const MAX_AUTOCOMPLETE_RESULTS = 25;
+
 export default {
   data: new SlashCommandBuilder()
     .setName('remove')
     .setDescription('대기열에서 음악을 제거해요.')
-    .addNumberOption(option => option.setName('index').setDescription('제거할 음악의 인덱스를 입력해 주세요.').setRequired(true).setMinValue(1)),
+    .addStringOption(option => option.setName('track').setDescription('🗑️ 제거할 음악을 선택해 주세요.').setRequired(true).setAutocomplete(true)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
@@ -19,12 +22,12 @@ export default {
     const queue = client.queues.get(interaction.guildId!);
     if (!queue) return;
 
-    const index = interaction.options.getNumber('index')! - 1;
-    const queueSize = queue.size();
+    const trackValue = interaction.options.getString('track', true);
+    const index = parseInt(trackValue, 10);
 
-    if (index < 0 || index >= queueSize) {
+    if (isNaN(index) || index < 0 || index >= queue.size()) {
       return await safeReply(interaction, {
-        embeds: [createErrorEmbed(client, '유효하지 않은 인덱스에요.')],
+        embeds: [createErrorEmbed(client, '유효하지 않은 음악이에요.', '자동완성 목록에서 제거할 음악을 선택해 주세요.')],
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -48,5 +51,48 @@ export default {
           .setColor(client.config.EMBED_COLOR_NORMAL as HexColorString),
       ],
     });
+  },
+  async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
+    const client = getClient(interaction);
+
+    const respondSafely = async (choices: {name: string; value: string}[]) => {
+      try {
+        await interaction.respond(choices);
+      } catch (error) {
+        if (error instanceof DiscordAPIError && error.code === 10062) {
+          client.logger.debug('Autocomplete interaction expired before response could be sent.');
+          return;
+        }
+        client.logger.error(new Error(`Failed to respond to autocomplete interaction: ${error instanceof Error ? error.message : String(error)}`));
+      }
+    };
+
+    const queue = client.queues.get(interaction.guildId!);
+    if (!queue || queue.size() === 0) {
+      await respondSafely([]);
+      return;
+    }
+
+    const focused = interaction.options.getFocused();
+    const tracks = queue.getSlice(0, MAX_AUTOCOMPLETE_RESULTS);
+
+    const choices = tracks
+      .map((track, i) => {
+        const label = `${i + 1}. ${track.info.title}`;
+        return {
+          name: truncateWithEllipsis(label, 100),
+          value: String(i),
+          title: track.info.title,
+          index: i,
+        };
+      })
+      .filter(choice => {
+        if (!focused) return true;
+        const query = focused.toLowerCase();
+        return choice.title.toLowerCase().includes(query) || String(choice.index + 1) === focused;
+      })
+      .map(({name, value}) => ({name, value}));
+
+    await respondSafely(choices);
   },
 } satisfies Command;

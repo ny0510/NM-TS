@@ -9,7 +9,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName('speed')
     .setDescription('재생 속도를 조절해요.')
-    .addNumberOption(option => option.setName('level').setDescription('재생 속도').setMinValue(0.5).setMaxValue(2.0).setRequired(true)),
+    .addNumberOption(option => option.setName('level').setDescription('⏩ 변경할 재생 속도 (0.5 ~ 2.0)').setMinValue(0.5).setMaxValue(2.0).setRequired(true)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;

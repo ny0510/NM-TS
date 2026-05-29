@@ -10,12 +10,12 @@ export default {
   data: new SlashCommandBuilder()
     .setName('play')
     .setDescription('음악을 재생해요.')
-    .addStringOption(option => option.setName('query').setDescription('재생할 음악의 제목이나 URL을 입력해 주세요.').setRequired(true).setAutocomplete(true))
-    .addBooleanOption(option => option.setName('add_first').setDescription('대기열의 맨 앞에 음악을 추가해요.').setRequired(false))
-    .addIntegerOption(option => option.setName('index').setDescription('대기열의 특정 위치에 음악을 추가해요.').setRequired(false))
-    .addBooleanOption(option => option.setName('ignore_playlist').setDescription('재생목록을 무시하고 해당 음악만 추가해요.').setRequired(false))
-    .addBooleanOption(option => option.setName('exclude_cover').setDescription('커버 곡을 제외하고 검색해요.').setRequired(false))
-    .addBooleanOption(option => option.setName('exclude_shorts').setDescription('쇼츠 영상을 제외하고 검색해요.').setRequired(false)),
+    .addStringOption(option => option.setName('query').setDescription('🔍 재생할 음악의 제목이나 URL을 입력해 주세요.').setRequired(true).setAutocomplete(true))
+    .addBooleanOption(option => option.setName('add_first').setDescription('⏫ 대기열의 맨 앞에 음악을 추가해요.').setRequired(false))
+    .addIntegerOption(option => option.setName('index').setDescription('📍 대기열의 특정 위치에 음악을 추가해요.').setRequired(false))
+    .addBooleanOption(option => option.setName('ignore_playlist').setDescription('📄 재생목록을 무시하고 해당 음악만 추가해요.').setRequired(false))
+    .addBooleanOption(option => option.setName('exclude_cover').setDescription('🚫 커버 곡을 제외하고 검색해요.').setRequired(false))
+    .addBooleanOption(option => option.setName('exclude_shorts').setDescription('🚫 쇼츠 영상을 제외하고 검색해요.').setRequired(false)),
   permissions: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {

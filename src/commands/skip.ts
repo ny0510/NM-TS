@@ -10,7 +10,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName('skip')
     .setDescription('음악을 건너뛰어요.')
-    .addIntegerOption(option => option.setName('count').setDescription('건너뛸 음악의 개수를 입력해 주세요.').setRequired(false)),
+    .addIntegerOption(option => option.setName('count').setDescription('⏭️ 건너뛸 음악의 개수를 입력해 주세요.').setRequired(false)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;

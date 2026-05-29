@@ -56,7 +56,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName('queue')
     .setDescription('대기열을 확인해요.')
-    .addNumberOption(option => option.setName('page').setDescription('페이지를 선택해 주세요.').setMinValue(1)),
+    .addNumberOption(option => option.setName('page').setDescription('📄 조회할 페이지 번호를 입력해 주세요.').setMinValue(1)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     const client = getClient(interaction);
@@ -78,11 +78,11 @@ export default {
     }
 
     const embed = buildQueueEmbed(client, queue, page);
-    const row = buildQueueButtons(page, totalPages);
+    const components = [buildQueueButtons(page, totalPages)];
 
     await safeReply(interaction, {
       embeds: [embed],
-      components: [row],
+      components: components,
     });
 
     const filter = async (i: MessageComponentInteraction) => {

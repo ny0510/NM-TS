@@ -22,8 +22,8 @@ export default {
   data: new SlashCommandBuilder()
     .setName('search')
     .setDescription('음악을 검색해요.')
-    .addStringOption(option => option.setName('query').setDescription('검색할 음악의 제목이나 URL을 입력해 주세요.').setRequired(true))
-    .addStringOption(option => option.setName('searchplatform').setDescription('검색할 플랫폼을 선택해 주세요.').addChoices({name: '유튜브', value: 'ytsearch'}, {name: '스포티파이', value: 'spsearch'}, {name: '사운드클라우드', value: 'scsearch'})),
+    .addStringOption(option => option.setName('query').setDescription('🔍 검색할 음악의 제목이나 URL을 입력해 주세요.').setRequired(true))
+    .addStringOption(option => option.setName('searchplatform').setDescription('🌐 검색할 플랫폼을 선택해 주세요.').addChoices({name: '▶️ 유튜브', value: 'ytsearch'}, {name: '🎵 스포티파이', value: 'spsearch'}, {name: '☁️ 사운드클라우드', value: 'scsearch'})),
   permissions: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {

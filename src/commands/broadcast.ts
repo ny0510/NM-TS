@@ -8,8 +8,8 @@ export default {
   data: new SlashCommandBuilder()
     .setName('broadcast')
     .setDescription('현재 재생중인 모든 서버에 공지사항을 보내요.')
-    .addStringOption(option => option.setName('message').setDescription('보낼 공지사항 내용').setRequired(true))
-    .addBooleanOption(option => option.setName('preview').setDescription('전송 전 임베드 미리보기').setRequired(false)),
+    .addStringOption(option => option.setName('message').setDescription('✏️ 보낼 공지사항 내용').setRequired(true))
+    .addBooleanOption(option => option.setName('preview').setDescription('👁️ 전송 전 임베드 미리보기').setRequired(false)),
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = getClient(interaction);
 

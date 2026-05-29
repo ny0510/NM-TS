@@ -9,7 +9,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName('volume')
     .setDescription('볼륨을 조절해요.')
-    .addNumberOption(option => option.setName('level').setDescription('볼륨').setMinValue(0).setMaxValue(100).setRequired(true)),
+    .addNumberOption(option => option.setName('level').setDescription('🔊 변경할 볼륨 크기 (0 ~ 100)').setMinValue(0).setMaxValue(100).setRequired(true)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;

@@ -9,7 +9,7 @@ export default {
   data: new SlashCommandBuilder()
     .setName('shuffle')
     .setDescription('대기열을 섞어요.')
-    .addStringOption(option => option.setName('mode').setDescription('대기열을 섞는 모드를 선택해 주세요.').addChoices({name: '랜덤', value: 'random'}, {name: '라운드 로빈', value: 'roundrobin'})),
+    .addStringOption(option => option.setName('mode').setDescription('대기열을 섞는 모드를 선택해 주세요.').addChoices({name: '🎲 랜덤', value: 'random'}, {name: '🔄 라운드 로빈', value: 'roundrobin'})),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
