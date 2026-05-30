@@ -102,7 +102,7 @@ export default {
     }
 
     try {
-      const ranking = await getChartRanking(month, isGlobal ? null : guildId);
+      let ranking = await getChartRanking(month, isGlobal ? null : guildId);
 
       if (ranking.length === 0) {
         await safeReply(interaction, {
@@ -113,7 +113,7 @@ export default {
       }
 
       const monthLabel = formatMonthLabel(month);
-      const totalPages = Math.max(1, Math.ceil(ranking.length / TRACKS_PER_PAGE));
+      let totalPages = Math.max(1, Math.ceil(ranking.length / TRACKS_PER_PAGE));
       let page = 1;
       const guildName = interaction.guild?.name ?? null;
 
@@ -124,8 +124,6 @@ export default {
         embeds: [embed],
         components,
       });
-
-      if (totalPages <= 1) return;
 
       const filter = async (i: MessageComponentInteraction) => {
         if (!i.customId.startsWith('chart_')) return false;
@@ -187,8 +185,25 @@ export default {
 
           await i.deferUpdate();
 
-          if (i.customId === 'chart_previous' && page > 1) page--;
-          else if (i.customId === 'chart_next' && page < totalPages) page++;
+          if (i.customId === 'chart_previous' && page > 1) {
+            page--;
+          } else if (i.customId === 'chart_next' && page < totalPages) {
+            page++;
+          } else if (i.customId === 'chart_refresh') {
+            ranking = await getChartRanking(month, isGlobal ? null : guildId);
+            totalPages = Math.max(1, Math.ceil(ranking.length / TRACKS_PER_PAGE));
+            if (page > totalPages) page = totalPages;
+            if (page < 1) page = 1;
+          }
+
+          if (ranking.length === 0) {
+            await i.editReply({
+              embeds: [createErrorEmbed(client, '아직 재생 기록이 없어요.', '음악을 재생한 후 다시 확인해 주세요.')],
+              components: [],
+            });
+            collector.stop();
+            return;
+          }
 
           await i.editReply({
             embeds: [buildChartEmbed(client, ranking, page, totalPages, monthLabel, isGlobal, guildName)],
