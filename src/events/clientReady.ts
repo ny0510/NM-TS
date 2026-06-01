@@ -9,7 +9,7 @@ let presenceInterval: ReturnType<typeof setInterval> | undefined;
 const updatePresence = (client: NMClient) => {
   const stats = client.getStats();
 
-  const messages = [`NM | ${stats.guilds}개의 서버에서 활동 중!`];
+  const messages = [`NM | ${stats.guilds}개의 서버에서 활동 중!`, '/chart 명령어로 NM 음악 차트를 확인해 보세요'];
 
   if (stats.activePlayers) {
     messages.push(`NM | ${stats.activePlayers}개의 서버에서 음악 재생 중!`);
