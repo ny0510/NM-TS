@@ -84,7 +84,7 @@ export class KoreanbotsManager {
       this.koreanbotsLastShards = typeof shardCount === 'number' ? shardCount : undefined;
 
       const shardInfo = payload.shards ? `, shards: ${payload.shards}` : '';
-      this.logger.info(`Updated Koreanbots stats (servers: ${servers}${shardInfo}).`);
+      this.logger.info(`Updated Koreanbots stats (servers: ${servers}${shardInfo})`);
     } catch (error) {
       const message = error instanceof Error ? error.message : `${error}`;
 
