@@ -1,4 +1,4 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, MessageComponentInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ChatInputCommandInteraction, EmbedBuilder, LabelBuilder, MessageComponentInteraction, MessageFlags, ModalBuilder, SlashCommandBuilder, TextInputBuilder, TextInputStyle} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Queue} from '@/structures/Queue';
@@ -43,6 +43,11 @@ function buildQueueButtons(page: number, totalPages: number) {
       .setEmoji('◀')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page <= 1),
+    new ButtonBuilder()
+      .setCustomId('queue_page')
+      .setLabel(`${page}/${totalPages}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(totalPages <= 1),
     new ButtonBuilder()
       .setCustomId('queue_next')
       .setEmoji('▶')
@@ -135,13 +140,60 @@ export default {
     };
 
     collector.on('collect', async i => {
-      if (!i.isButton()) return;
-
       try {
         if (i.replied || i.deferred) {
           client.logger.warn('Interaction already handled, skipping...');
           return;
         }
+
+        // 페이지 이동 버튼 → 모달 표시 + awaitModalSubmit
+        if (i.isButton() && i.customId === 'queue_page') {
+          const modalId = `queue_page_modal_${i.id}`;
+          const modal = new ModalBuilder().setCustomId(modalId).setTitle('페이지 이동');
+          const pageInput = new TextInputBuilder()
+            .setCustomId('queue_page_input')
+            .setStyle(TextInputStyle.Short)
+            .setPlaceholder(`1 ~ ${Math.max(1, Math.ceil((client.queues.get(interaction.guildId!)?.size() ?? 0) / TRACKS_PER_PAGE))}`)
+            .setRequired(true);
+          const pageLabel = new LabelBuilder()
+            .setLabel('이동할 페이지 번호를 입력해 주세요.')
+            .setTextInputComponent(pageInput);
+          modal.addLabelComponents(pageLabel);
+          await i.showModal(modal);
+
+          try {
+            const modalInteraction = await i.awaitModalSubmit({time: 30_000, filter: mi => mi.customId === modalId});
+            await modalInteraction.deferUpdate();
+
+            const currentQueue = client.queues.get(interaction.guildId!);
+            if (!currentQueue || currentQueue.size() === 0) {
+              await modalInteraction.editReply({
+                embeds: [createErrorEmbed(client, '대기열이 비어있어요.', '더 이상 재생할 음악이 없어요.')],
+                components: [],
+              });
+              return;
+            }
+            const currentTotalPages = Math.max(1, Math.ceil(currentQueue.size() / TRACKS_PER_PAGE));
+            const inputValue = parseInt(modalInteraction.fields.getTextInputValue('queue_page_input'), 10);
+            if (isNaN(inputValue) || inputValue < 1 || inputValue > currentTotalPages) {
+              await modalInteraction.followUp({
+                embeds: [createErrorEmbed(client, '유효하지 않은 페이지 번호예요.', `1 ~ ${currentTotalPages} 사이의 번호를 입력해 주세요.`)],
+                flags: MessageFlags.Ephemeral,
+              });
+              return;
+            }
+            page = inputValue;
+            await modalInteraction.editReply({
+              embeds: [buildQueueEmbed(client, currentQueue, page)],
+              components: [buildQueueButtons(page, currentTotalPages)],
+            });
+          } catch {
+            // 모달 시간 초과 무시
+          }
+          return;
+        }
+
+        if (!i.isButton()) return;
 
         const currentQueue = client.queues.get(interaction.guildId!);
         if (!currentQueue) {

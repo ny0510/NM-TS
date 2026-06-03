@@ -1,4 +1,4 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonStyle, type ChatInputCommandInteraction, EmbedBuilder, type HexColorString, type MessageComponentInteraction, MessageFlags, SlashCommandBuilder, inlineCode} from 'discord.js';
+import {ActionRowBuilder, ButtonBuilder, ButtonStyle, type ChatInputCommandInteraction, EmbedBuilder, type HexColorString, LabelBuilder, type MessageComponentInteraction, MessageFlags, ModalBuilder, SlashCommandBuilder, TextInputBuilder, TextInputStyle, inlineCode} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Command} from '@/types/client';
@@ -60,6 +60,11 @@ function buildChartButtons(page: number, totalPages: number): ActionRowBuilder<B
       .setEmoji('◀')
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page <= 1),
+    new ButtonBuilder()
+      .setCustomId('chart_page')
+      .setLabel(`${page}/${totalPages}`)
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(totalPages <= 1),
     new ButtonBuilder()
       .setCustomId('chart_next')
       .setEmoji('▶')
@@ -175,13 +180,51 @@ export default {
       };
 
       collector.on('collect', async i => {
-        if (!i.isButton()) return;
-
         try {
           if (i.replied || i.deferred) {
             client.logger.warn('Interaction already handled, skipping...');
             return;
           }
+
+          // 페이지 이동 버튼 → 모달 표시 + awaitModalSubmit
+          if (i.isButton() && i.customId === 'chart_page') {
+            const modalId = `chart_page_modal_${i.id}`;
+            const modal = new ModalBuilder().setCustomId(modalId).setTitle('페이지 이동');
+            const pageInput = new TextInputBuilder()
+              .setCustomId('chart_page_input')
+              .setStyle(TextInputStyle.Short)
+              .setPlaceholder(`1 ~ ${totalPages}`)
+              .setRequired(true);
+            const pageLabel = new LabelBuilder()
+              .setLabel('이동할 페이지 번호를 입력해 주세요.')
+              .setTextInputComponent(pageInput);
+            modal.addLabelComponents(pageLabel);
+            await i.showModal(modal);
+
+            try {
+              const modalInteraction = await i.awaitModalSubmit({time: 30_000, filter: mi => mi.customId === modalId});
+              await modalInteraction.deferUpdate();
+
+              const inputValue = parseInt(modalInteraction.fields.getTextInputValue('chart_page_input'), 10);
+              if (isNaN(inputValue) || inputValue < 1 || inputValue > totalPages) {
+                await modalInteraction.followUp({
+                  embeds: [createErrorEmbed(client, '유효하지 않은 페이지 번호예요.', `1 ~ ${totalPages} 사이의 번호를 입력해 주세요.`)],
+                  flags: MessageFlags.Ephemeral,
+                });
+                return;
+              }
+              page = inputValue;
+              await modalInteraction.editReply({
+                embeds: [buildChartEmbed(client, ranking, page, totalPages, monthLabel, isGlobal, guildName)],
+                components: [buildChartButtons(page, totalPages)],
+              });
+            } catch {
+              // 모달 시간 초과 무시
+            }
+            return;
+          }
+
+          if (!i.isButton()) return;
 
           await i.deferUpdate();
 
