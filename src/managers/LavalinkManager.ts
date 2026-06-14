@@ -56,31 +56,51 @@ export class LavalinkManager {
       try {
         await this.shoukaku.leaveVoiceChannel(options.guildId);
       } catch {}
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    const player = await this.shoukaku.joinVoiceChannel({
-      guildId: options.guildId,
-      channelId: options.voiceChannelId,
-      shardId: options.shardId,
-      deaf: options.deaf ?? true,
-      mute: options.mute ?? false,
-    });
+    const MAX_RETRIES = 3;
+    let lastError: unknown;
 
-    const queue = new Queue({
-      shoukaku: this.shoukaku,
-      player,
-      guildId: options.guildId,
-      textChannelId: options.textChannelId,
-      voiceChannelId: options.voiceChannelId,
-      volume: options.volume,
-    });
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const player = await this.shoukaku.joinVoiceChannel({
+          guildId: options.guildId,
+          channelId: options.voiceChannelId,
+          shardId: options.shardId,
+          deaf: options.deaf ?? true,
+          mute: options.mute ?? false,
+        });
 
-    this.queues.set(options.guildId, queue);
-    if (this.client) {
-      registerPlayerEvents(queue, this.client);
+        const queue = new Queue({
+          shoukaku: this.shoukaku,
+          player,
+          guildId: options.guildId,
+          textChannelId: options.textChannelId,
+          voiceChannelId: options.voiceChannelId,
+          volume: options.volume,
+        });
+
+        this.queues.set(options.guildId, queue);
+        if (this.client) {
+          registerPlayerEvents(queue, this.client);
+        }
+        return queue;
+      } catch (e) {
+        lastError = e;
+        const isTimeout = e instanceof Error && e.message.includes('voice connection is not established');
+        if (!isTimeout || attempt === MAX_RETRIES) break;
+
+        this.logger.warn(`Voice connection attempt ${attempt + 1} failed, retrying...`);
+        // 재시도 전 남은 연결 정리
+        try {
+          await this.shoukaku.leaveVoiceChannel(options.guildId);
+        } catch {}
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
     }
-    return queue;
+
+    throw lastError;
   }
 
   public async destroyQueue(guildId: string): Promise<void> {
