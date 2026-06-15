@@ -253,8 +253,6 @@ export default {
             components: [buildChartButtons(page, totalPages)],
           });
         } catch (error) {
-          client.logger.error(error instanceof Error ? error : new Error(`Error handling chart interaction: ${error}`));
-
           if (error && typeof error === 'object' && 'code' in error) {
             const discordError = error as {code: number};
 
@@ -275,6 +273,8 @@ export default {
               return;
             }
           }
+
+          client.logger.error(error instanceof Error ? error : new Error(`Error handling chart interaction: ${error}`));
 
           try {
             if (!i.replied && !i.deferred) {
