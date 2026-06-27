@@ -68,3 +68,11 @@ src/utils/
 - **Pure Functions**: Prefer stateless utility functions
 - **Localization**: Use `locale` helpers for user-facing strings
 - **Error logging**: Always use `new Error(message)` for `logger.error()`, never string interpolation
+
+## ANTI-PATTERNS (THIS DIRECTORY)
+
+- **Do NOT add to the barrel to "make imports easier"**: `music/playerUtils.ts` and `music/index.ts` re-export on purpose; new consumers should import the concrete source file, and barrels should not gain new symbols casually.
+- **`music/lavalinkEvents.ts:165` violates the `new Error()` rule**: it calls `logger.error(\`...${...}\`)`. Fix it if you touch the file.
+- **`formatting/patterns.ts:3` has dead commented code** — remove if editing.
+- **`discord/permissions/formatPermissions.ts` uses unsafe `as` casts** (x2). Prefer a typed lookup table over `as Record<...>`.
+- **Do NOT introduce a new barrel `index.ts`** for a subfolder that doesn't already have one — it fights the direct-import rule.
