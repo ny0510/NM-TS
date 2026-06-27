@@ -1,5 +1,9 @@
 # NM-TS Agent Guide
 
+## OVERVIEW
+
+Discord.js + Lavalink music bot ("NM", v2.10.6). Bun runtime, TypeScript strict, ESM, Drizzle ORM + PostgreSQL, Shoukaku audio. ~5.4k lines of TS across 51 files (only `src/commands/chart.ts` exceeds 300 lines); max directory depth 6. `data/postgres/` is a committed live PG cluster (~1000 files) — treat as data, not source. No test suite exists.
+
 ## Runtime and entrypoints
 
 - Bun is the runtime. `package.json` runs the app directly from `src/index.ts`; there is no Node wrapper.
@@ -26,10 +30,10 @@
 
 ## Repo-specific conventions worth keeping
 
-- TypeScript is strict, `noUncheckedIndexedAccess` is on, module resolution is `bundler`, and `@/*` maps to `./src/*`.
-- Prettier disables bracket spacing and sorts imports with `@trivago/prettier-plugin-sort-imports`; ESLint enforces single quotes, semicolons, 2-space indent, and Stroustrup brace style.
+- TypeScript is strict, `noUncheckedIndexedAccess` is on, `verbatimModuleSyntax` forces `import type`, module resolution is `bundler`, and `@/*` maps to `./src/*`. `noUnusedLocals`/`noUnusedParameters` are OFF.
+- Prettier disables bracket spacing and sorts imports with `@trivago/prettier-plugin-sort-imports` (printWidth 350, trailingComma all, arrowParens avoid, bracketSameLine); ESLint enforces single quotes, semicolons, 2-space indent, Stroustrup braces, comma-dangle always-multiline, `no-inline-comments` error, and `no-console` OFF.
 - User-facing text is Korean throughout the command/event flow.
-- Root guidance should stay high-level. There are nested instruction files at `src/commands/AGENTS.md` and `src/utils/AGENTS.md` for area-specific rules.
+- Nested instruction files: `src/commands/AGENTS.md`, `src/utils/AGENTS.md`, `src/managers/AGENTS.md`, and `src/events/AGENTS.md` carry area-specific rules — consult them before editing those directories.
 
 ## Discord / music gotchas
 
