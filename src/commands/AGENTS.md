@@ -35,6 +35,13 @@ Flat directory. Each file exports a single command object using `satisfies Comma
 - **Cooldowns**: Optional `cooldown` property (seconds, managed by CooldownManager)
 - **Permissions**: Optional `permissions` array (BigInt permission flags)
 
+## ANTI-PATTERNS (THIS DIRECTORY)
+
+- **Do NOT import from the `@/utils/music/playerUtils` barrel**: ~18 commands pull from `@/utils/music` and 4 from `@/utils/music/playerUtils`. Import from the concrete source module instead (e.g. `@/utils/music/playerValidation`, `@/utils/music/trackAdder`). The barrel exists for re-export only.
+- **Do NOT bypass `safeReply`**: `broadcast.ts` and `ping.ts` call raw `interaction.reply`/`interaction.editReply`. New commands must route every reply through `safeReply`.
+- **Do NOT leave dead commented code**: `chart.ts:29-37,41` contains dead commented-out blocks. Remove unused logic outright.
+- **Do NOT rely on `noUnusedParameters` being off to stub params**: prefer `_`-prefix or genuinely omit.
+
 ## Example
 
 ```typescript
