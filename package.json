@@ -15,18 +15,18 @@
   },
   "devDependencies": {
     "@trivago/prettier-plugin-sort-imports": "^6.0.2",
-    "@types/bun": "^1.3.12",
+    "@types/bun": "^1.3.14",
     "@types/get-image-colors": "^4.0.5",
-    "eslint": "^10.2.1",
-    "prettier": "^3.8.3"
+    "eslint": "^10.6.0",
+    "prettier": "^3.9.4"
   },
   "peerDependencies": {
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "@types/luxon": "^3.7.1",
+    "@types/luxon": "^3.7.2",
     "chalk": "^5.6.2",
-    "discord.js": "^14.26.3",
+    "discord.js": "^14.26.4",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "get-image-colors": "^4.0.1",
@@ -34,6 +34,6 @@
     "luxon": "^3.7.2",
     "postgres": "^3.4.9",
     "shoukaku": "^4.3.0",
-    "undici": "^8.1.0"
+    "undici": "^8.6.0"
   }
 }
