@@ -155,9 +155,7 @@ export default {
             .setStyle(TextInputStyle.Short)
             .setPlaceholder(`1 ~ ${Math.max(1, Math.ceil((client.queues.get(interaction.guildId!)?.size() ?? 0) / TRACKS_PER_PAGE))}`)
             .setRequired(true);
-          const pageLabel = new LabelBuilder()
-            .setLabel('이동할 페이지 번호를 입력해 주세요.')
-            .setTextInputComponent(pageInput);
+          const pageLabel = new LabelBuilder().setLabel('이동할 페이지 번호를 입력해 주세요.').setTextInputComponent(pageInput);
           modal.addLabelComponents(pageLabel);
           await i.showModal(modal);
 
@@ -198,7 +196,7 @@ export default {
         const currentQueue = client.queues.get(interaction.guildId!);
         if (!currentQueue) {
           await i.reply({
-            embeds: [createErrorEmbed(client, '플레이어를 찾을 수 없어요.', '음악 재생이 중단되었거나 봇이 음성 채널에서 나갔어요.')],
+            embeds: [createErrorEmbed(client, '플레이어를 찾을 수 없어요.', '음악 재생이 중단되었거나 NM이 음성 채널에서 나갔어요.')],
             flags: MessageFlags.Ephemeral,
           });
           collector.stop();

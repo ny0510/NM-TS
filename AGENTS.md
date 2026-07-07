@@ -47,3 +47,7 @@ Discord.js + Lavalink music bot ("NM", v2.10.6). Bun runtime, TypeScript strict,
 - The only checked-in GitHub Actions workflow is `.github/workflows/docker-build.yml`.
 - Releases are tag-driven: pushing `v*.*.*` builds and pushes GHCR images tagged as both `latest` and the version.
 - The workflow expects `GHCR_TOKEN`; there is no general CI file here for lint/test/typecheck enforcement.
+
+## Agent Behavior Directives
+
+- **Ask, don't assume**: 모호하거나 조건이 확실하지 않으면 스스로 판단하지 말고 사용자에게 질문한다.

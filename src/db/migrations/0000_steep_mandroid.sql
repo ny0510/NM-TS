@@ -17,7 +17,6 @@ CREATE TABLE "track_play_events" (
 	"request_channel_id" text,
 	"play_context" text NOT NULL,
 	"queue_type" text NOT NULL,
-	"month" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
@@ -34,12 +33,20 @@ CREATE TABLE "tracks" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "user_favorites" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"user_id" text NOT NULL,
+	"track_id" integer NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 ALTER TABLE "track_play_events" ADD CONSTRAINT "track_play_events_track_id_tracks_id_fk" FOREIGN KEY ("track_id") REFERENCES "public"."tracks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "user_favorites" ADD CONSTRAINT "user_favorites_track_id_tracks_id_fk" FOREIGN KEY ("track_id") REFERENCES "public"."tracks"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "track_play_events_guild_played_at_idx" ON "track_play_events" USING btree ("guild_id","played_at");--> statement-breakpoint
 CREATE INDEX "track_play_events_guild_user_played_at_idx" ON "track_play_events" USING btree ("guild_id","user_id","played_at");--> statement-breakpoint
 CREATE INDEX "track_play_events_guild_track_played_at_idx" ON "track_play_events" USING btree ("guild_id","track_id","played_at");--> statement-breakpoint
 CREATE INDEX "track_play_events_user_played_at_idx" ON "track_play_events" USING btree ("user_id","played_at");--> statement-breakpoint
-CREATE INDEX "track_play_events_guild_month_idx" ON "track_play_events" USING btree ("guild_id","month");--> statement-breakpoint
-CREATE INDEX "track_play_events_user_month_idx" ON "track_play_events" USING btree ("user_id","month");--> statement-breakpoint
 CREATE UNIQUE INDEX "tracks_source_identifier_unique" ON "tracks" USING btree ("source","identifier");--> statement-breakpoint
-CREATE INDEX "tracks_source_identifier_idx" ON "tracks" USING btree ("source","identifier");
+CREATE INDEX "tracks_source_identifier_idx" ON "tracks" USING btree ("source","identifier");--> statement-breakpoint
+CREATE UNIQUE INDEX "user_favorites_user_track_unique" ON "user_favorites" USING btree ("user_id","track_id");--> statement-breakpoint
+CREATE INDEX "user_favorites_user_idx" ON "user_favorites" USING btree ("user_id");

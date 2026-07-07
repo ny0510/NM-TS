@@ -93,13 +93,13 @@ export class NMClient extends Client {
   public getStats(): ClientStats {
     const guilds = this.guilds.cache;
     const users = guilds.reduce((acc, guild) => acc + guild.memberCount, 0);
-    const activePlayers = this.queues.size;
 
     const shoukaku = this.services.lavalinkManager.getShoukaku();
     const node = Array.from(shoukaku.nodes.values())[0] as import('shoukaku').Node | undefined;
     const lavalinkStats = node?.stats;
     const memoryUsage = lavalinkStats?.memory ? Math.round(lavalinkStats.memory.used / 1024 / 1024) : 0;
-    const cpuUsage = lavalinkStats?.cpu ? Math.round(lavalinkStats.cpu.lavalinkLoad * 100) : 0;
+    const cpuUsage = lavalinkStats?.cpu ? Math.round(lavalinkStats.cpu.systemLoad * 100) : 0;
+    const activePlayers = lavalinkStats?.players ?? 0;
 
     return {
       guilds: guilds.size,

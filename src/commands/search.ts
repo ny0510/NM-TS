@@ -164,7 +164,7 @@ export default {
       return await i.update({
         embeds: [
           new EmbedBuilder()
-            .setTitle(`💿 선택한 음악을 대기열에 추가했어요.`)
+            .setTitle(`💿 선택한 ${selectedTracks.length ? '음악들을' : '음악을'} 대기열에 추가했어요.`)
             .setDescription(description)
             .setThumbnail(firstTrackThumbnail || null)
             .setFooter({text: tracksFooterText})

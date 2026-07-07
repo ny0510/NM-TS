@@ -24,7 +24,7 @@ const gracefulShutdown = async (signal: string) => {
     if (channel?.isSendable()) {
       try {
         await channel.send({
-          embeds: [new EmbedBuilder().setTitle('봇이 재시작 중이에요.').setDescription('잠시 후 이전 재생 상태가 자동으로 복구돼요.').setColor(client.config.EMBED_COLOR_NORMAL)],
+          embeds: [new EmbedBuilder().setTitle('NM이 재시작 중이에요.').setDescription('잠시 후 이전 재생 상태가 자동으로 복구돼요.').setColor(client.config.EMBED_COLOR_NORMAL)],
         });
       } catch {
         // 알림 전송 실패 무시

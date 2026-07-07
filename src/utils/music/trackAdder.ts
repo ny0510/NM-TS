@@ -2,10 +2,10 @@ import {ButtonInteraction, ChatInputCommandInteraction, EmbedBuilder, type HexCo
 import getColors from 'get-image-colors';
 import {LoadType} from 'shoukaku';
 
+import {createPlayerControls} from './buttons/controlsButton';
 import type {NMClient} from '@/client/Client';
 import type {Queue} from '@/structures/Queue';
 import type {AddTrackOptions, QueueTrack} from '@/types/music';
-import {getClient} from '@/utils/discord/client';
 import {createErrorEmbed} from '@/utils/discord/embeds';
 import {safeReply} from '@/utils/discord/interactions';
 import {coverPattern, msToTime, playlistPattern, truncateWithEllipsis, videoPattern} from '@/utils/formatting';
@@ -218,7 +218,7 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
 
       await safeReply(interaction, {
         embeds: [embed],
-        components: [createQuickAddButton()],
+        components: [createPlayerControls(queue, track.info.uri ?? '')],
       });
       break;
     }

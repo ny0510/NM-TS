@@ -255,7 +255,7 @@ export class PlayerStateManager {
       try {
         const isPaused = state.currentTrack?.paused ?? false;
         const embed = new EmbedBuilder()
-          .setTitle('봇이 재시작되어 이전 재생 상태를 복구했어요.')
+          .setTitle('NM이 재시작되어 이전 재생 상태를 복구했어요.')
           .setDescription(isPaused ? '일시정지 상태로 복구되었어요.' : '음악을 이어서 재생할게요.')
           .setColor(nmClient.config.EMBED_COLOR_NORMAL);
 

@@ -21,6 +21,13 @@ export function createPlayerControls(queue: Queue, trackUri: string): ActionRowB
   const quickAddRow = createQuickAddButton();
   row.addComponents(quickAddRow.components);
 
+  row.addComponents(
+    new ButtonBuilder()
+      .setCustomId('fav_toggle')
+      .setEmoji('⭐')
+      .setStyle(ButtonStyle.Secondary),
+  );
+
   return row;
 }
 

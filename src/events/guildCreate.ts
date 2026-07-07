@@ -38,7 +38,7 @@ export default {
                   },
                 )
                 .setColor(client.config.EMBED_COLOR_ERROR)
-                .setFooter({text: '이 알림은 봇이 정상 작동하기 위해 전송되었습니다.'}),
+                .setFooter({text: '이 알림은 NM이 정상 작동하기 위해 전송되었습니다.'}),
             ],
           });
         } catch {}

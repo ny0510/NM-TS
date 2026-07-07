@@ -8,6 +8,8 @@ import {safeReply} from '@/utils/discord/interactions';
 import {checkPermissions} from '@/utils/discord/permissions';
 import PermissionTranslations from '@/utils/discord/permissions/locale/permission';
 import {handlePlayerControlsButtons} from '@/utils/music/buttons/controlsButton';
+import {handleFavToggleButton} from '@/utils/music/buttons/favToggleButton';
+import {handleFavoritesPagination, handleFavoritesSelectMenu} from '@/utils/music/buttons/favoritesListInteraction';
 import {handleQuickAddButton} from '@/utils/music/buttons/quickAddButton';
 
 export default {
@@ -20,6 +22,17 @@ export default {
         await handleQuickAddButton(interaction);
       } else if (interaction.customId.startsWith('control_')) {
         await handlePlayerControlsButtons(interaction);
+      } else if (interaction.customId === 'fav_toggle') {
+        await handleFavToggleButton(interaction);
+      } else if (interaction.customId.startsWith('fav_page_') || interaction.customId.startsWith('fav_remove_') || interaction.customId.startsWith('fav_refresh_')) {
+        await handleFavoritesPagination(interaction);
+      }
+      return;
+    }
+
+    if (interaction.isStringSelectMenu()) {
+      if (interaction.customId.startsWith('fav_select_')) {
+        await handleFavoritesSelectMenu(interaction);
       }
       return;
     }

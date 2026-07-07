@@ -54,3 +54,19 @@ export const playerStates = pgTable('player_states', {
   createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
 });
+
+export const userFavorites = pgTable(
+  'user_favorites',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id').notNull(),
+    trackId: integer('track_id')
+      .notNull()
+      .references(() => tracks.id, {onDelete: 'cascade'}),
+    createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
+  },
+  table => [
+    uniqueIndex('user_favorites_user_track_unique').on(table.userId, table.trackId),
+    index('user_favorites_user_idx').on(table.userId),
+  ],
+);
