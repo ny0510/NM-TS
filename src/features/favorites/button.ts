@@ -61,7 +61,7 @@ export async function handleFavToggleButton(interaction: ButtonInteraction): Pro
   const alreadyFavorited = await isFavorited(userId, source, identifier);
   if (alreadyFavorited) {
     await safeReply(interaction, {
-      embeds: [createErrorEmbed(client, `이미 즐겨찾기에 추가된 곡이에요. 제거는 ${slashCommandMention(interaction, 'favorites')} 명령어로 가능해요.`)],
+      embeds: [createErrorEmbed(client, `이미 즐겨찾기에 추가된 곡이에요. 제거는 ${await slashCommandMention(interaction, 'favorites')} 명령어로 가능해요.`)],
       flags: MessageFlags.Ephemeral,
     });
     return;
