@@ -7,10 +7,9 @@ import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {toError} from '@/shared/errors';
 import {validateMusicCommand} from '@/features/music/guard';
-import {buildQueueButtons, disableQueueComponents} from '@/features/music/interactions/buttonBuilder';
-import {buildQueueEmbed} from '@/features/music/interactions/embedBuilder';
+import {disableQueueComponents} from '@/features/music/interactions/buttonBuilder';
+import {buildQueueContainer, TRACKS_PER_PAGE} from '@/features/music/interactions/embedBuilder';
 import {createQueueFilter, handleQueueCollect, handleQueueCollectError} from '@/features/music/interactions/collectHandler';
-import {TRACKS_PER_PAGE} from '@/features/music/interactions/embedBuilder';
 
 export default {
   data: new SlashCommandBuilder()
@@ -36,8 +35,8 @@ export default {
     }
 
     await safeReply(interaction, {
-      embeds: [buildQueueEmbed(client, queue, page)],
-      components: [buildQueueButtons(page, totalPages)],
+      components: [buildQueueContainer(client, queue, page)],
+      flags: MessageFlags.IsComponentsV2,
     });
 
     const reply = await interaction.fetchReply();
