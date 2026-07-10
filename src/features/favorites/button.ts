@@ -59,44 +59,30 @@ export async function handleFavToggleButton(interaction: ButtonInteraction): Pro
   }
 
   const alreadyFavorited = await isFavorited(userId, source, identifier);
-  const colors = currentTrack?.info.artworkUrl ? await getImageColors(currentTrack.info.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
-
   if (alreadyFavorited) {
-    const success = await removeFavoriteByIdentifier(userId, source, identifier);
-    if (success) {
-      await interaction.followUp({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle('🗑️ 즐겨찾기에서 제거했어요.')
-            .setDescription(truncateWithEllipsis(`🗑️ ${currentTrack.info.title}`, 50))
-            .setColor(COLORS.error),
-        ],
-        flags: MessageFlags.Ephemeral,
-      });
-    } else {
-      await safeReply(interaction, {
-        embeds: [createErrorEmbed(client, '즐겨찾기 제거에 실패했어요.')],
-        flags: MessageFlags.Ephemeral,
-      });
-    }
+    await safeReply(interaction, {
+      embeds: [createErrorEmbed(client, `이미 즐겨찾기에 추가된 곡이에요. 제거는 ${slashCommandMention(interaction, 'favorites')} 명령어로 가능해요.`)],
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const success = await addFavorite(userId, currentTrack);
+  if (success) {
+    await interaction.followUp({
+      embeds: [
+        new EmbedBuilder()
+          .setTitle('⭐️ 즐겨찾기에 추가했어요.')
+          .setDescription(truncateWithEllipsis(`⭐️ ${currentTrack.info.title}`, 50))
+          .setColor(COLORS.normal),
+      ],
+      flags: MessageFlags.Ephemeral,
+    });
   } else {
-    const success = await addFavorite(userId, currentTrack);
-    if (success) {
-      await interaction.followUp({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle('⭐️ 즐겨찾기에 추가했어요.')
-            .setDescription(truncateWithEllipsis(`⭐️ ${currentTrack.info.title}`, 50))
-            .setColor(COLORS.normal),
-        ],
-        flags: MessageFlags.Ephemeral,
-      });
-    } else {
-      await safeReply(interaction, {
-        embeds: [createErrorEmbed(client, '즐겨찾기 추가에 실패했어요.')],
-        flags: MessageFlags.Ephemeral,
-      });
-    }
+    await safeReply(interaction, {
+      embeds: [createErrorEmbed(client, '즐겨찾기 추가에 실패했어요.')],
+      flags: MessageFlags.Ephemeral,
+    });
   }
 }
 
