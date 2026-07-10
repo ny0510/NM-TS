@@ -70,12 +70,7 @@ export async function handleFavToggleButton(interaction: ButtonInteraction): Pro
   const success = await addFavorite(userId, currentTrack);
   if (success) {
     await interaction.followUp({
-      embeds: [
-        new EmbedBuilder()
-          .setTitle('⭐️ 즐겨찾기에 추가했어요.')
-          .setDescription(truncateWithEllipsis(`⭐️ ${currentTrack.info.title}`, 50))
-          .setColor(COLORS.normal),
-      ],
+      embeds: [new EmbedBuilder().setTitle('⭐️ 즐겨찾기에 추가했어요.').setDescription(truncateWithEllipsis(currentTrack.info.title, 50)).setColor(COLORS.normal)],
       flags: MessageFlags.Ephemeral,
     });
   } else {
