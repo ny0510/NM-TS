@@ -3,7 +3,7 @@ import {LoadType} from 'shoukaku';
 
 import type {NMClient} from '@/client/Client';
 import type {AddTrackOptions, QueueTrack} from '@/types/music';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {playlistPattern, truncateWithEllipsis, videoPattern} from '@/shared/formatting';
@@ -61,7 +61,7 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
           new EmbedBuilder()
             .setTitle('재생목록 무시 옵션을 사용하려면 유튜브 URL을 입력해야 해요.')
             .setDescription(`${inlineCode(`${videoPattern}`)} 형식의 URL을 입력해 주세요.`)
-            .setColor(getColors(client.config).error),
+            .setColor(COLORS.error),
         ],
         flags: MessageFlags.Ephemeral,
       });
@@ -141,7 +141,7 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
         .setThumbnail(track.info.artworkUrl ?? null)
         .setFooter({text: footerText})
         .setURL(track.info.uri ?? null)
-        .setColor((colors[0]?.hex?.() ?? getColors(client.config).normal) as HexColorString);
+        .setColor((colors[0]?.hex?.() ?? COLORS.normal) as HexColorString);
 
       await safeReply(interaction, {
         embeds: [embed],
@@ -207,7 +207,7 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
         .setThumbnail(firstPlaylistTrack?.info.artworkUrl ?? null)
         .setURL(query)
         .setFooter({text: `최대 100곡까지 한번에 추가할 수 있어요.\n${playlistFooterText}`})
-        .setColor((playlistColors[0]?.hex?.() ?? getColors(client.config).normal) as HexColorString);
+        .setColor((playlistColors[0]?.hex?.() ?? COLORS.normal) as HexColorString);
 
       await safeReply(interaction, {
         embeds: [embed],

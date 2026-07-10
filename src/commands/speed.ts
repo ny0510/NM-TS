@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'di
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {validateMusicCommand} from '@/features/music/guard';
 
@@ -25,6 +25,6 @@ export default {
       rate: 1.0,
     });
 
-    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`재생 속도를 ${level}배로 설정했어요.`).setDescription('반영되기까지 약 10초 가량이 소요될 수 있어요.').setColor(getColors(client.config).normal)]});
+    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`재생 속도를 ${level}배로 설정했어요.`).setDescription('반영되기까지 약 10초 가량이 소요될 수 있어요.').setColor(COLORS.normal)]});
   },
 } satisfies Command;

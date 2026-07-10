@@ -1,7 +1,7 @@
 import {EmbedBuilder, Events, type Guild} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {checkMissingPermissions, generateInviteLink} from '@/shared/discord/permissions/basicPermissions';
 import {toError} from '@/shared/errors';
 
@@ -39,7 +39,7 @@ export default {
                     inline: false,
                   },
                 )
-                .setColor(getColors(client.config).error)
+                .setColor(COLORS.error)
                 .setFooter({text: '이 알림은 NM이 정상 작동하기 위해 전송되었습니다.'}),
             ],
           });

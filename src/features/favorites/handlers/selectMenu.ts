@@ -5,7 +5,7 @@ import type {QueueTrack} from '@/types/music';
 import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
 import {Logger} from '@/shared/logger';
@@ -185,7 +185,7 @@ export async function handleFavoritesSelectMenu(interaction: StringSelectMenuInt
     .setDescription(description || '음악을 찾을 수 없어요.')
     .setThumbnail(firstTrackThumbnail)
     .setFooter({text: footerText})
-    .setColor((colors[0]?.hex?.() ?? getColors(client.config).normal) as HexColorString);
+    .setColor((colors[0]?.hex?.() ?? COLORS.normal) as HexColorString);
 
   await interaction.followUp({
     embeds: [resultEmbed],

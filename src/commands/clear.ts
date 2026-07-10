@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'di
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {validateMusicCommand} from '@/features/music/guard';
 
@@ -17,7 +17,7 @@ export default {
     queue.clear();
 
     return await safeReply(interaction, {
-      embeds: [new EmbedBuilder().setTitle('대기열을 비웠어요.').setColor(getColors(client.config).normal)],
+      embeds: [new EmbedBuilder().setTitle('대기열을 비웠어요.').setColor(COLORS.normal)],
     });
   },
 } satisfies Command;

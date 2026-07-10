@@ -2,7 +2,7 @@ import {EmbedBuilder} from 'discord.js';
 import type {TrackStartEvent} from 'shoukaku';
 
 import type {QueueTrack} from '@/types/music';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
 import {Logger} from '@/shared/logger';
 import {createPlayerControls} from '@/features/music/button/controls';
@@ -47,7 +47,7 @@ export const handleTrackStart = async (ctx: PlayerEventContext, data: TrackStart
           .setDescription(`♪ ${hyperlink(truncateWithEllipsis(track.info.title, 50), track.info.uri ?? '')}`)
           .setURL(track.info.uri ?? null)
           .setFooter({text: trackMeta.footerText})
-          .setColor(getColors(client.config).normal),
+          .setColor(COLORS.normal),
       ],
       components: [createPlayerControls(queue, track.info.uri ?? '')],
     });

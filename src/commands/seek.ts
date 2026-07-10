@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBui
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {msToTime} from '@/shared/formatting';
@@ -60,6 +60,6 @@ export default {
     if (!currentTrack.info.isSeekable) return safeReply(interaction, {embeds: [createErrorEmbed(client, '이 트랙은 건너뛰기를 지원하지 않아요.')], flags: MessageFlags.Ephemeral});
 
     await queue.seek(position);
-    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${formatTime(seconds)}(으)로 건너뛰었어요.`).setColor(getColors(client.config).normal)]});
+    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${formatTime(seconds)}(으)로 건너뛰었어요.`).setColor(COLORS.normal)]});
   },
 } satisfies Command;

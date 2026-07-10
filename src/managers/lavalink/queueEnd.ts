@@ -2,7 +2,7 @@ import {type Message, EmbedBuilder} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Queue} from '@/features/music/queue/Queue';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {Logger} from '@/shared/logger';
 import {destroyQueueSafely} from '@/features/music/queue/operations';
@@ -30,7 +30,7 @@ export async function handleQueueEnd(queue: Queue, client: NMClient): Promise<vo
     queue.setAutoplay(false);
   }
 
-  const embed = new EmbedBuilder().setTitle('대기열에 있는 음악을 모두 재생했어요. 30초 후에 자동으로 연결을 종료해요.').setColor(getColors(client.config).normal);
+  const embed = new EmbedBuilder().setTitle('대기열에 있는 음악을 모두 재생했어요. 30초 후에 자동으로 연결을 종료해요.').setColor(COLORS.normal);
   let message: Message | undefined;
 
   try {

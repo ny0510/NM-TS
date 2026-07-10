@@ -6,7 +6,7 @@ import {PLAYER_STATE_VERSION, type PersistedQueueState} from '@/types/playerStat
 import type {ILogger} from '@/shared/logger';
 import {clearPlayerStates, loadPlayerStates} from './persistence';
 import {CHANNEL_EMPTY_TIMEOUT_MS} from '@/shared/discord/constants';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 
 const RESTORE_TIMEOUT_MS = 3_000;
@@ -158,6 +158,9 @@ async function restoreQueueFromState(client: Client, state: PersistedQueueState,
     }
   } else {
     await queue.player.setGlobalVolume(state.volume);
+    if (queueTracks.length > 0) {
+      await queue.play();
+    }
   }
 
   if (state.repeatMode === 'track') {
@@ -188,7 +191,7 @@ async function restoreQueueFromState(client: Client, state: PersistedQueueState,
         try {
           const endTime = Math.floor((Date.now() + CHANNEL_EMPTY_TIMEOUT_MS) / 1000);
           await textChannel.send({
-            embeds: [new EmbedBuilder().setTitle('아무도 없어서 음악을 일시정지했어요.').setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`).setColor(getColors(nmClient.config).normal)],
+            embeds: [new EmbedBuilder().setTitle('아무도 없어서 음악을 일시정지했어요.').setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`).setColor(COLORS.normal)],
           });
         } catch {}
       }
@@ -201,7 +204,7 @@ async function restoreQueueFromState(client: Client, state: PersistedQueueState,
       const embed = new EmbedBuilder()
         .setTitle('NM이 재시작되어 이전 재생 상태를 복구했어요.')
         .setDescription(isPaused ? '일시정지 상태로 복구되었어요.' : '음악을 이어서 재생할게요.')
-        .setColor(getColors(nmClient.config).normal);
+        .setColor(COLORS.normal);
 
       await textChannel.send({embeds: [embed]});
     } catch {}

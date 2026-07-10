@@ -3,7 +3,7 @@ import {type AutocompleteInteraction, type ChatInputCommandInteraction, EmbedBui
 import type {Event} from '@/types/client';
 import {slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {isInteractionProcessed} from '@/shared/discord/interactions';
 import {safeReply} from '@/shared/discord/interactions';
 import {checkPermissions} from '@/shared/discord/permissions';
@@ -55,7 +55,7 @@ export default {
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.channel?.isSendable()) return;
     if (!interaction.client.user) return;
-    if (!interaction.guild) return await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('DM에서는 사용할 수 없어요.').setColor(getColors(client.config).error)], flags: MessageFlags.Ephemeral});
+    if (!interaction.guild) return await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('DM에서는 사용할 수 없어요.').setColor(COLORS.error)], flags: MessageFlags.Ephemeral});
 
     if (isInteractionProcessed(interaction.id)) {
       client.logger.warn(`Duplicate interaction detected: ${interaction.id}`);
@@ -74,7 +74,7 @@ export default {
           new EmbedBuilder()
             .setTitle('잠시 후에 다시 시도해 주세요.')
             .setDescription(`${await slashCommandMention(interaction, command.data.name)} 명령어는 \`${cooldownResult.timeLeft}초\` 후에 사용할 수 있어요.`)
-            .setColor(getColors(client.config).error),
+            .setColor(COLORS.error),
         ],
         flags: MessageFlags.Ephemeral,
       });
@@ -84,7 +84,7 @@ export default {
     if (!result) {
       const missingPermissions = missing.map(permission => `+ ${PermissionTranslations[permission as PermissionsString]} (${permission})`).join('\n');
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.').setDescription(codeBlock('diff', missingPermissions)).setColor(getColors(client.config).error)],
+        embeds: [new EmbedBuilder().setTitle('명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.').setDescription(codeBlock('diff', missingPermissions)).setColor(COLORS.error)],
         flags: MessageFlags.Ephemeral,
       });
     }

@@ -4,7 +4,7 @@ import getImageColors from 'get-image-colors';
 import type {QueueTrack} from '@/types/music';
 import {safeDeferUpdate, safeReply, slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {truncateWithEllipsis} from '@/shared/formatting';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
@@ -65,7 +65,7 @@ export async function handleFavToggleButton(interaction: ButtonInteraction): Pro
     const success = await removeFavoriteByIdentifier(userId, source, identifier);
     if (success) {
       await interaction.followUp({
-        embeds: [new EmbedBuilder().setTitle(truncateWithEllipsis(`🗑️ ${currentTrack.info.title}`, 50)).setColor(getColors(client.config).error)],
+        embeds: [new EmbedBuilder().setTitle(truncateWithEllipsis(`🗑️ ${currentTrack.info.title}`, 50)).setColor(COLORS.error)],
         flags: MessageFlags.Ephemeral,
       });
     } else {
@@ -78,7 +78,7 @@ export async function handleFavToggleButton(interaction: ButtonInteraction): Pro
     const success = await addFavorite(userId, currentTrack);
     if (success) {
       await interaction.followUp({
-        embeds: [new EmbedBuilder().setTitle(truncateWithEllipsis(`⭐️ ${currentTrack.info.title}`, 50)).setColor((colors[0]?.hex?.() ?? getColors(client.config).normal) as HexColorString)],
+        embeds: [new EmbedBuilder().setTitle(truncateWithEllipsis(`⭐️ ${currentTrack.info.title}`, 50)).setColor((colors[0]?.hex?.() ?? COLORS.normal) as HexColorString)],
         flags: MessageFlags.Ephemeral,
       });
     } else {

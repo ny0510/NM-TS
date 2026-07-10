@@ -1,7 +1,7 @@
 import {EmbedBuilder} from 'discord.js';
 
 import {NMClient} from '@/client/Client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 
 const client = new NMClient();
@@ -26,7 +26,7 @@ const gracefulShutdown = async (signal: string) => {
     if (channel?.isSendable()) {
       try {
         await channel.send({
-          embeds: [new EmbedBuilder().setTitle('NM이 재시작 중이에요.').setDescription('잠시 후 이전 재생 상태가 자동으로 복구돼요.').setColor(getColors(client.config).normal)],
+          embeds: [new EmbedBuilder().setTitle('NM이 재시작 중이에요.').setDescription('잠시 후 이전 재생 상태가 자동으로 복구돼요.').setColor(COLORS.normal)],
         });
       } catch {
       }

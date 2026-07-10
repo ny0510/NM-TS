@@ -4,7 +4,7 @@ import {buildFavoritesComponents} from '@/features/favorites/component';
 import {getUserFavorites, removeFavorite} from '@/features/favorites/service';
 import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {toError} from '@/shared/errors';
 import {truncateWithEllipsis} from '@/shared/formatting';
@@ -37,7 +37,7 @@ export async function handleFavoritesDeleteConfirm(interaction: ButtonInteractio
   await safeReply(interaction, {
     embeds: [
       new EmbedBuilder()
-        .setColor(getColors(client.config).normal)
+        .setColor(COLORS.normal)
         .setTitle(trackTitle ? trackTitle : '즐겨찾기 삭제 확인')
         .setDescription('정말로 즐겨찾기에서 삭제하시겠어요?\n삭제하면 되돌릴 수 없어요.'),
     ],
@@ -68,7 +68,7 @@ export async function handleFavoritesDeleteExec(interaction: ButtonInteraction):
   }
 
   await safeEditReply(interaction, {
-    embeds: [new EmbedBuilder().setColor(getColors(client.config).normal).setDescription('🗑️ 즐겨찾기에서 삭제했어요.')],
+    embeds: [new EmbedBuilder().setColor(COLORS.normal).setDescription('🗑️ 즐겨찾기에서 삭제했어요.')],
     components: [],
   });
 
@@ -104,7 +104,7 @@ export async function handleFavoritesDeleteCancel(interaction: ButtonInteraction
 
   try {
     await interaction.update({
-      embeds: [new EmbedBuilder().setColor(getColors(client.config).normal).setDescription('❌ 삭제를 취소했어요.')],
+      embeds: [new EmbedBuilder().setColor(COLORS.normal).setDescription('❌ 삭제를 취소했어요.')],
       components: [],
     });
     setTimeout(() => {

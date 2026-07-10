@@ -3,7 +3,7 @@ import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 
 import type {NMClient} from '@/client/Client';
 import {slashCommandMention} from '@/shared/discord';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 
 export function buildQueueButtons(page: number, totalPages: number): ActionRowBuilder<ButtonBuilder> {
@@ -38,7 +38,7 @@ export async function disableQueueComponents(
         embeds: [
           new EmbedBuilder()
             .setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'queue')} 명령어를 사용해 다시 확인해 주세요.`)
-            .setColor(getColors(client.config).normal),
+            .setColor(COLORS.normal),
         ],
         components: [],
       });

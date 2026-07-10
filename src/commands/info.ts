@@ -3,7 +3,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBui
 import {version} from '@/../package.json';
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {toError} from '@/shared/errors';
 
@@ -34,7 +34,7 @@ export default {
         embeds: [
           new EmbedBuilder()
             .setTitle(client.user?.username || client.user?.displayName || '')
-            .setColor(getColors(client.config).normal)
+            .setColor(COLORS.normal)
             .setThumbnail(client.user?.displayAvatarURL({forceStatic: true}) || '')
             .setFields(fields),
         ],

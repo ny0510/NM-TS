@@ -4,7 +4,7 @@ import {DateTime} from 'luxon';
 
 import type {NMClient} from '@/client/Client';
 import type {ILogger, LogLevel} from '@/types/logger';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {truncateWithEllipsis} from '@/shared/formatting';
 
 const FALLBACK_ERROR_COLOR = '#ff3333' as ColorResolvable;
@@ -68,7 +68,7 @@ export class Logger implements ILogger {
     if (!this._webhook) return;
 
     try {
-      const color = this._client?.config ? getColors(this._client.config).error : FALLBACK_ERROR_COLOR;
+      const color = this._client?.config ? COLORS.error : FALLBACK_ERROR_COLOR;
       const safeMessage = message ?? 'An error occurred';
 
       const embed = new EmbedBuilder()
@@ -172,7 +172,7 @@ export class Logger implements ILogger {
         .setTimestamp()
         .addFields({name: '서버 소유자', value: `👑 ${userMention(currentGuildOwner)} (${currentGuildOwner})`}, {name: '현재 서버 수', value: `📊 ${currentGuildCount}개 (${guildChange})`, inline: true}, {name: '현재 사용자 수', value: `👥 ${currentUserCount.toLocaleString()}명 (${userChange})`, inline: true})
         .setDescription(`${guildName} (${guild.id})`)
-        .setColor(type === 'joined' ? getColors(client.config).normal : getColors(client.config).error)
+        .setColor(type === 'joined' ? COLORS.normal : COLORS.error)
         .setTitle(type === 'joined' ? '새로운 서버에 추가됨' : '서버에서 제거됨');
 
       const webhookOptions = this.createWebhookOptions([embed]);

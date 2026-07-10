@@ -3,7 +3,7 @@ import type {ChatInputCommandInteraction} from 'discord.js';
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 
 export default {
   data: new SlashCommandBuilder()
@@ -43,7 +43,7 @@ export default {
     }
 
     if (preview) {
-      const embed = new EmbedBuilder().setTitle('📢 공지사항 (미리보기)').setDescription(message).setColor(getColors(client.config).normal);
+      const embed = new EmbedBuilder().setTitle('📢 공지사항 (미리보기)').setDescription(message).setColor(COLORS.normal);
       await interaction.reply({embeds: [embed], flags: [MessageFlags.Ephemeral]});
       return;
     }
@@ -60,7 +60,7 @@ export default {
         if (!channel || !channel.isSendable()) {
           throw new Error('Channel not sendable');
         }
-        const embed = new EmbedBuilder().setTitle('📢 공지사항').setDescription(message).setColor(getColors(client.config).normal);
+        const embed = new EmbedBuilder().setTitle('📢 공지사항').setDescription(message).setColor(COLORS.normal);
         await channel.send({embeds: [embed]});
         return queue.guildId;
       })(),
@@ -79,7 +79,7 @@ export default {
 
     const resultEmbed = new EmbedBuilder()
       .setTitle('📢 공지사항 전송 결과')
-      .setColor(fail > 0 ? getColors(client.config).error : getColors(client.config).normal)
+      .setColor(fail > 0 ? COLORS.error : COLORS.normal)
       .setDescription(`총 **${queues.length}개** 서버 중 **${success}개** 서버에 성공적으로 전송되었습니다. ${fail ? `(${fail}개 실패)` : ''}`);
 
     if (failedList.length > 0) {

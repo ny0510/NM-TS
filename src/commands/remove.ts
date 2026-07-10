@@ -3,7 +3,7 @@ import {type AutocompleteInteraction, ChatInputCommandInteraction, EmbedBuilder,
 import type {Command} from '@/types/client';
 import {truncateWithEllipsis} from '@/shared/formatting';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {safeRespondAutocomplete} from '@/shared/discord/interactions/safeAutocomplete';
@@ -55,7 +55,7 @@ export default {
         new EmbedBuilder()
           .setTitle(`${userIndex}번째 음악을 대기열에서 제거했어요.`)
           .setDescription(codeBlock('diff', `- ${track.info.title}`))
-          .setColor(getColors(client.config).normal),
+          .setColor(COLORS.normal),
       ],
     });
   },

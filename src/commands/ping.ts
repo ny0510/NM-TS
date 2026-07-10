@@ -3,7 +3,7 @@ import {DateTime} from 'luxon';
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 
 export default {
   data: new SlashCommandBuilder().setName('ping').setDescription('봇의 지연시간을 확인해요.'),
@@ -21,7 +21,7 @@ export default {
         new EmbedBuilder()
           .setTitle('🏓 당신은 퐁입니다')
           .setDescription(`⏱️ 봇 지연시간: **${DateTime.now().diff(start).toMillis()}ms**\n⌛ API 지연시간: **${apiLatency}ms**`)
-          .setColor(getColors(client.config).normal)
+          .setColor(COLORS.normal)
           .setTimestamp(),
       ],
     });

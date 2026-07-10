@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'di
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {ensurePaused} from '@/features/music/guard';
 import {validateMusicCommand} from '@/features/music/guard';
@@ -19,6 +19,6 @@ export default {
     if (!isPaused) return;
 
     await queue.pause(true);
-    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('음악을 일시정지했어요.').setColor(getColors(client.config).normal)]});
+    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('음악을 일시정지했어요.').setColor(COLORS.normal)]});
   },
 } satisfies Command;

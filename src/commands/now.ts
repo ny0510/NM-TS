@@ -3,7 +3,7 @@ import getImageColors from 'get-image-colors';
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {msToTime, truncateWithEllipsis} from '@/shared/formatting';
 import {createProgressBar} from '@/features/music/queue/operations';
@@ -86,7 +86,7 @@ export default {
               inline: true,
             },
           ])
-          .setColor((colors[0]?.hex?.() ?? getColors(client.config).normal) as HexColorString),
+          .setColor((colors[0]?.hex?.() ?? COLORS.normal) as HexColorString),
       ],
     });
   },

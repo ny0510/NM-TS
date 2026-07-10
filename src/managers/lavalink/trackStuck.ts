@@ -1,7 +1,7 @@
 import {EmbedBuilder} from 'discord.js';
 import type {TrackStuckEvent} from 'shoukaku';
 
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
 import type {PlayerEventContext} from './types';
@@ -22,7 +22,7 @@ export const handleTrackStuck = async (ctx: PlayerEventContext, data: TrackStuck
         new EmbedBuilder()
           .setTitle(`음악이 ${data.thresholdMs / 1000}초 동안 재생되지 않았어요.`)
           .setDescription('다음 음악으로 넘어갈게요.')
-          .setColor(getColors(client.config).error),
+          .setColor(COLORS.error),
       ],
     });
   } catch (sendError) {

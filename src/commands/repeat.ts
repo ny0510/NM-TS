@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBui
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {validateMusicCommand} from '@/features/music/guard';
 
@@ -25,7 +25,7 @@ export default {
       const enabled = !queue.trackRepeat;
       queue.setTrackRepeat(enabled);
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle(`현재 음악 반복을 ${enabled ? '활성화' : '비활성화'}했어요.`).setColor(getColors(client.config).normal)],
+        embeds: [new EmbedBuilder().setTitle(`현재 음악 반복을 ${enabled ? '활성화' : '비활성화'}했어요.`).setColor(COLORS.normal)],
       });
     } else if (subcommand === 'queue') {
       const enabled = !queue.queueRepeat;
@@ -36,7 +36,7 @@ export default {
           new EmbedBuilder()
             .setTitle(`대기열 반복을 ${enabled ? '활성화' : '비활성화'}했어요.`)
             .setDescription(enabled && queue.trackRepeat ? '현재 음악 반복이 활성화된 상태여서 자동으로 비활성화했어요.' : null)
-            .setColor(getColors(client.config).normal),
+            .setColor(COLORS.normal),
         ],
       });
     } else if (subcommand === 'off') {
@@ -45,7 +45,7 @@ export default {
 
       if (!trackRepeat && !queueRepeat) {
         return await safeReply(interaction, {
-          embeds: [new EmbedBuilder().setTitle('반복 재생이 비활성화된 상태에요.').setColor(getColors(client.config).normal)],
+          embeds: [new EmbedBuilder().setTitle('반복 재생이 비활성화된 상태에요.').setColor(COLORS.normal)],
           flags: MessageFlags.Ephemeral,
         });
       }
@@ -54,7 +54,7 @@ export default {
       queue.setQueueRepeat(false);
 
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('반복 재생을 해제했어요.').setColor(getColors(client.config).normal)],
+        embeds: [new EmbedBuilder().setTitle('반복 재생을 해제했어요.').setColor(COLORS.normal)],
       });
     }
   },

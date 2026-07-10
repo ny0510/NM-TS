@@ -2,7 +2,7 @@ import {ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, inlineCode} 
 
 import type {NMClient} from '@/client/Client';
 import {truncateWithEllipsis} from '@/shared/formatting';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {type ChartRankingRow, getTotalPlayCount} from './data';
 
 export const TRACKS_PER_PAGE = 5;
@@ -30,7 +30,7 @@ export function buildChartEmbed(client: NMClient, ranking: ChartRankingRow[], pa
   const embed = new EmbedBuilder()
     .setTitle(`📊 ${monthLabel} ${scopeLabel} 음악 차트`)
     .addFields(trackList)
-    .setColor(getColors(client.config).normal)
+    .setColor(COLORS.normal)
     .setFooter({
       text: [totalPages > 1 ? `${page}/${totalPages} 페이지` : null, `총 ${ranking.length}곡 · ${totalPlayCount}회 재생`].filter(Boolean).join(' · '),
     });

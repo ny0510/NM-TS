@@ -5,7 +5,7 @@ import type {Command} from '@/types/client';
 import type {QueueTrack} from '@/types/music';
 import {slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/shared/formatting';
@@ -85,7 +85,7 @@ export default {
     const customId = `search:${interaction.id}`;
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId(customId).setPlaceholder('음악을 선택해 주세요.').setMinValues(1).setMaxValues(options.length).addOptions(options));
 
-    const embed = new EmbedBuilder().setTitle(`🔍 ${platformDisplayName}에서 ${query} 검색 결과`).setDescription('대기열에 추가할 음악을 선택해 주세요.').setColor(getColors(client.config).normal);
+    const embed = new EmbedBuilder().setTitle(`🔍 ${platformDisplayName}에서 ${query} 검색 결과`).setDescription('대기열에 추가할 음악을 선택해 주세요.').setColor(COLORS.normal);
 
     await safeReply(interaction, {
       embeds: [embed],
@@ -119,7 +119,7 @@ export default {
     const disableComponents = async () => {
       if (handled) return;
       try {
-        await followUp?.edit({embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'search')} 명령어를 사용해 다시 검색해 주세요.`).setColor(getColors(client.config).error)], components: []});
+        await followUp?.edit({embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'search')} 명령어를 사용해 다시 검색해 주세요.`).setColor(COLORS.error)], components: []});
       } catch {
         /* 이미 수정된 메시지는 무시 */
       }
@@ -175,7 +175,7 @@ export default {
             .setDescription(description)
             .setThumbnail(firstTrackThumbnail || null)
             .setFooter({text: tracksFooterText})
-            .setColor((tracksColor[0]?.hex?.() ?? getColors(client.config).normal) as HexColorString),
+            .setColor((tracksColor[0]?.hex?.() ?? COLORS.normal) as HexColorString),
         ],
         components: [],
       });

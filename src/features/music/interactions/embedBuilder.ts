@@ -3,7 +3,7 @@ import {EmbedBuilder} from 'discord.js';
 import type {NMClient} from '@/client/Client';
 import type {Queue} from '@/features/music/queue/Queue';
 import type {QueueTrack} from '@/types/music';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/shared/formatting';
 
 export const TRACKS_PER_PAGE = 10;
@@ -28,5 +28,5 @@ export function buildQueueEmbed(client: NMClient, queue: Queue, page: number): E
     .setDescription(currentTrack ? hyperlink(truncateWithEllipsis(`⏵ ${currentTrack.info.title}`, 50), currentTrack.info.uri ?? '') : '현재 재생중인 음악이 없어요.')
     .addFields(trackList)
     .setFooter({text: footer})
-    .setColor(getColors(client.config).normal);
+    .setColor(COLORS.normal);
 }

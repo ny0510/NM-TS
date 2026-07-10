@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'di
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {validateMusicCommand} from '@/features/music/guard';
 
@@ -19,12 +19,12 @@ export default {
 
     if (enabled) {
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('자동 셔플을 비활성화했어요.').setDescription('더 이상 자동으로 대기열을 섞지 않아요.').setColor(getColors(client.config).normal)],
+        embeds: [new EmbedBuilder().setTitle('자동 셔플을 비활성화했어요.').setDescription('더 이상 자동으로 대기열을 섞지 않아요.').setColor(COLORS.normal)],
       });
     }
 
     return await safeReply(interaction, {
-      embeds: [new EmbedBuilder().setTitle('자동 셔플을 활성화했어요.').setDescription('노래가 추가될 때마다 대기열을 자동으로 섞어요.').setColor(getColors(client.config).normal)],
+      embeds: [new EmbedBuilder().setTitle('자동 셔플을 활성화했어요.').setDescription('노래가 추가될 때마다 대기열을 자동으로 섞어요.').setColor(COLORS.normal)],
     });
   },
 } satisfies Command;

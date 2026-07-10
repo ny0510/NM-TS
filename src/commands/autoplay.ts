@@ -2,7 +2,7 @@ import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'di
 
 import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
-import {getColors} from '@/shared/discord/embedColors';
+import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {validateMusicCommand} from '@/features/music/guard';
 
@@ -18,7 +18,7 @@ export default {
       queue.setAutoplay(false);
 
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('자동 재생을 비활성화했어요.').setDescription('더 이상 관련 음악을 자동으로 추가하지 않아요.').setColor(getColors(client.config).normal)],
+        embeds: [new EmbedBuilder().setTitle('자동 재생을 비활성화했어요.').setDescription('더 이상 관련 음악을 자동으로 추가하지 않아요.').setColor(COLORS.normal)],
       });
     }
 
@@ -26,7 +26,7 @@ export default {
     queue.setAutoplay(true, interaction.user);
 
     return await safeReply(interaction, {
-      embeds: [new EmbedBuilder().setTitle('자동 재생을 활성화했어요!').setDescription('마지막 곡이 끝나면 자동으로 비슷한 곡을 재생해요.').setColor(getColors(client.config).normal)],
+      embeds: [new EmbedBuilder().setTitle('자동 재생을 활성화했어요!').setDescription('마지막 곡이 끝나면 자동으로 비슷한 곡을 재생해요.').setColor(COLORS.normal)],
     });
   },
 } satisfies Command;
