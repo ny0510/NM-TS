@@ -1,8 +1,9 @@
 import {Events} from 'discord.js';
 import {request as undiciRequest} from 'undici';
 
+import {toError} from '@/shared/errors';
 import type {NMClient} from '@/client/Client';
-import type {ILogger} from '@/utils/logger';
+import type {ILogger} from '@/shared/logger';
 
 export class KoreanbotsManager {
   private koreanbotsInterval?: ReturnType<typeof setInterval>;
@@ -74,7 +75,7 @@ export class KoreanbotsManager {
           const parsed = JSON.parse(rawBody);
           message = parsed?.message ?? message;
         } catch {
-          // JSON 파싱 실패 시 원본 메시지 사용
+          /* JSON 파싱 실패 시 원본 메시지 사용 */
         }
 
         throw new Error(message);
@@ -94,7 +95,7 @@ export class KoreanbotsManager {
         return;
       }
 
-      this.logger.error(error instanceof Error ? error : new Error(`Failed to update Koreanbots stats: ${message}`));
+      this.logger.error(toError(error, `Failed to update Koreanbots stats: ${message}`));
     }
   }
 }

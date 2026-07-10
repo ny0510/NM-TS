@@ -1,9 +1,9 @@
 import {MessageFlags, SlashCommandBuilder} from 'discord.js';
 
 import type {Command} from '@/types/client';
-import {safeReply} from '@/utils/discord';
-import {buildFavoritesComponents} from '@/utils/music/favorites/favoritesComponents';
-import {getUserFavorites} from '@/utils/music/favorites/favoritesService';
+import {safeReply} from '@/shared/discord';
+import {buildFavoritesComponents} from '@/features/favorites/component';
+import {getUserFavorites} from '@/features/favorites/service';
 
 export default {
   data: new SlashCommandBuilder().setName('favorites').setDescription('내 즐겨찾기 목록을 확인해요.'),

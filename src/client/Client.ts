@@ -7,11 +7,12 @@ import {EventManager} from '@/managers/EventManager';
 import {KoreanbotsManager} from '@/managers/KoreanbotsManager';
 import {LavalinkManager} from '@/managers/LavalinkManager';
 import {PlayerStateManager} from '@/managers/PlayerStateManager';
-import type {Queue} from '@/structures/Queue';
+import type {Queue} from '@/features/music/queue/Queue';
 import type {ClientServices, ClientStats, Config} from '@/types/client';
 import type {ILogger} from '@/types/logger';
-import {config} from '@/utils/config';
-import {Logger} from '@/utils/logger';
+import {config} from '@/shared/config';
+import {toError} from '@/shared/errors';
+import {Logger} from '@/shared/logger';
 
 export class NMClient extends Client {
   public readonly logger: ILogger;
@@ -62,7 +63,7 @@ export class NMClient extends Client {
   }
 
   private setupEventHandlers(): void {
-    this.on(Events.Error, error => this.logger.error(error instanceof Error ? error : new Error(`Discord client error: ${error}`)));
+    this.on(Events.Error, error => this.logger.error(toError(error, 'Discord client error')));
     this.on(Events.Warn, warning => this.logger.warn(`Discord client warning: ${warning}`));
   }
 
@@ -77,7 +78,7 @@ export class NMClient extends Client {
 
       await this.loadModules();
     } catch (error) {
-      this.logger.error(error instanceof Error ? error : new Error(`Failed to initialize client: ${error}`));
+      this.logger.error(toError(error, 'Failed to initialize client'));
       throw error;
     }
   }
@@ -115,7 +116,7 @@ export class NMClient extends Client {
       await this.services.eventManager.loadEvents();
       await this.services.commandManager.loadCommands();
     } catch (error) {
-      this.logger.error(error instanceof Error ? error : new Error(`Failed to load modules: ${error}`));
+      this.logger.error(toError(error, 'Failed to load modules'));
       throw error;
     }
   }

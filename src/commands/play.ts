@@ -1,10 +1,11 @@
-import {type AutocompleteInteraction, ChatInputCommandInteraction, DiscordAPIError, MessageFlags, PermissionsBitField, SlashCommandBuilder} from 'discord.js';
+import {type AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags, PermissionsBitField, SlashCommandBuilder} from 'discord.js';
 
 import type {Command} from '@/types/client';
-import {getGoogleSuggestions} from '@/utils/autocomplete/googleSuggest';
-import {getClient} from '@/utils/discord/client';
-import {ensureSameVoiceChannel, ensureVoiceChannel} from '@/utils/music';
-import {addTrackToQueue} from '@/utils/music/playerUtils';
+import {getGoogleSuggestions} from '@/shared/autocomplete/googleSuggest';
+import {getClient} from '@/shared/discord/client';
+import {safeRespondAutocomplete} from '@/shared/discord/interactions/safeAutocomplete';
+import {ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
+import {addTrackToQueue} from '@/features/music/track/operations';
 
 export default {
   data: new SlashCommandBuilder()
@@ -48,24 +49,11 @@ export default {
 
     const client = getClient(interaction);
 
-    const respondSafely = async (choices: {name: string; value: string}[]) => {
-      try {
-        await interaction.respond(choices);
-      } catch (error) {
-        if (error instanceof DiscordAPIError && error.code === 10062) {
-          client.logger.debug('Autocomplete interaction expired before response could be sent.');
-          return;
-        }
-
-        client.logger.error(new Error(`Failed to respond to autocomplete interaction: ${error instanceof Error ? error.message : String(error)}`));
-      }
-    };
-
     if (focusedOption.name === 'query') {
       const query = focusedOption.value;
 
       if (!query || query.trim().length === 0 || /https?:\/\//i.test(query)) {
-        await respondSafely([]);
+        await safeRespondAutocomplete(interaction, []);
         return;
       }
 
@@ -76,17 +64,17 @@ export default {
           value: suggestion.length > 100 ? suggestion.substring(0, 100) : suggestion,
         }));
 
-        await respondSafely(choices);
+        await safeRespondAutocomplete(interaction, choices);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           client.logger.debug('Autocomplete suggestions request timed out; responding with empty list.');
         } else {
           client.logger.error(new Error(`Autocomplete error: ${error instanceof Error ? error.message : String(error)}`));
         }
-        await respondSafely([]);
+        await safeRespondAutocomplete(interaction, []);
       }
     } else {
-      await respondSafely([]);
+      await safeRespondAutocomplete(interaction, []);
     }
   },
 } satisfies Command;

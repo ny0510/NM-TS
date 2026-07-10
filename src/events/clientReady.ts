@@ -2,9 +2,13 @@ import {ActivityType, type Client, Events, GatewayIntentBits, PresenceUpdateStat
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/types/client';
+import {toError} from '@/shared/errors';
 
 let presenceToggle = false;
 let presenceInterval: ReturnType<typeof setInterval> | undefined;
+
+/** Presence 업데이트 주기 (10초) */
+const PRESENCE_UPDATE_INTERVAL_MS = 10_000;
 
 const updatePresence = (client: NMClient) => {
   const stats = client.getStats();
@@ -61,7 +65,7 @@ export default {
       try {
         await nmClient.services.playerStateManager.restoreAll();
       } catch (error) {
-        nmClient.logger.error(error instanceof Error ? error : new Error(`Failed to restore player state: ${error}`));
+        nmClient.logger.error(toError(error, 'Failed to restore player state'));
       }
 
       updatePresence(nmClient);
@@ -78,9 +82,9 @@ export default {
 
       checkRequiredIntents(nmClient);
 
-      presenceInterval = setInterval(() => void updatePresence(nmClient), 10_000);
+      presenceInterval = setInterval(() => void updatePresence(nmClient), PRESENCE_UPDATE_INTERVAL_MS);
     } catch (error) {
-      nmClient.logger.error(error instanceof Error ? error : new Error(`Error in clientReady event: ${error}`));
+      nmClient.logger.error(toError(error, 'Error in clientReady event'));
     }
   },
 } satisfies Event<'clientReady'>;

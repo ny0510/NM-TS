@@ -1,5 +1,11 @@
 import {type AutocompleteInteraction, type ChatInputCommandInteraction, type ClientEvents, type HexColorString, PermissionsBitField, SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder, type SlashCommandSubcommandsOnlyBuilder} from 'discord.js';
 
+import type {CommandManager} from '@/managers/CommandManager';
+import type {CooldownManager} from '@/managers/CooldownManager';
+import type {EventManager} from '@/managers/EventManager';
+import type {LavalinkManager} from '@/managers/LavalinkManager';
+import type {PlayerStateManager} from '@/managers/PlayerStateManager';
+
 export interface Command {
   data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder;
   permissions?: PermissionsBitField[] | bigint[];
@@ -27,6 +33,7 @@ export interface LavalinkConfig {
   LAVALINK_PORT: number;
   LAVALINK_PASSWORD: string;
   LAVALINK_SECURE: boolean;
+  LAVALINK_SEARCH_PREFIX: string;
 }
 
 export interface EmbedConfig {
@@ -58,11 +65,11 @@ export interface KoreanbotsConfig {
 export interface Config extends DiscordConfig, LavalinkConfig, EmbedConfig, AppConfig, ProgressBarConfig, KoreanbotsConfig {}
 
 export interface ClientServices {
-  commandManager: import('@/managers/CommandManager').CommandManager;
-  eventManager: import('@/managers/EventManager').EventManager;
-  lavalinkManager: import('@/managers/LavalinkManager').LavalinkManager;
-  cooldownManager: import('@/managers/CooldownManager').CooldownManager;
-  playerStateManager: import('@/managers/PlayerStateManager').PlayerStateManager;
+  commandManager: CommandManager;
+  eventManager: EventManager;
+  lavalinkManager: LavalinkManager;
+  cooldownManager: CooldownManager;
+  playerStateManager: PlayerStateManager;
 }
 
 export interface ClientStats {

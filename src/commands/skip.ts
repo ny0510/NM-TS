@@ -1,10 +1,11 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
 
 import type {Command} from '@/types/client';
-import {getClient} from '@/utils/discord/client';
-import {createErrorEmbed} from '@/utils/discord/embeds';
-import {safeReply} from '@/utils/discord/interactions';
-import {ensurePlayerReady} from '@/utils/music';
+import {getClient} from '@/shared/discord/client';
+import {getColors} from '@/shared/discord/embedColors';
+import {createErrorEmbed} from '@/shared/discord/embeds';
+import {safeReply} from '@/shared/discord/interactions';
+import {validateMusicCommand} from '@/features/music/guard';
 
 export default {
   data: new SlashCommandBuilder()
@@ -13,11 +14,9 @@ export default {
     .addIntegerOption(option => option.setName('count').setDescription('⏭️ 건너뛸 음악의 개수를 입력해 주세요.').setRequired(false)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
-    if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
-
-    const client = getClient(interaction);
-    const queue = client.queues.get(interaction.guildId!);
+    const queue = await validateMusicCommand(interaction, {requirePlaying: true});
     if (!queue) return;
+    const client = getClient(interaction);
 
     const count = interaction.options.getInteger('count') ?? 1;
     const queueSize = queue.size();
@@ -34,6 +33,6 @@ export default {
       });
 
     await queue.stop(count);
-    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${count}곡을 건너뛰었어요.`).setColor(client.config.EMBED_COLOR_NORMAL)]});
+    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${count}곡을 건너뛰었어요.`).setColor(getColors(client.config).normal)]});
   },
 } satisfies Command;

@@ -1,11 +1,12 @@
 import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, inlineCode} from 'discord.js';
 
 import type {Command} from '@/types/client';
-import {getClient} from '@/utils/discord/client';
-import {createErrorEmbed} from '@/utils/discord/embeds';
-import {safeReply} from '@/utils/discord/interactions';
-import {msToTime} from '@/utils/formatting';
-import {ensurePlayerReady} from '@/utils/music';
+import {getClient} from '@/shared/discord/client';
+import {getColors} from '@/shared/discord/embedColors';
+import {createErrorEmbed} from '@/shared/discord/embeds';
+import {safeReply} from '@/shared/discord/interactions';
+import {msToTime} from '@/shared/formatting';
+import {validateMusicCommand} from '@/features/music/guard';
 
 const parseTimeToSeconds = (time: string): number | null => {
   if (/^\d+$/.test(time)) return parseInt(time, 10);
@@ -36,11 +37,9 @@ export default {
     .addStringOption(option => option.setName('time').setDescription('⏱️ 건너뛸 시간 (시:분:초)').setRequired(true)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
-    if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
-
-    const client = getClient(interaction);
-    const queue = client.queues.get(interaction.guildId!);
+    const queue = await validateMusicCommand(interaction, {requirePlaying: true});
     if (!queue) return;
+    const client = getClient(interaction);
 
     const timeStr = interaction.options.getString('time', true);
     const seconds = parseTimeToSeconds(timeStr);
@@ -61,6 +60,6 @@ export default {
     if (!currentTrack.info.isSeekable) return safeReply(interaction, {embeds: [createErrorEmbed(client, '이 트랙은 건너뛰기를 지원하지 않아요.')], flags: MessageFlags.Ephemeral});
 
     await queue.seek(position);
-    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${formatTime(seconds)}(으)로 건너뛰었어요.`).setColor(client.config.EMBED_COLOR_NORMAL)]});
+    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(`${formatTime(seconds)}(으)로 건너뛰었어요.`).setColor(getColors(client.config).normal)]});
   },
 } satisfies Command;

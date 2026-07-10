@@ -1,7 +1,9 @@
 import {EmbedBuilder, Events, type Guild} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
-import {checkMissingPermissions, generateInviteLink} from '@/utils/discord/permissions/basicPermissions';
+import {getColors} from '@/shared/discord/embedColors';
+import {checkMissingPermissions, generateInviteLink} from '@/shared/discord/permissions/basicPermissions';
+import {toError} from '@/shared/errors';
 
 export default {
   name: Events.GuildCreate,
@@ -37,14 +39,14 @@ export default {
                     inline: false,
                   },
                 )
-                .setColor(client.config.EMBED_COLOR_ERROR)
+                .setColor(getColors(client.config).error)
                 .setFooter({text: '이 알림은 NM이 정상 작동하기 위해 전송되었습니다.'}),
             ],
           });
         } catch {}
       }
     } catch (error) {
-      client.logger.error(error instanceof Error ? error : new Error(`Failed to check permissions: ${error}`));
+      client.logger.error(toError(error, 'Failed to check permissions'));
     }
   },
 };

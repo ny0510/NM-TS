@@ -3,12 +3,19 @@ import {LoadType, type Track} from 'shoukaku';
 
 import type {Command} from '@/types/client';
 import type {QueueTrack} from '@/types/music';
-import {slashCommandMention} from '@/utils/discord';
-import {getClient} from '@/utils/discord/client';
-import {createErrorEmbed} from '@/utils/discord/embeds';
-import {safeReply} from '@/utils/discord/interactions';
-import {hyperlink, msToTime, truncateWithEllipsis} from '@/utils/formatting';
-import {createQueue, ensureSameVoiceChannel, ensureVoiceChannel, getEmbedMeta} from '@/utils/music';
+import {slashCommandMention} from '@/shared/discord';
+import {getClient} from '@/shared/discord/client';
+import {getColors} from '@/shared/discord/embedColors';
+import {createErrorEmbed} from '@/shared/discord/embeds';
+import {safeReply} from '@/shared/discord/interactions';
+import {hyperlink, msToTime, truncateWithEllipsis} from '@/shared/formatting';
+import {createQueue, ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
+import {getEmbedMeta} from '@/features/music/track/embeds';
+
+/** 검색 결과 선택 대기 타임아웃 (5분) */
+const SEARCH_COLLECTOR_TIMEOUT = 60 * 1000 * 5;
+/** 검색 결과 표시 최대 개수 */
+const MAX_SEARCH_RESULTS = 10;
 
 const SEARCH_PLATFORMS = {
   ytsearch: '유튜브',
@@ -67,7 +74,7 @@ export default {
           description: `${truncateWithEllipsis(track.info.author, 20)} (${msToTime(track.info.length)})`,
         };
       })
-      .slice(0, 10);
+      .slice(0, MAX_SEARCH_RESULTS);
 
     if (options.length === 0)
       return await safeReply(interaction, {
@@ -78,7 +85,7 @@ export default {
     const customId = `search:${interaction.id}`;
     const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(new StringSelectMenuBuilder().setCustomId(customId).setPlaceholder('음악을 선택해 주세요.').setMinValues(1).setMaxValues(options.length).addOptions(options));
 
-    const embed = new EmbedBuilder().setTitle(`🔍 ${platformDisplayName}에서 ${query} 검색 결과`).setDescription('대기열에 추가할 음악을 선택해 주세요.').setColor(client.config.EMBED_COLOR_NORMAL);
+    const embed = new EmbedBuilder().setTitle(`🔍 ${platformDisplayName}에서 ${query} 검색 결과`).setDescription('대기열에 추가할 음악을 선택해 주세요.').setColor(getColors(client.config).normal);
 
     await safeReply(interaction, {
       embeds: [embed],
@@ -103,7 +110,7 @@ export default {
       return true;
     };
 
-    const collector = interaction.channel?.createMessageComponentCollector({filter, time: 60 * 1000 * 5, componentType: ComponentType.StringSelect});
+    const collector = interaction.channel?.createMessageComponentCollector({filter, time: SEARCH_COLLECTOR_TIMEOUT, componentType: ComponentType.StringSelect});
     const followUp = await interaction.fetchReply();
     if (!collector || !followUp) return;
 
@@ -112,9 +119,9 @@ export default {
     const disableComponents = async () => {
       if (handled) return;
       try {
-        await followUp?.edit({embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'search')} 명령어를 사용해 다시 검색해 주세요.`).setColor(client.config.EMBED_COLOR_ERROR)], components: []});
+        await followUp?.edit({embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'search')} 명령어를 사용해 다시 검색해 주세요.`).setColor(getColors(client.config).error)], components: []});
       } catch {
-        // 이미 수정된 메시지는 무시
+        /* 이미 수정된 메시지는 무시 */
       }
     };
 
@@ -168,7 +175,7 @@ export default {
             .setDescription(description)
             .setThumbnail(firstTrackThumbnail || null)
             .setFooter({text: tracksFooterText})
-            .setColor((tracksColor[0]?.hex?.() ?? client.config.EMBED_COLOR_NORMAL) as HexColorString),
+            .setColor((tracksColor[0]?.hex?.() ?? getColors(client.config).normal) as HexColorString),
         ],
         components: [],
       });

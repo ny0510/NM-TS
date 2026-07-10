@@ -2,7 +2,8 @@ import {Collection, REST, Routes} from 'discord.js';
 import path from 'node:path';
 
 import type {Command, Config} from '@/types/client';
-import type {ILogger} from '@/utils/logger';
+import {toError} from '@/shared/errors';
+import type {ILogger} from '@/shared/logger';
 import {readdir} from 'node:fs/promises';
 
 export class CommandManager {
@@ -44,7 +45,7 @@ export class CommandManager {
 
       this.logger.info(`Loaded ${this.commands.size} commands`);
     } catch (error) {
-      this.logger.error(error instanceof Error ? error : new Error(`Failed to load commands: ${error}`));
+      this.logger.error(toError(error, 'Failed to load commands'));
       throw error;
     }
   }
@@ -67,7 +68,7 @@ export class CommandManager {
         this.logger.info('Successfully deployed global commands');
       }
     } catch (error) {
-      this.logger.error(error instanceof Error ? error : new Error(`Failed to deploy commands: ${error}`));
+      this.logger.error(toError(error, 'Failed to deploy commands'));
       throw error;
     }
   }

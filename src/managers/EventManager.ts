@@ -2,7 +2,7 @@ import type {Client} from 'discord.js';
 import path from 'node:path';
 
 import type {Event} from '@/types/client';
-import type {ILogger} from '@/utils/logger';
+import type {ILogger} from '@/shared/logger';
 import {readdir} from 'node:fs/promises';
 
 export class EventManager {

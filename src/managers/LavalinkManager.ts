@@ -2,21 +2,26 @@ import type {Client, User} from 'discord.js';
 import {Connectors, type LavalinkResponse, LoadType, type Node, type NodeOption, Shoukaku} from 'shoukaku';
 
 import type {NMClient} from '@/client/Client';
-import {Queue} from '@/structures/Queue';
+import {Queue} from '@/features/music/queue/Queue';
 import type {Config} from '@/types/client';
 import type {QueueTrack} from '@/types/music';
 import type {CreateQueueOptions} from '@/types/music';
-import {isURL} from '@/utils/formatting/patterns';
-import type {ILogger} from '@/utils/logger';
-import {registerLavalinkEvents, registerPlayerEvents} from '@/utils/music/lavalinkEvents';
+import {isURL} from '@/shared/formatting/patterns';
+import type {ILogger} from '@/shared/logger';
+import {registerLavalinkEvents, registerPlayerEvents} from '@/managers/lavalink';
+
+/** 재시도 기본 지연 시간 (1초) */
+const RETRY_DELAY_MS = 1000;
 
 export class LavalinkManager {
   private readonly shoukaku: Shoukaku;
   private readonly logger: ILogger;
+  private readonly config: Config;
   private readonly queues = new Map<string, Queue>();
   private client: NMClient | null = null;
   constructor(client: Client, logger: ILogger, config: Config) {
     this.logger = logger;
+    this.config = config;
 
     const nodes: NodeOption[] = [
       {
@@ -56,7 +61,7 @@ export class LavalinkManager {
       try {
         await this.shoukaku.leaveVoiceChannel(options.guildId);
       } catch {}
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
     }
 
     const MAX_RETRIES = 3;
@@ -92,11 +97,11 @@ export class LavalinkManager {
         if (!isTimeout || attempt === MAX_RETRIES) break;
 
         this.logger.warn(`Voice connection attempt ${attempt + 1} failed, retrying...`);
-        // 재시도 전 남은 연결 정리
+        /* 재시도 전 남은 연결 정리 */
         try {
           await this.shoukaku.leaveVoiceChannel(options.guildId);
         } catch {}
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
       }
     }
 
@@ -123,7 +128,7 @@ export class LavalinkManager {
 
     const normalizedQuery = query.trim();
     const hasSearchPrefix = /^(ytsearch|spsearch|scsearch):/i.test(normalizedQuery);
-    const resolveQuery = isURL.test(normalizedQuery) || hasSearchPrefix ? normalizedQuery : `ytsearch:${normalizedQuery}`;
+    const resolveQuery = isURL.test(normalizedQuery) || hasSearchPrefix ? normalizedQuery : `${this.config.LAVALINK_SEARCH_PREFIX}${normalizedQuery}`;
     const result = await node.rest.resolve(resolveQuery);
     if (!result) return undefined;
 

@@ -2,7 +2,9 @@ import {Events, type GuildMember} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
 import type {Event} from '@/types/client';
-import {destroyQueueSafely} from '@/utils/music/playerUtils';
+import {toError} from '@/shared/errors';
+import {isTimedOut} from '@/shared/discord/permissions/isTimedOut';
+import {destroyQueueSafely} from '@/features/music/queue/operations';
 
 export default {
   name: Events.GuildMemberUpdate,
@@ -12,10 +14,10 @@ export default {
 
       if (newMember.id !== client.user?.id) return;
 
-      const wasTimedOut = oldMember.communicationDisabledUntil !== null && oldMember.communicationDisabledUntil > new Date();
-      const isTimedOut = newMember.communicationDisabledUntil !== null && newMember.communicationDisabledUntil > new Date();
+      const wasTimedOut = isTimedOut(oldMember);
+      const isTimedOutNow = isTimedOut(newMember);
 
-      if (!wasTimedOut && isTimedOut) {
+      if (!wasTimedOut && isTimedOutNow) {
         const queue = client.queues.get(newMember.guild.id);
 
         if (queue) {
@@ -25,7 +27,7 @@ export default {
       }
     } catch (error) {
       const client = newMember.client as NMClient;
-      client.logger.error(error instanceof Error ? error : new Error(`Error in GuildMemberUpdate event: ${error}`));
+      client.logger.error(toError(error, 'Error in GuildMemberUpdate event'));
     }
   },
 } satisfies Event<'guildMemberUpdate'>;

@@ -1,9 +1,11 @@
-import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, MessageFlags, SlashCommandBuilder, time, userMention} from 'discord.js';
+import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, time, userMention} from 'discord.js';
 
 import {version} from '@/../package.json';
 import type {Command} from '@/types/client';
-import {getClient} from '@/utils/discord/client';
-import {safeReply} from '@/utils/discord/interactions';
+import {getClient} from '@/shared/discord/client';
+import {getColors} from '@/shared/discord/embedColors';
+import {safeReply} from '@/shared/discord/interactions';
+import {toError} from '@/shared/errors';
 
 export default {
   data: new SlashCommandBuilder().setName('info').setDescription('봇의 상태를 확인해요.'),
@@ -32,13 +34,13 @@ export default {
         embeds: [
           new EmbedBuilder()
             .setTitle(client.user?.username || client.user?.displayName || '')
-            .setColor(client.config.EMBED_COLOR_NORMAL as HexColorString)
+            .setColor(getColors(client.config).normal)
             .setThumbnail(client.user?.displayAvatarURL({forceStatic: true}) || '')
             .setFields(fields),
         ],
       });
     } catch (error) {
-      client.logger.error(error instanceof Error ? error : new Error(`Error in info command: ${error}`));
+      client.logger.error(toError(error, 'Error in info command'));
       if (!interaction.replied && !interaction.deferred) {
         try {
           await safeReply(interaction, {
@@ -46,7 +48,7 @@ export default {
             flags: MessageFlags.Ephemeral,
           });
         } catch (replyError) {
-          client.logger.error(replyError instanceof Error ? replyError : new Error(`Failed to send error reply: ${replyError}`));
+          client.logger.error(toError(replyError, 'Failed to send error reply'));
         }
       }
     }

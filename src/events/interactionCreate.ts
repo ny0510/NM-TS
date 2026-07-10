@@ -1,16 +1,18 @@
 import {type AutocompleteInteraction, type ChatInputCommandInteraction, EmbedBuilder, Events, type Interaction, MessageFlags, type PermissionsString, codeBlock} from 'discord.js';
 
 import type {Event} from '@/types/client';
-import {slashCommandMention} from '@/utils/discord';
-import {getClient} from '@/utils/discord/client';
-import {isInteractionProcessed} from '@/utils/discord/interactions';
-import {safeReply} from '@/utils/discord/interactions';
-import {checkPermissions} from '@/utils/discord/permissions';
-import PermissionTranslations from '@/utils/discord/permissions/locale/permission';
-import {handlePlayerControlsButtons} from '@/utils/music/buttons/controlsButton';
-import {handleFavToggleButton} from '@/utils/music/buttons/favToggleButton';
-import {handleFavoritesPagination, handleFavoritesSelectMenu} from '@/utils/music/buttons/favoritesListInteraction';
-import {handleQuickAddButton} from '@/utils/music/buttons/quickAddButton';
+import {slashCommandMention} from '@/shared/discord';
+import {getClient} from '@/shared/discord/client';
+import {getColors} from '@/shared/discord/embedColors';
+import {isInteractionProcessed} from '@/shared/discord/interactions';
+import {safeReply} from '@/shared/discord/interactions';
+import {checkPermissions} from '@/shared/discord/permissions';
+import {toError} from '@/shared/errors';
+import PermissionTranslations from '@/shared/discord/permissions/locale/permission';
+import {handlePlayerControlsButtons} from '@/features/music/button/controls';
+import {handleFavToggleButton} from '@/features/favorites/button';
+import {handleFavoritesPagination, handleFavoritesSelectMenu} from '@/features/favorites/interaction';
+import {handleQuickAddButton} from '@/features/music/button/quickAdd';
 
 export default {
   name: Events.InteractionCreate,
@@ -44,7 +46,7 @@ export default {
         try {
           await command.autocomplete(interaction as AutocompleteInteraction);
         } catch (error) {
-          client.logger.error(error instanceof Error ? error : new Error(`Error executing autocomplete for ${interaction.commandName}: ${error}`));
+          client.logger.error(toError(error, `Error executing autocomplete for ${interaction.commandName}`));
         }
       }
       return;
@@ -53,7 +55,7 @@ export default {
     if (!interaction.isChatInputCommand()) return;
     if (!interaction.channel?.isSendable()) return;
     if (!interaction.client.user) return;
-    if (!interaction.guild) return await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('DM에서는 사용할 수 없어요.').setColor(client.config.EMBED_COLOR_ERROR)], flags: MessageFlags.Ephemeral});
+    if (!interaction.guild) return await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('DM에서는 사용할 수 없어요.').setColor(getColors(client.config).error)], flags: MessageFlags.Ephemeral});
 
     if (isInteractionProcessed(interaction.id)) {
       client.logger.warn(`Duplicate interaction detected: ${interaction.id}`);
@@ -72,7 +74,7 @@ export default {
           new EmbedBuilder()
             .setTitle('잠시 후에 다시 시도해 주세요.')
             .setDescription(`${await slashCommandMention(interaction, command.data.name)} 명령어는 \`${cooldownResult.timeLeft}초\` 후에 사용할 수 있어요.`)
-            .setColor(client.config.EMBED_COLOR_ERROR),
+            .setColor(getColors(client.config).error),
         ],
         flags: MessageFlags.Ephemeral,
       });
@@ -82,7 +84,7 @@ export default {
     if (!result) {
       const missingPermissions = missing.map(permission => `+ ${PermissionTranslations[permission as PermissionsString]} (${permission})`).join('\n');
       return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.').setDescription(codeBlock('diff', missingPermissions)).setColor(client.config.EMBED_COLOR_ERROR)],
+        embeds: [new EmbedBuilder().setTitle('명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.').setDescription(codeBlock('diff', missingPermissions)).setColor(getColors(client.config).error)],
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -90,8 +92,7 @@ export default {
     try {
       await command.execute(interaction);
     } catch (e) {
-      client.logger.error(e instanceof Error ? e : new Error(`Error executing command ${interaction.commandName}: ${e}`));
-      console.error(e);
+      client.logger.error(toError(e, `Error executing command ${interaction.commandName}`));
 
       if (!interaction.replied && !interaction.deferred) {
         if (client.config.IS_DEV_MODE) {

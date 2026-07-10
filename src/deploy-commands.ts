@@ -2,8 +2,9 @@ import {REST, Routes} from 'discord.js';
 import process from 'node:process';
 
 import {CommandManager} from '@/managers/CommandManager';
-import {config} from '@/utils/config';
-import {Logger} from '@/utils/logger';
+import {config} from '@/shared/config';
+import {toError} from '@/shared/errors';
+import {Logger} from '@/shared/logger';
 
 const logger = new Logger('DEPLOY');
 
@@ -45,7 +46,7 @@ async function deployCommands() {
       }
     }
   } catch (error) {
-    logger.error(error instanceof Error ? error : new Error(`Failed to refresh/delete application (/) commands: ${error}`));
+    logger.error(toError(error, 'Failed to refresh/delete application (/) commands'));
     process.exit(1);
   }
 }

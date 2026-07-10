@@ -1,11 +1,13 @@
 import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
-import getColors from 'get-image-colors';
+import getImageColors from 'get-image-colors';
 
 import type {Command} from '@/types/client';
-import {getClient} from '@/utils/discord/client';
-import {safeReply} from '@/utils/discord/interactions';
-import {msToTime, truncateWithEllipsis} from '@/utils/formatting';
-import {createProgressBar, ensurePlaying} from '@/utils/music';
+import {getClient} from '@/shared/discord/client';
+import {getColors} from '@/shared/discord/embedColors';
+import {safeReply} from '@/shared/discord/interactions';
+import {msToTime, truncateWithEllipsis} from '@/shared/formatting';
+import {createProgressBar} from '@/features/music/queue/operations';
+import {ensurePlaying} from '@/features/music/guard';
 
 const getVolumeIcon = (volume: number): string => {
   if (volume === 0) return '🔇';
@@ -33,7 +35,7 @@ export default {
     if (!queue) return;
 
     const track = queue.getCurrent()!;
-    const colors = track.info.artworkUrl ? await getColors(track.info.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
+    const colors = track.info.artworkUrl ? await getImageColors(track.info.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
     const progressBar = createProgressBar(queue);
     const queueSize = queue.size();
     const queueDuration = queue.duration();
@@ -84,7 +86,7 @@ export default {
               inline: true,
             },
           ])
-          .setColor((colors[0]?.hex?.() ?? client.config.EMBED_COLOR_NORMAL) as HexColorString),
+          .setColor((colors[0]?.hex?.() ?? getColors(client.config).normal) as HexColorString),
       ],
     });
   },

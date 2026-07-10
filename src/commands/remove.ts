@@ -1,11 +1,13 @@
-import {type AutocompleteInteraction, ChatInputCommandInteraction, DiscordAPIError, EmbedBuilder, type HexColorString, MessageFlags, SlashCommandBuilder, codeBlock} from 'discord.js';
+import {type AutocompleteInteraction, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, codeBlock} from 'discord.js';
 
 import type {Command} from '@/types/client';
-import {truncateWithEllipsis} from '@/utils';
-import {getClient} from '@/utils/discord/client';
-import {createErrorEmbed} from '@/utils/discord/embeds';
-import {safeReply} from '@/utils/discord/interactions';
-import {ensurePlayerReady} from '@/utils/music';
+import {truncateWithEllipsis} from '@/shared/formatting';
+import {getClient} from '@/shared/discord/client';
+import {getColors} from '@/shared/discord/embedColors';
+import {createErrorEmbed} from '@/shared/discord/embeds';
+import {safeReply} from '@/shared/discord/interactions';
+import {safeRespondAutocomplete} from '@/shared/discord/interactions/safeAutocomplete';
+import {validateMusicCommand} from '@/features/music/guard';
 
 const MAX_AUTOCOMPLETE_RESULTS = 25;
 
@@ -16,11 +18,9 @@ export default {
     .addStringOption(option => option.setName('track').setDescription('🗑️ 제거할 음악을 선택해 주세요.').setRequired(true).setAutocomplete(true)),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
-    if (!(await ensurePlayerReady(interaction, {requirePlaying: true}))) return;
-
-    const client = getClient(interaction);
-    const queue = client.queues.get(interaction.guildId!);
+    const queue = await validateMusicCommand(interaction, {requirePlaying: true});
     if (!queue) return;
+    const client = getClient(interaction);
 
     const trackValue = interaction.options.getString('track', true);
     const userIndex = parseInt(trackValue, 10);
@@ -55,28 +55,16 @@ export default {
         new EmbedBuilder()
           .setTitle(`${userIndex}번째 음악을 대기열에서 제거했어요.`)
           .setDescription(codeBlock('diff', `- ${track.info.title}`))
-          .setColor(client.config.EMBED_COLOR_NORMAL as HexColorString),
+          .setColor(getColors(client.config).normal),
       ],
     });
   },
   async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
     const client = getClient(interaction);
 
-    const respondSafely = async (choices: {name: string; value: string}[]) => {
-      try {
-        await interaction.respond(choices);
-      } catch (error) {
-        if (error instanceof DiscordAPIError && error.code === 10062) {
-          client.logger.debug('Autocomplete interaction expired before response could be sent.');
-          return;
-        }
-        client.logger.error(new Error(`Failed to respond to autocomplete interaction: ${error instanceof Error ? error.message : String(error)}`));
-      }
-    };
-
     const queue = client.queues.get(interaction.guildId!);
     if (!queue || queue.size() === 0) {
-      await respondSafely([]);
+      await safeRespondAutocomplete(interaction, []);
       return;
     }
 
@@ -101,6 +89,6 @@ export default {
       .slice(0, MAX_AUTOCOMPLETE_RESULTS)
       .map(({name, value}) => ({name, value}));
 
-    await respondSafely(choices);
+    await safeRespondAutocomplete(interaction, choices);
   },
 } satisfies Command;

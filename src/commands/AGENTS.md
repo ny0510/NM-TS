@@ -10,16 +10,16 @@ Flat directory. Each file exports a single command object using `satisfies Comma
 
 ## WHERE TO LOOK
 
-| Task              | Location                                                            | Notes                  |
-| ----------------- | ------------------------------------------------------------------- | ---------------------- |
-| **Music Control** | `play.ts`, `skip.ts`, `stop.ts`, `pause.ts`, `resume.ts`, `seek.ts` | Core music playback    |
-| **Queue Mgmt**    | `queue.ts`, `remove.ts`, `shuffle.ts`, `clear.ts`                   | Queue manipulation     |
-| **Repeat/Auto**   | `repeat.ts`, `autoplay.ts`, `autoshuffle.ts`                        | 반복/자동재생/자동셔플 |
-| **Info**          | `info.ts`, `ping.ts`, `now.ts`                                      | Bot/Track status       |
-| **Config**        | `volume.ts`, `speed.ts`                                             | Player settings        |
-| **Broadcast**     | `broadcast.ts`                                                      | 공지 명령어            |
-| **Search**        | `search.ts`                                                         | 검색 명령어            |
-| **Chart**         | `chart.ts`                                                          | 음악 차트/순위         |
+| Task | Location | Notes |
+| --- | --- | --- |
+| **Music Control** | `play.ts`, `skip.ts`, `stop.ts`, `pause.ts`, `resume.ts`, `seek.ts` | Core music playback |
+| **Queue Mgmt** | `queue.ts`, `remove.ts`, `shuffle.ts`, `clear.ts` | Queue manipulation |
+| **Repeat/Auto** | `repeat.ts`, `autoplay.ts`, `autoshuffle.ts` | 반복/자동재생/자동셔플 |
+| **Info** | `info.ts`, `ping.ts`, `now.ts` | Bot/Track status |
+| **Config** | `volume.ts`, `speed.ts` | Player settings |
+| **Broadcast** | `broadcast.ts` | 공지 명령어 |
+| **Search** | `search.ts` | 검색 명령어 |
+| **Chart** | `chart.ts` (collector 추출됨) | 음악 차트/순위 |
 
 ## CONVENTIONS
 
@@ -28,18 +28,20 @@ Flat directory. Each file exports a single command object using `satisfies Comma
 - **Export**: `export default { ... } satisfies Command`
 - **Client**: Use `getClient(interaction)` (never manual cast)
 - **Reply**: Use `safeReply` from `@/utils/discord/interactions/safeReply`
-- **Validation**: Import directly from source modules:
-  - `@/utils/music/playerValidation` (ensureVoiceChannel, ensurePlayerReady, etc.)
-  - NOT from barrel file `@/utils/music/playerUtils`
+- **Validation**: Import `validateMusicCommand` and `ensure*` helpers from `@/utils/music/commandGuard`
 - **Embeds**: Use `createErrorEmbed` from `@/utils/discord/embeds`
+- **Embed colors**: Use `getColors(client.config)` from `@/utils/discord/embedColors`
+- **Error logging**: Use `toError(error, context)` from `@/utils/errors`
 - **Cooldowns**: Optional `cooldown` property (seconds, managed by CooldownManager)
 - **Permissions**: Optional `permissions` array (BigInt permission flags)
+- **Cross-domain imports**: Import from `@/music/trackAdder` (not the old `@/utils/music/trackAdder`); from `@/structures/queue/Queue`; from `@/analytics/trackPlayEvents`; etc.
 
 ## ANTI-PATTERNS (THIS DIRECTORY)
 
-- **Do NOT import from the `@/utils/music/playerUtils` barrel**: ~18 commands pull from `@/utils/music` and 4 from `@/utils/music/playerUtils`. Import from the concrete source module instead (e.g. `@/utils/music/playerValidation`, `@/utils/music/trackAdder`). The barrel exists for re-export only.
-- **Do NOT bypass `safeReply`**: `broadcast.ts` and `ping.ts` call raw `interaction.reply`/`interaction.editReply`. New commands must route every reply through `safeReply`.
-- **Do NOT leave dead commented code**: `chart.ts:29-37,41` contains dead commented-out blocks. Remove unused logic outright.
+- **Do NOT import from the `@/utils/music/index` or `@/utils/music/playerUtils` barrels**: Both were deleted in R16. Import directly from `@/utils/music/commandGuard`, `@/utils/music/queueOperations`, `@/utils/music/trackMeta`, etc.
+- **Do NOT bypass `safeReply`**: `broadcast.ts` and `ping.ts` still call raw `interaction.reply`/`interaction.editReply`. New commands must route every reply through `safeReply`.
+- **Do NOT use Discord error code magic numbers** (e.g. `10008`, `10062`, `40060`): Use `RESTJSONErrorCodes.UnknownMessage`, etc. from `discord-api-types/v10`.
+- **Do NOT leave dead commented code**: remove unused logic outright when refactoring.
 - **Do NOT rely on `noUnusedParameters` being off to stub params**: prefer `_`-prefix or genuinely omit.
 
 ## Example
@@ -53,7 +55,8 @@ export default {
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = getClient(interaction);
-    if (!(await ensureVoiceChannel(interaction))) return;
+    const queue = await validateMusicCommand(interaction, {requirePlaying: true});
+    if (!queue) return;
     // Command logic
   },
 } satisfies Command;
