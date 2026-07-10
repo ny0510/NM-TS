@@ -23,48 +23,50 @@ function extractPageFromCustomId(customId: string, prefix: string): number {
   return match?.[1] ? parseInt(match[1], 10) : 0;
 }
 
+async function refreshSelectionAndShowError(
+  interaction: StringSelectMenuInteraction,
+  client: ReturnType<typeof getClient>,
+  favorites: Awaited<ReturnType<typeof getUserFavorites>>,
+  page: number,
+  errorMessage: string,
+): Promise<void> {
+  const totalPages = Math.max(1, Math.ceil(favorites.length / FAVORITES_PER_PAGE));
+  const validPage = Math.min(Math.max(page, 0), totalPages - 1);
+  await interaction.update({components: buildFavoritesComponents(favorites, validPage, Date.now().toString(36))});
+  await interaction.followUp({embeds: [createErrorEmbed(client, errorMessage)], flags: MessageFlags.Ephemeral});
+}
+
 export async function handleFavoritesSelectMenu(interaction: StringSelectMenuInteraction): Promise<void> {
   const client = getClient(interaction);
   const userId = interaction.user.id;
   const guildId = interaction.guildId!;
   const page = extractPageFromCustomId(interaction.customId, 'fav_select_');
 
+  const favorites = await getUserFavorites(userId);
+
   if (!interaction.values || interaction.values.length === 0) {
-    await interaction.reply({
-      embeds: [createErrorEmbed(client, '재생할 곡을 선택해 주세요.')],
-      flags: MessageFlags.Ephemeral,
-    });
+    await refreshSelectionAndShowError(interaction, client, favorites, page, '재생할 곡을 선택해 주세요.');
     return;
   }
 
   const trackIds = interaction.values.map(v => Number.parseInt(v, 10));
-  const favorites = await getUserFavorites(userId);
   const selectedFavorites = trackIds.map(id => favorites.find(f => f.trackId === id)).filter((f): f is FavoriteTrack => Boolean(f));
 
   if (selectedFavorites.length === 0) {
-    await interaction.reply({
-      embeds: [createErrorEmbed(client, '선택한 곡을 찾을 수 없어요.')],
-      flags: MessageFlags.Ephemeral,
-    });
+    await refreshSelectionAndShowError(interaction, client, favorites, page, '선택한 곡을 찾을 수 없어요.');
     return;
   }
 
   const member = interaction.guild?.members.cache.get(userId);
   const voiceChannelId = member?.voice.channelId;
   if (!voiceChannelId) {
-    await interaction.reply({
-      embeds: [createErrorEmbed(client, '음성 채널에 먼저 들어가 주세요.')],
-      flags: MessageFlags.Ephemeral,
-    });
+    await refreshSelectionAndShowError(interaction, client, favorites, page, '음성 채널에 먼저 들어가 주세요.');
     return;
   }
 
   const existingQueue = client.queues.get(guildId);
   if (existingQueue && existingQueue.voiceChannelId !== voiceChannelId) {
-    await interaction.reply({
-      embeds: [createErrorEmbed(client, '봇과 같은 음성 채널에 있어야 해요.')],
-      flags: MessageFlags.Ephemeral,
-    });
+    await refreshSelectionAndShowError(interaction, client, favorites, page, '봇과 같은 음성 채널에 있어야 해요.');
     return;
   }
 
