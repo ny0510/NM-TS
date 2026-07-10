@@ -1,10 +1,10 @@
 import {ActivityType, type Client, Events, GatewayIntentBits, PresenceUpdateStatus} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
-import type {Event} from '@/types/client';
 import {toError} from '@/shared/errors';
+import type {Event} from '@/types/client';
 
-let presenceToggle = false;
+let presenceToggle = 0;
 let presenceInterval: ReturnType<typeof setInterval> | undefined;
 
 /** Presence 업데이트 주기 (10초) */
@@ -19,8 +19,7 @@ const updatePresence = (client: NMClient) => {
     messages.push(`NM | ${stats.activePlayers}개의 서버에서 음악 재생 중!`);
   }
 
-  const name = messages.length > 1 ? messages[presenceToggle ? 1 : 0] : messages[0];
-  presenceToggle = !presenceToggle;
+  const name = messages[presenceToggle++ % messages.length];
 
   client.user?.setPresence({
     activities: [{name: name ?? messages[0] ?? '', type: ActivityType.Custom}],
