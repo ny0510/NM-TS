@@ -4,7 +4,9 @@ import type {NMClient} from '@/client/Client';
 import {MODAL_SUBMIT_TIMEOUT} from '@/shared/discord/constants';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 
-import {buildQueueContainer, TRACKS_PER_PAGE} from './embedBuilder';
+import {buildQueueButtons} from './buttonBuilder';
+import {buildQueueEmbed} from './embedBuilder';
+import {TRACKS_PER_PAGE} from './embedBuilder';
 
 /**
  * Handles prev/next page navigation.
@@ -58,8 +60,8 @@ export async function handleQueuePageJump(interaction: ButtonInteraction, client
     }
 
     await modalInteraction.editReply({
-      components: [buildQueueContainer(client, currentQueue, inputValue)],
-      flags: MessageFlags.IsComponentsV2,
+      embeds: [buildQueueEmbed(client, currentQueue, inputValue)],
+      components: [buildQueueButtons(inputValue, currentTotalPages)],
     });
 
     return inputValue;

@@ -6,7 +6,8 @@ import {slashCommandMention} from '@/shared/discord';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {toError} from '@/shared/errors';
 
-import {buildQueueContainer, TRACKS_PER_PAGE} from './embedBuilder';
+import {buildQueueButtons} from './buttonBuilder';
+import {buildQueueEmbed, TRACKS_PER_PAGE} from './embedBuilder';
 import {calculateQueuePage, handleQueuePageJump} from './paginationHandler';
 
 function clampQueuePage(page: number, totalPages: number): number {
@@ -85,8 +86,8 @@ export async function handleQueueCollect(
   }
 
   await i.editReply({
-    components: [buildQueueContainer(client, currentQueue, pageRef.value)],
-    flags: MessageFlags.IsComponentsV2,
+    embeds: [buildQueueEmbed(client, currentQueue, pageRef.value)],
+    components: [buildQueueButtons(pageRef.value, currentTotalPages)],
   });
 }
 
