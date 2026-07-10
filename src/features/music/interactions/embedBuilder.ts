@@ -1,4 +1,4 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, resolveColor, SectionBuilder, SeparatorBuilder, SeparatorSpacingSize, TextDisplayBuilder} from 'discord.js';
+import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, resolveColor, SeparatorBuilder, SeparatorSpacingSize, TextDisplayBuilder} from 'discord.js';
 import type {MessageActionRowComponentBuilder} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
@@ -58,10 +58,9 @@ export function buildQueueContainer(client: NMClient, queue: Queue, page: number
     const url = currentTrack.info.uri ?? '';
     const duration = currentTrack.info.isStream ? '실시간 스트리밍' : msToTime(currentTrack.info.length);
     const requester = formatRequester(currentTrack.requester);
-    const section = new SectionBuilder().addTextDisplayComponents(
+    container.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(`**${hyperlink(`⏵ ${title}`, url)}**\n┕ ${duration} | ${requester}`),
     );
-    container.addSectionComponents(section);
   } else {
     container.addTextDisplayComponents(new TextDisplayBuilder().setContent('> 현재 재생중인 음악이 없어요.'));
   }
@@ -77,15 +76,14 @@ export function buildQueueContainer(client: NMClient, queue: Queue, page: number
 
   container.addSeparatorComponents(new SeparatorBuilder().setDivider(true).setSpacing(SeparatorSpacingSize.Small));
 
-  // Track list — Section per track
+  // Track list — TextDisplay per track
   tracks.forEach((track, i) => {
     const index = start + i + 1;
     const duration = track.info.isStream ? '실시간 스트리밍' : msToTime(track.info.length);
     const requester = formatRequester(track.requester);
-    const section = new SectionBuilder().addTextDisplayComponents(
+    container.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(`${index}. **${truncateWithEllipsis(track.info.title, 50)}**\n┕ ${duration} | ${requester}`),
     );
-    container.addSectionComponents(section);
   });
 
   // Footer
