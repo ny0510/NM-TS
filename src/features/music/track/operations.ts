@@ -9,7 +9,6 @@ import {safeReply} from '@/shared/discord/interactions';
 import {playlistPattern, truncateWithEllipsis, videoPattern} from '@/shared/formatting';
 import {createQuickAddButton} from '@/features/music/button/quickAdd';
 import {createQueue} from '@/features/music/guard';
-import {createPlayerControls} from '@/features/music/button/controls';
 import {getEmbedMeta} from './embeds';
 import {filterTracksWithOptions} from './resolver';
 
@@ -145,7 +144,7 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
 
       await safeReply(interaction, {
         embeds: [embed],
-        components: [createPlayerControls(queue, track.info.uri ?? '')],
+        components: [createQuickAddButton()],
       });
       break;
     }

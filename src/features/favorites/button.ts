@@ -1,14 +1,14 @@
 import {ButtonInteraction, EmbedBuilder, type HexColorString, MessageFlags} from 'discord.js';
 import getImageColors from 'get-image-colors';
 
-import type {QueueTrack} from '@/types/music';
+import {addFavorite, isFavorited, removeFavoriteByIdentifier} from '@/features/favorites/service';
+import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
 import {safeDeferUpdate, safeReply, slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {truncateWithEllipsis} from '@/shared/formatting';
-import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
-import {addFavorite, isFavorited, removeFavoriteByIdentifier} from '@/features/favorites/service';
+import type {QueueTrack} from '@/types/music';
 
 export async function handleFavToggleButton(interaction: ButtonInteraction): Promise<void> {
   const client = getClient(interaction);
@@ -65,7 +65,12 @@ export async function handleFavToggleButton(interaction: ButtonInteraction): Pro
     const success = await removeFavoriteByIdentifier(userId, source, identifier);
     if (success) {
       await interaction.followUp({
-        embeds: [new EmbedBuilder().setTitle(truncateWithEllipsis(`🗑️ ${currentTrack.info.title}`, 50)).setColor(COLORS.error)],
+        embeds: [
+          new EmbedBuilder()
+            .setTitle('🗑️ 즐겨찾기에서 제거했어요.')
+            .setDescription(truncateWithEllipsis(`🗑️ ${currentTrack.info.title}`, 50))
+            .setColor(COLORS.error),
+        ],
         flags: MessageFlags.Ephemeral,
       });
     } else {
@@ -78,7 +83,12 @@ export async function handleFavToggleButton(interaction: ButtonInteraction): Pro
     const success = await addFavorite(userId, currentTrack);
     if (success) {
       await interaction.followUp({
-        embeds: [new EmbedBuilder().setTitle(truncateWithEllipsis(`⭐️ ${currentTrack.info.title}`, 50)).setColor((colors[0]?.hex?.() ?? COLORS.normal) as HexColorString)],
+        embeds: [
+          new EmbedBuilder()
+            .setTitle('⭐️ 즐겨찾기에 추가했어요.')
+            .setDescription(truncateWithEllipsis(`⭐️ ${currentTrack.info.title}`, 50))
+            .setColor(COLORS.normal),
+        ],
         flags: MessageFlags.Ephemeral,
       });
     } else {
