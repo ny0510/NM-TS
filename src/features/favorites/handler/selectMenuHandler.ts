@@ -9,7 +9,7 @@ import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
 import {Logger} from '@/shared/logger';
-import {FAVORITES_PER_PAGE, buildFavoritesComponents} from '@/features/favorites/component';
+import {FAVORITES_PER_PAGE, buildFavoritesComponents} from '@/features/favorites/componentBuilder';
 import {getUserFavorites} from '@/features/favorites/service';
 import type {FavoriteTrack} from '@/features/favorites/service';
 import {getEmbedMeta} from '@/features/music/track/embeds';

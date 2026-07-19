@@ -5,7 +5,7 @@ import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
-import {createQuickAddButton} from '@/features/music/button/quickAdd';
+import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
 
 export function createPlayerControls(queue: Queue, trackUri: string): ActionRowBuilder<ButtonBuilder> {
   const row = new ActionRowBuilder<ButtonBuilder>();

@@ -5,8 +5,7 @@ import {MODAL_SUBMIT_TIMEOUT} from '@/shared/discord/constants';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 
 import {buildQueueButtons} from './buttonBuilder';
-import {buildQueueEmbed} from './embedBuilder';
-import {TRACKS_PER_PAGE} from './embedBuilder';
+import {buildQueueEmbed, TRACKS_PER_PAGE} from './embedBuilder';
 
 /**
  * Handles prev/next page navigation.

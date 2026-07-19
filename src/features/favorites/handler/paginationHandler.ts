@@ -4,7 +4,7 @@ import {safeDeferUpdate, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 
-import {updateFavoritesList} from './types';
+import {updateFavoritesList} from './listUpdater';
 
 export async function handleFavoritesRefresh(interaction: ButtonInteraction): Promise<void> {
   const deferred = await safeDeferUpdate(interaction);

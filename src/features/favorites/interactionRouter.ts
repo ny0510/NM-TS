@@ -1,10 +1,10 @@
 import {ButtonInteraction} from 'discord.js';
 
-import {handleFavoritesDeleteCancel, handleFavoritesDeleteConfirm, handleFavoritesDeleteExec} from './handlers/deleteConfirm';
-import {handleFavoritesPageJump} from './handlers/pageJump';
-import {handleFavoritesPageNavigation, handleFavoritesRefresh} from './handlers/pagination';
+import {handleFavoritesDeleteCancel, handleFavoritesDeleteConfirm, handleFavoritesDeleteExec} from './handler/deleteConfirmHandler';
+import {handleFavoritesPageJump} from './handler/pageJumpHandler';
+import {handleFavoritesPageNavigation, handleFavoritesRefresh} from './handler/paginationHandler';
 
-export {handleFavoritesSelectMenu} from './handlers/selectMenu';
+export {handleFavoritesSelectMenu} from './handler/selectMenuHandler';
 
 export async function handleFavoritesPagination(interaction: ButtonInteraction): Promise<void> {
   const {customId} = interaction;

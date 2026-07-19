@@ -3,7 +3,7 @@ import {ButtonInteraction, LabelBuilder, MessageFlags, ModalBuilder, TextInputBu
 import {getClient} from '@/shared/discord/client';
 import {MODAL_SUBMIT_TIMEOUT} from '@/shared/discord/constants';
 import {createErrorEmbed} from '@/shared/discord/embeds';
-import {FAVORITES_PER_PAGE, buildFavoritesComponents} from '@/features/favorites/component';
+import {FAVORITES_PER_PAGE, buildFavoritesComponents} from '@/features/favorites/componentBuilder';
 import {getUserFavorites} from '@/features/favorites/service';
 
 export async function handleFavoritesPageJump(interaction: ButtonInteraction): Promise<void> {

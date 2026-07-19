@@ -6,7 +6,7 @@ import {safeDeferReply, safeEditReply, safeReply} from '@/shared/discord/interac
 import {checkBotPermissions, formatMissingPermissions} from '@/shared/discord/permissions';
 import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
-import {addTrackToQueue} from '@/features/music/track/operations';
+import {addTrackToQueue} from '@/features/music/track/trackAdder';
 
 // ── UI Builder ──
 

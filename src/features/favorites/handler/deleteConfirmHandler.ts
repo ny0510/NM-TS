@@ -1,6 +1,6 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, MessageFlags} from 'discord.js';
 
-import {buildFavoritesComponents} from '@/features/favorites/component';
+import {buildFavoritesComponents} from '@/features/favorites/componentBuilder';
 import {getUserFavorites, removeFavorite} from '@/features/favorites/service';
 import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';

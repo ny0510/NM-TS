@@ -1,7 +1,6 @@
-import {ButtonInteraction, EmbedBuilder, type HexColorString, MessageFlags} from 'discord.js';
-import getImageColors from 'get-image-colors';
+import {ButtonInteraction, EmbedBuilder, MessageFlags} from 'discord.js';
 
-import {addFavorite, isFavorited, removeFavoriteByIdentifier} from '@/features/favorites/service';
+import {addFavorite, isFavorited} from '@/features/favorites/service';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
 import {safeDeferUpdate, safeReply, slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';

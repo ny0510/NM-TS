@@ -7,7 +7,7 @@ import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {playlistPattern, truncateWithEllipsis, videoPattern} from '@/shared/formatting';
-import {createQuickAddButton} from '@/features/music/button/quickAdd';
+import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
 import {createQueue} from '@/features/music/guard';
 import {getEmbedMeta} from './embeds';
 import {filterTracksWithOptions} from './resolver';
