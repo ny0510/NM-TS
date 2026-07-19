@@ -4,7 +4,7 @@ import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
-import {destroyQueueSafely} from '@/features/music/queue/operations';
+import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
 import {validateMusicCommand} from '@/features/music/guard';
 
 export default {

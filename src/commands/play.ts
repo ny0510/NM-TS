@@ -5,7 +5,7 @@ import {getGoogleSuggestions} from '@/shared/autocomplete/googleSuggest';
 import {getClient} from '@/shared/discord/client';
 import {safeRespondAutocomplete} from '@/shared/discord/interactions/safeAutocomplete';
 import {ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
-import {addTrackToQueue} from '@/features/music/track/operations';
+import {addTrackToQueue} from '@/features/music/track/trackAdder';
 
 export default {
   data: new SlashCommandBuilder()

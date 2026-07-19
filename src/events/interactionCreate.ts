@@ -9,10 +9,10 @@ import {safeReply} from '@/shared/discord/interactions';
 import {checkPermissions} from '@/shared/discord/permissions';
 import {toError} from '@/shared/errors';
 import PermissionTranslations from '@/shared/discord/permissions/locale/permission';
-import {handlePlayerControlsButtons} from '@/features/music/button/controls';
-import {handleFavToggleButton} from '@/features/favorites/button';
-import {handleFavoritesPagination, handleFavoritesSelectMenu} from '@/features/favorites/interaction';
-import {handleQuickAddButton} from '@/features/music/button/quickAdd';
+import {handlePlayerControlsButtons} from '@/features/music/button/controlsBuilder';
+import {handleFavToggleButton} from '@/features/favorites/favToggleHandler';
+import {handleFavoritesPagination, handleFavoritesSelectMenu} from '@/features/favorites/interactionRouter';
+import {handleQuickAddButton} from '@/features/music/button/quickAddBuilder';
 
 export default {
   name: Events.InteractionCreate,

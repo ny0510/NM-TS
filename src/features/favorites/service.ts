@@ -68,21 +68,6 @@ export async function removeFavorite(userId: string, trackId: number): Promise<b
   }
 }
 
-export async function removeFavoriteByIdentifier(userId: string, source: string, identifier: string): Promise<boolean> {
-  const db = getDb();
-
-  try {
-    const track = await db.select({id: tracks.id}).from(tracks).where(and(eq(tracks.source, source), eq(tracks.identifier, identifier))).limit(1);
-
-    if (!track[0]) return false;
-
-    return await removeFavorite(userId, track[0].id);
-  } catch (error) {
-    logger.error(toError(error, '즐겨찾기 제거 중 오류가 발생했어요'));
-    return false;
-  }
-}
-
 export async function getUserFavorites(userId: string): Promise<FavoriteTrack[]> {
   const db = getDb();
 

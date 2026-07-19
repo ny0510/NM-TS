@@ -5,8 +5,8 @@ import type {QueueTrack} from '@/types/music';
 import {COLORS} from '@/shared/discord/embedColors';
 import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
 import {Logger} from '@/shared/logger';
-import {createPlayerControls} from '@/features/music/button/controls';
-import {createQuickAddButton} from '@/features/music/button/quickAdd';
+import {createPlayerControls} from '@/features/music/button/controlsBuilder';
+import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
 import {getEmbedMeta} from '@/features/music/track/embeds';
 import type {PlayerEventContext} from './types';
 

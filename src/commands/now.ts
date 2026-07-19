@@ -6,7 +6,7 @@ import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {msToTime, truncateWithEllipsis} from '@/shared/formatting';
-import {createProgressBar} from '@/features/music/queue/operations';
+import {createProgressBar} from '@/features/music/queue/queueOperations';
 import {ensurePlaying} from '@/features/music/guard';
 
 const getVolumeIcon = (volume: number): string => {

@@ -4,7 +4,7 @@ import type {NMClient} from '@/client/Client';
 import type {Event} from '@/types/client';
 import {toError} from '@/shared/errors';
 import {isTimedOut} from '@/shared/discord/permissions/isTimedOut';
-import {destroyQueueSafely} from '@/features/music/queue/operations';
+import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
 
 export default {
   name: Events.GuildMemberUpdate,

@@ -7,10 +7,9 @@ import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {toError} from '@/shared/errors';
 import {validateMusicCommand} from '@/features/music/guard';
-import {buildQueueButtons, disableQueueComponents} from '@/features/music/interactions/buttonBuilder';
-import {buildQueueEmbed} from '@/features/music/interactions/embedBuilder';
-import {createQueueFilter, handleQueueCollect, handleQueueCollectError} from '@/features/music/interactions/collectHandler';
-import {TRACKS_PER_PAGE} from '@/features/music/interactions/embedBuilder';
+import {buildQueueButtons, disableQueueComponents} from '@/features/music/interaction/buttonBuilder';
+import {createQueueFilter, handleQueueCollect, handleQueueCollectError} from '@/features/music/interaction/collectHandler';
+import {buildQueueEmbed, TRACKS_PER_PAGE} from '@/features/music/interaction/embedBuilder';
 
 export default {
   data: new SlashCommandBuilder()

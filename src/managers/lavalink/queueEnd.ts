@@ -5,7 +5,7 @@ import type {Queue} from '@/features/music/queue/Queue';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {Logger} from '@/shared/logger';
-import {destroyQueueSafely} from '@/features/music/queue/operations';
+import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
 
 const logger = new Logger('Lavalink');
 

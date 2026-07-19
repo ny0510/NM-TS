@@ -30,3 +30,12 @@ features/
 
 - Each feature directory may contain its own `*.ts` modules and subdirectories; no barrel `index.ts` files.
 - Imports across features or into `commands/`/`events/` use `@/` aliases — see root `AGENTS.md`.
+
+## Naming
+
+- Subdomain directories are singular: `button/`, `track/`, `queue/`, `collector/`, `handler/`, `interaction/`.
+- Files that build a Discord embed/component/button end in `Builder` (e.g. `embedBuilder.ts`, `componentBuilder.ts`).
+- Files that respond to an interaction event (button click, collector, select menu) end in `Handler` (e.g. `collectHandler.ts`, `selectMenuHandler.ts`).
+- A feature's top-level dispatch/entry file ends in `Router` (e.g. `interactionRouter.ts`).
+- Don't rely on the parent directory to disambiguate a filename — name the file for what it does (e.g. `trackAdder.ts` / `queueOperations.ts`, not two files both called `operations.ts`).
+- Class-exporting files are the one PascalCase exception (e.g. `queue/Queue.ts`); everything else is camelCase.

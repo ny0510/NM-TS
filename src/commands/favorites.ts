@@ -2,7 +2,7 @@ import {MessageFlags, SlashCommandBuilder} from 'discord.js';
 
 import type {Command} from '@/types/client';
 import {safeReply} from '@/shared/discord';
-import {buildFavoritesComponents} from '@/features/favorites/component';
+import {buildFavoritesComponents} from '@/features/favorites/componentBuilder';
 import {getUserFavorites} from '@/features/favorites/service';
 
 export default {

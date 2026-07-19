@@ -3,7 +3,7 @@ import {VoiceState} from 'discord.js';
 import type {NMClient} from '@/client/Client';
 import type {Queue} from '@/features/music/queue/Queue';
 import {isTimedOut} from '@/shared/discord/permissions/isTimedOut';
-import {destroyQueueSafely} from '@/features/music/queue/operations';
+import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
 import {clearActiveTimeout} from './activityManager';
 import {createBotKickedEmbed, sendTextChannelMessage} from './notifications';
 
