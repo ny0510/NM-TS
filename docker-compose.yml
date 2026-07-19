@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - TZ=Asia/Seoul
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     networks:
@@ -30,6 +32,7 @@ services:
     restart: unless-stopped
     environment:
       - _JAVA_OPTIONS=-Xmx2G
+      - TZ=Asia/Seoul
     volumes:
       - ./data/lavalink/application.yml:/opt/Lavalink/application.yml
       - ./data/lavalink/plugins/:/opt/Lavalink/plugins/
@@ -57,6 +60,8 @@ services:
     restart: unless-stopped
     init: true
     stop_grace_period: 2s
+    environment:
+      - TZ=Asia/Seoul
     networks:
       - nm
     ports:
@@ -78,6 +83,7 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - TZ=Asia/Seoul
     command: bun run db:migrate:once
     networks:
       - nm
@@ -99,6 +105,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      - TZ=Asia/Seoul
     networks:
       - nm
     depends_on:
