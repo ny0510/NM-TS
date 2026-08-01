@@ -22,7 +22,7 @@ export default {
 
       const fields = [
         {name: '👨‍💻 개발자', value: userMention('690148325604720660'), inline: true},
-        {name: '📦 버전', value: `v${version}`, inline: true},
+        {name: '📦 버전', value: `[v${version}](https://github.com/ny0510/NM-TS/releases/tag/v${version})`, inline: true},
         {name: '📚 라이브러리', value: '[Discord.js](https://discord.js.org), [Lavalink](https://github.com/lavalink-devs/Lavalink)', inline: true},
         {name: '📊 서버 수', value: `${stats.guilds}개`, inline: true},
         {name: '👥 사용자 수', value: `${stats.users}명`, inline: true},
