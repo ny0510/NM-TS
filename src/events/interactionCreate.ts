@@ -26,7 +26,7 @@ export default {
         await handlePlayerControlsButtons(interaction);
       } else if (interaction.customId === 'fav_toggle') {
         await handleFavToggleButton(interaction);
-      } else if (interaction.customId.startsWith('fav_page_') || interaction.customId.startsWith('fav_remove_') || interaction.customId.startsWith('fav_refresh_')) {
+      } else if (interaction.customId.startsWith('fav_page_') || interaction.customId.startsWith('fav_remove_') || interaction.customId.startsWith('fav_refresh_') || interaction.customId.startsWith('fav_add_all_')) {
         await handleFavoritesPagination(interaction);
       }
       return;
