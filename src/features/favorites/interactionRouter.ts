@@ -1,14 +1,26 @@
-import {ButtonInteraction} from 'discord.js';
+import {ButtonInteraction, StringSelectMenuInteraction} from 'discord.js';
 
+import {handleFavToggleButton} from './favToggleHandler';
 import {handleFavoritesAddAll} from './handler/addAllHandler';
 import {handleFavoritesDeleteCancel, handleFavoritesDeleteConfirm, handleFavoritesDeleteExec} from './handler/deleteConfirmHandler';
 import {handleFavoritesPageJump} from './handler/pageJumpHandler';
 import {handleFavoritesPageNavigation, handleFavoritesRefresh} from './handler/paginationHandler';
+import {handleFavoritesSelectMenu} from './handler/selectMenuHandler';
 
-export {handleFavoritesSelectMenu} from './handler/selectMenuHandler';
+export {handleFavoritesSelectMenu};
 
-export async function handleFavoritesPagination(interaction: ButtonInteraction): Promise<void> {
+export async function handleFavoritesInteraction(interaction: ButtonInteraction | StringSelectMenuInteraction): Promise<void> {
+  if (interaction.isStringSelectMenu()) {
+    await handleFavoritesSelectMenu(interaction);
+    return;
+  }
+
   const {customId} = interaction;
+
+  if (customId === 'fav_toggle') {
+    await handleFavToggleButton(interaction);
+    return;
+  }
 
   // Delete confirmation flow
   if (customId.startsWith('fav_remove_confirm_')) {

@@ -10,8 +10,7 @@ import {checkPermissions} from '@/shared/discord/permissions';
 import {toError} from '@/shared/errors';
 import PermissionTranslations from '@/shared/discord/permissions/locale/permission';
 import {handlePlayerControlsButtons} from '@/features/music/button/controlsBuilder';
-import {handleFavToggleButton} from '@/features/favorites/favToggleHandler';
-import {handleFavoritesPagination, handleFavoritesSelectMenu} from '@/features/favorites/interactionRouter';
+import {handleFavoritesInteraction} from '@/features/favorites/interactionRouter';
 import {handleQuickAddButton} from '@/features/music/button/quickAddBuilder';
 
 export default {
@@ -19,23 +18,23 @@ export default {
   async execute(interaction: Interaction): Promise<void> {
     const client = getClient(interaction);
 
+    if (interaction.isButton() || interaction.isStringSelectMenu()) {
+      if (interaction.customId.startsWith('fav_')) {
+        await handleFavoritesInteraction(interaction);
+        return;
+      }
+    }
+
     if (interaction.isButton()) {
       if (interaction.customId === 'quick_add') {
         await handleQuickAddButton(interaction);
       } else if (interaction.customId.startsWith('control_')) {
         await handlePlayerControlsButtons(interaction);
-      } else if (interaction.customId === 'fav_toggle') {
-        await handleFavToggleButton(interaction);
-      } else if (interaction.customId.startsWith('fav_page_') || interaction.customId.startsWith('fav_remove_') || interaction.customId.startsWith('fav_refresh_') || interaction.customId.startsWith('fav_add_all_')) {
-        await handleFavoritesPagination(interaction);
       }
       return;
     }
 
     if (interaction.isStringSelectMenu()) {
-      if (interaction.customId.startsWith('fav_select_')) {
-        await handleFavoritesSelectMenu(interaction);
-      }
       return;
     }
 
