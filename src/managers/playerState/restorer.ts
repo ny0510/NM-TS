@@ -1,11 +1,11 @@
 import {EmbedBuilder, type Client} from 'discord.js';
 
 import type {NMClient} from '@/client/Client';
+import {handleEmptyChannel} from '@/events/voiceStateUpdate/activityManager';
 import type {QueueTrack} from '@/types/music';
 import {PLAYER_STATE_VERSION, type PersistedQueueState} from '@/types/playerState';
 import type {ILogger} from '@/shared/logger';
 import {clearPlayerStates, loadPlayerStates} from './persistence';
-import {CHANNEL_EMPTY_TIMEOUT_MS} from '@/shared/discord/constants';
 import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 
@@ -184,17 +184,8 @@ async function restoreQueueFromState(client: Client, state: PersistedQueueState,
   if (restoreVoiceChannel?.isVoiceBased()) {
     const nonBotMembers = restoreVoiceChannel.members.filter(m => !m.user.bot);
     if (nonBotMembers.size === 0) {
-      await queue.pause(true);
+      await handleEmptyChannel(nmClient, state.guildId, guild, queue);
       logger.info(`Restored queue for guild ${state.guildId} is in empty channel, pausing`);
-
-      if (textChannel?.isSendable()) {
-        try {
-          const endTime = Math.floor((Date.now() + CHANNEL_EMPTY_TIMEOUT_MS) / 1000);
-          await textChannel.send({
-            embeds: [new EmbedBuilder().setTitle('아무도 없어서 음악을 일시정지했어요.').setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`).setColor(COLORS.normal)],
-          });
-        } catch {}
-      }
     }
   }
 

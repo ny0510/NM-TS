@@ -27,7 +27,7 @@ export function createBotKickedEmbed(client: NMClient): EmbedBuilder {
 export function createPausedEmbed(client: NMClient, endTime: number): EmbedBuilder {
   return new EmbedBuilder()
     .setTitle('아무도 없어서 음악을 일시정지했어요.')
-    .setDescription(`<t:${endTime}:R> 후에 자동으로 연결을 종료해요.`)
+    .setDescription(`<t:${endTime}:R>에 자동으로 연결을 종료해요.`)
     .setColor(COLORS.normal);
 }
 

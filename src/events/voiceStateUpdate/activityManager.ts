@@ -41,7 +41,8 @@ export async function handleEmptyChannel(
 
         if (message?.editable) {
           try {
-            await message.edit({embeds: [embed.setDescription('10분이 지나서 자동으로 연결을 종료했어요.')]});
+            const disconnectedAt = Math.floor(Date.now() / 1000);
+            await message.edit({embeds: [embed.setDescription(`<t:${disconnectedAt}:f>에 자동으로 연결을 종료했어요.`)]});
           } catch (editError) {
             client.logger.warn(`Failed to edit timeout message: ${editError}`);
           }
