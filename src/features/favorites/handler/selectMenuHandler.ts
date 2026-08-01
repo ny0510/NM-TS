@@ -1,4 +1,4 @@
-import {EmbedBuilder, type HexColorString, MessageFlags, StringSelectMenuInteraction} from 'discord.js';
+import {EmbedBuilder, type HexColorString, type MessageComponentInteraction, MessageFlags, StringSelectMenuInteraction} from 'discord.js';
 import {LoadType} from 'shoukaku';
 
 import type {QueueTrack} from '@/types/music';
@@ -24,7 +24,7 @@ function extractPageFromCustomId(customId: string, prefix: string): number {
 }
 
 async function refreshSelectionAndShowError(
-  interaction: StringSelectMenuInteraction,
+  interaction: MessageComponentInteraction,
   client: ReturnType<typeof getClient>,
   favorites: Awaited<ReturnType<typeof getUserFavorites>>,
   page: number,
@@ -39,7 +39,6 @@ async function refreshSelectionAndShowError(
 export async function handleFavoritesSelectMenu(interaction: StringSelectMenuInteraction): Promise<void> {
   const client = getClient(interaction);
   const userId = interaction.user.id;
-  const guildId = interaction.guildId!;
   const page = extractPageFromCustomId(interaction.customId, 'fav_select_');
 
   const favorites = await getUserFavorites(userId);
@@ -57,16 +56,24 @@ export async function handleFavoritesSelectMenu(interaction: StringSelectMenuInt
     return;
   }
 
+  await addFavoritesToQueue(interaction, selectedFavorites, page);
+}
+
+export async function addFavoritesToQueue(interaction: MessageComponentInteraction, selectedFavorites: FavoriteTrack[], page: number): Promise<void> {
+  const client = getClient(interaction);
+  const userId = interaction.user.id;
+  const guildId = interaction.guildId!;
+
   const member = interaction.guild?.members.cache.get(userId);
   const voiceChannelId = member?.voice.channelId;
   if (!voiceChannelId) {
-    await refreshSelectionAndShowError(interaction, client, favorites, page, '음성 채널에 먼저 들어가 주세요.');
+    await refreshSelectionAndShowError(interaction, client, await getUserFavorites(userId), page, '음성 채널에 먼저 들어가 주세요.');
     return;
   }
 
   const existingQueue = client.queues.get(guildId);
   if (existingQueue && existingQueue.voiceChannelId !== voiceChannelId) {
-    await refreshSelectionAndShowError(interaction, client, favorites, page, '봇과 같은 음성 채널에 있어야 해요.');
+    await refreshSelectionAndShowError(interaction, client, await getUserFavorites(userId), page, '봇과 같은 음성 채널에 있어야 해요.');
     return;
   }
 

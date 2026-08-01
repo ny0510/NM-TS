@@ -1,5 +1,6 @@
 import {ButtonInteraction} from 'discord.js';
 
+import {handleFavoritesAddAll} from './handler/addAllHandler';
 import {handleFavoritesDeleteCancel, handleFavoritesDeleteConfirm, handleFavoritesDeleteExec} from './handler/deleteConfirmHandler';
 import {handleFavoritesPageJump} from './handler/pageJumpHandler';
 import {handleFavoritesPageNavigation, handleFavoritesRefresh} from './handler/paginationHandler';
@@ -34,6 +35,12 @@ export async function handleFavoritesPagination(interaction: ButtonInteraction):
   // Refresh
   if (customId.startsWith('fav_refresh_')) {
     await handleFavoritesRefresh(interaction);
+    return;
+  }
+
+  // Add all favorites to queue
+  if (customId.startsWith('fav_add_all_')) {
+    await handleFavoritesAddAll(interaction);
     return;
   }
 

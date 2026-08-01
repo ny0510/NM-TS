@@ -65,6 +65,7 @@ export function buildFavoritesContainer(favorites: Favorites, page: number, tota
       .setStyle(ButtonStyle.Secondary)
       .setDisabled(page >= totalPages - 1),
     new ButtonBuilder().setCustomId(`fav_refresh_${nonce}`).setLabel('새로고침').setEmoji({name: '🔄'}).setStyle(ButtonStyle.Primary),
+    new ButtonBuilder().setCustomId(`fav_add_all_${nonce}`).setLabel('전체 추가').setEmoji({name: '➕'}).setStyle(ButtonStyle.Success),
   );
 
   container.addActionRowComponents(paginationRow);
