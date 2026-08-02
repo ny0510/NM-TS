@@ -153,11 +153,11 @@ export default {
         }
       }
 
-      const searchQueueSize = queue.size();
-      if (!queue.playing && !queue.paused && searchQueueSize + 1 === selectedTracks.length) await queue.play();
+      if (!queue.playing && !queue.paused && queue.size()) await queue.play();
 
       const tracksMeta = await getEmbedMeta(queueTracks, true, queue);
       const [tracksColor, tracksFooterText] = [tracksMeta.colors, tracksMeta.footerText];
+      const addedCount = results.filter(result => result.success).length;
       const description = results.length
         ? results
             .map(({track, success, error}) => {
@@ -171,7 +171,7 @@ export default {
       return await i.update({
         embeds: [
           new EmbedBuilder()
-            .setTitle(`💿 선택한 ${selectedTracks.length ? '음악들을' : '음악을'} 대기열에 추가했어요.`)
+            .setTitle(addedCount > 0 ? `💿 선택한 ${results.length}곡 중 ${addedCount}곡을 대기열에 추가했어요.` : '⚠️ 선택한 곡을 대기열에 추가하지 못했어요.')
             .setDescription(description)
             .setThumbnail(firstTrackThumbnail || null)
             .setFooter({text: tracksFooterText})
