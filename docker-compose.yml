@@ -77,7 +77,7 @@ services:
       context: .
       cache_from:
         - ghcr.io/ny0510/nm:latest
-    image: ghcr.io/ny0510/nm:latest
+    image: ghcr.io/ny0510/nm:${NM_IMAGE_TAG:-latest}
     container_name: nm-migrate
     env_file:
       - .env
@@ -97,7 +97,7 @@ services:
       context: .
       cache_from:
         - ghcr.io/ny0510/nm:latest
-    image: ghcr.io/ny0510/nm:latest
+    image: ghcr.io/ny0510/nm:${NM_IMAGE_TAG:-latest}
     container_name: nm
     restart: unless-stopped
     env_file:
