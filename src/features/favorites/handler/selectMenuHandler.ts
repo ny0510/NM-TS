@@ -130,6 +130,7 @@ export async function addFavoritesToQueue(interaction: MessageComponentInteracti
       track.requester = interaction.user;
       track.playContext = {playContext: 'play', requestChannelId: interaction.channelId};
       queue.add(track);
+      if (!queue.playing && !queue.paused) await queue.play();
       addedQueueTracks.push(track);
       results.push({title: fav.title, uri: fav.uri, success: true});
     } catch (error) {
@@ -138,8 +139,6 @@ export async function addFavoritesToQueue(interaction: MessageComponentInteracti
       results.push({title: fav.title, uri: fav.uri, success: false, error: errorMessage});
     }
   }
-
-  if (!queue.playing && !queue.paused) await queue.play();
 
   const refreshedFavorites = await getUserFavorites(userId);
   const totalPages = Math.max(1, Math.ceil(refreshedFavorites.length / FAVORITES_PER_PAGE));
