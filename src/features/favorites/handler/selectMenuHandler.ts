@@ -147,7 +147,7 @@ export async function addFavoritesToQueue(interaction: MessageComponentInteracti
     components: buildFavoritesComponents(refreshedFavorites, validPage),
   });
 
-  const description = results.map(({title, uri, success, error}) => `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(title, 50), uri ?? '')}`).join('\n');
+  const description = truncateWithEllipsis(results.map(({title, uri, success, error}) => `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(title, 50), uri ?? '')}`).join('\n'), 4096);
 
   const addedCount = results.filter(r => r.success).length;
   const firstTrackThumbnail = addedQueueTracks[0]?.info.artworkUrl ?? selectedFavorites[0]?.artworkUrl ?? null;
