@@ -35,7 +35,9 @@ export class LavalinkManager {
     this.shoukaku = new Shoukaku(new Connectors.DiscordJS(client), nodes, {
       resume: true,
       resumeTimeout: 60 * 5,
-      reconnectTries: 5,
+      resumeByLibrary: true,
+      // Shoukaku 4.3.0 retains a failed retry error even if a later attempt connects.
+      reconnectTries: 1,
       reconnectInterval: 5,
       moveOnDisconnect: false,
     });

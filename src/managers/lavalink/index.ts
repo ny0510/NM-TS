@@ -30,7 +30,11 @@ export const registerLavalinkEvents = (client: NMClient): void => {
 
   shoukaku.on('error', (name: string, error: unknown) => logger.error(toError(error, `Node ${name} error`)));
   shoukaku.on('close', (name: string, code: number, reason: string) => logger.warn(`Node ${name} closed (code: ${code}, reason: ${reason})`));
-  shoukaku.on('disconnect', (name: string, count: number) => logger.warn(`Node ${name} disconnected (${count} players affected)`));
+  shoukaku.on('disconnect', (name: string, count: number) => {
+    logger.warn(`Node ${name} disconnected (${count} players affected)`);
+    const node = shoukaku.nodes.get(name);
+    if (node) void node.connect().catch(() => {});
+  });
   shoukaku.on('reconnecting', (name: string, reconnectsLeft: number, interval: number) => logger.info(`Node ${name} reconnecting... (${reconnectsLeft} tries left, interval: ${interval}s)`));
   shoukaku.on('debug', (name: string, info: string) => logger.debug(`[${name}] ${info}`));
 };
