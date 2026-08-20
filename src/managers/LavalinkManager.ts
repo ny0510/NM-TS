@@ -15,6 +15,7 @@ const RETRY_DELAY_MS = 1000;
 
 export class LavalinkManager {
   private readonly shoukaku: Shoukaku;
+  private readonly nodeOption: NodeOption;
   private readonly logger: ILogger;
   private readonly config: Config;
   private readonly queues = new Map<string, Queue>();
@@ -23,16 +24,14 @@ export class LavalinkManager {
     this.logger = logger;
     this.config = config;
 
-    const nodes: NodeOption[] = [
-      {
-        name: config.LAVALINK_IDENTIFIER,
-        url: `${config.LAVALINK_HOST}:${config.LAVALINK_PORT}`,
-        auth: config.LAVALINK_PASSWORD,
-        secure: config.LAVALINK_SECURE,
-      },
-    ];
+    this.nodeOption = {
+      name: config.LAVALINK_IDENTIFIER,
+      url: `${config.LAVALINK_HOST}:${config.LAVALINK_PORT}`,
+      auth: config.LAVALINK_PASSWORD,
+      secure: config.LAVALINK_SECURE,
+    };
 
-    this.shoukaku = new Shoukaku(new Connectors.DiscordJS(client), nodes, {
+    this.shoukaku = new Shoukaku(new Connectors.DiscordJS(client), [this.nodeOption], {
       resume: true,
       resumeTimeout: 60 * 5,
       resumeByLibrary: true,
@@ -160,6 +159,13 @@ export class LavalinkManager {
 
   public getNode(): Node | undefined {
     return this.shoukaku.getIdealNode();
+  }
+
+  public restoreNode(name: string): void {
+    if (name !== this.nodeOption.name || this.shoukaku.nodes.has(name)) return;
+
+    this.logger.warn(`Node ${name} unavailable; creating a new connection`);
+    this.shoukaku.addNode(this.nodeOption);
   }
 
   public registerEvents(client: NMClient): void {

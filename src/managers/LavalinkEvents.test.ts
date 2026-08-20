@@ -4,24 +4,22 @@ import {EventEmitter} from 'node:events';
 import {registerLavalinkEvents} from './lavalink';
 import type {NMClient} from '@/client/Client';
 
-test('reconnects a disconnected Lavalink node', () => {
-  let attempts = 0;
+test('restores a dropped Lavalink node after its final connection error', () => {
+  const restored: string[] = [];
   const shoukaku = Object.assign(new EventEmitter(), {
-    nodes: new Map([
-      [
-        'Mahiro',
-        {
-          connect: async () => {
-            attempts++;
-          },
-        },
-      ],
-    ]),
+    nodes: new Map(),
   });
-  const client = {services: {lavalinkManager: {getShoukaku: () => shoukaku}}} as unknown as NMClient;
+  const client = {
+    services: {
+      lavalinkManager: {
+        getShoukaku: () => shoukaku,
+        restoreNode: (name: string) => restored.push(name),
+      },
+    },
+  } as unknown as NMClient;
 
   registerLavalinkEvents(client);
-  shoukaku.emit('disconnect', 'Mahiro', 0);
+  shoukaku.emit('error', 'Mahiro', new Error('Websocket closed before a connection was established'));
 
-  expect(attempts).toBe(1);
+  expect(restored).toEqual(['Mahiro']);
 });
