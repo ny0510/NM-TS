@@ -47,3 +47,35 @@ test('rebinds players to a restored Lavalink node', () => {
 
   expect(player.node).toBe(newNode);
 });
+
+test('notifies active queues once when Lavalink restarts and recovers', () => {
+  const sentTitles: string[] = [];
+  const shoukaku = Object.assign(new EventEmitter(), {
+    nodes: new Map(),
+  });
+  const channel = {
+    isSendable: () => true,
+    send: (payload: {embeds: Array<{data: {title?: string}}>}) => {
+      sentTitles.push(payload.embeds[0]?.data.title ?? '');
+      return Promise.resolve();
+    },
+  };
+  const client = {
+    channels: {cache: new Map([['text', channel]])},
+    services: {
+      lavalinkManager: {
+        getShoukaku: () => shoukaku,
+        getQueues: () => new Map([['guild', {textChannelId: 'text'}]]),
+        restoreNode: () => undefined,
+      },
+    },
+  } as unknown as NMClient;
+
+  registerLavalinkEvents(client);
+  shoukaku.emit('ready', 'Mahiro', false, false);
+  shoukaku.emit('close', 'Mahiro', 1001, 'restart');
+  shoukaku.emit('reconnecting', 'Mahiro', 1, 5);
+  shoukaku.emit('ready', 'Mahiro', false, true);
+
+  expect(sentTitles).toEqual(['음악 서버가 재시작 중이에요.', '음악 서버 연결이 복구됐어요.']);
+});
