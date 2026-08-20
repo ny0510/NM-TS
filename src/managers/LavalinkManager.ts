@@ -166,6 +166,13 @@ export class LavalinkManager {
 
     this.logger.warn(`Node ${name} unavailable; creating a new connection`);
     this.shoukaku.addNode(this.nodeOption);
+
+    const node = this.shoukaku.nodes.get(name);
+    if (!node) return;
+
+    for (const player of this.shoukaku.players.values()) {
+      if (player.node.name === name) player.node = node;
+    }
   }
 
   public registerEvents(client: NMClient): void {
