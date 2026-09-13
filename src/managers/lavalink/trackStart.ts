@@ -17,6 +17,7 @@ export const handleTrackStart = async (ctx: PlayerEventContext, data: TrackStart
   const track = data.track as QueueTrack;
 
   logger.info(`Player ${guildName} (${guildId}) track start. Track: ${track.info.title}`);
+  queue.set('trackStartedAt', Date.now());
 
   const channel = client.channels.cache.get(queue.textChannelId);
   const isTrackRepeating = queue.trackRepeat;

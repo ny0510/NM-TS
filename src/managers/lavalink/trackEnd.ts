@@ -8,6 +8,11 @@ import {handleAutoplay} from './autoplay';
 import {handleQueueEnd} from './queueEnd';
 
 const logger = new Logger('Lavalink');
+const MIN_REPEAT_PLAYBACK_MS = 5_000;
+
+export function shouldRestartRepeatedTrack(startedAt: number | undefined, endedAt: number): boolean {
+  return startedAt === undefined || endedAt - startedAt >= MIN_REPEAT_PLAYBACK_MS;
+}
 
 export const handleTrackEnd = async (ctx: PlayerEventContext, data: TrackEndEvent): Promise<void> => {
   const {queue, client, guildName, guildId} = ctx;
@@ -31,8 +36,14 @@ export const handleTrackEnd = async (ctx: PlayerEventContext, data: TrackEndEven
   }
 
   if (queue.trackRepeat && data.reason === 'finished') {
-    await queue.player.playTrack({track: {encoded: track.encoded}});
-    return;
+    const startedAt = queue.get<number>('trackStartedAt');
+    if (shouldRestartRepeatedTrack(startedAt, Date.now())) {
+      await queue.player.playTrack({track: {encoded: track.encoded}});
+      return;
+    }
+
+    queue.setTrackRepeat(false);
+    logger.warn(`Player ${guildName} (${guildId}) track repeat stopped after playback ended within five seconds. Track: ${track.info.title}`);
   }
 
   if (queue.queueRepeat && data.reason === 'finished') {

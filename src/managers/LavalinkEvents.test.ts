@@ -3,7 +3,17 @@ import {EventEmitter} from 'node:events';
 
 import {LavalinkManager} from './LavalinkManager';
 import {registerLavalinkEvents} from './lavalink';
+import {shouldRestartRepeatedTrack} from './lavalink/trackEnd';
 import type {NMClient} from '@/client/Client';
+
+test('stops track repeat when the replay finishes again within five seconds', () => {
+  expect(shouldRestartRepeatedTrack(10_000, 14_999)).toBe(false);
+});
+
+test('keeps track repeat after normal playback or when its start was not observed', () => {
+  expect(shouldRestartRepeatedTrack(10_000, 15_000)).toBe(true);
+  expect(shouldRestartRepeatedTrack(undefined, 15_000)).toBe(true);
+});
 
 test('restores a dropped Lavalink node after its final connection error', () => {
   const restored: string[] = [];
