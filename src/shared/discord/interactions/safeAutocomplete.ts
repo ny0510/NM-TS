@@ -4,11 +4,7 @@ import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 import {getClient} from '@/shared/discord/client';
 import {toError} from '@/shared/errors';
 
-export async function safeRespondAutocomplete(
-  interaction: AutocompleteInteraction,
-  choices: {name: string; value: string}[],
-  debugMessage?: string,
-): Promise<void> {
+export async function safeRespondAutocomplete(interaction: AutocompleteInteraction, choices: {name: string; value: string}[], debugMessage?: string): Promise<void> {
   try {
     await interaction.respond(choices);
   } catch (error) {

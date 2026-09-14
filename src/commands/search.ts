@@ -1,16 +1,15 @@
-import {ActionRowBuilder, ChatInputCommandInteraction, ComponentType, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, StringSelectMenuInteraction} from 'discord.js';
+import {ActionRowBuilder, type ChatInputCommandInteraction, ComponentType, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, type StringSelectMenuInteraction} from 'discord.js';
 import {LoadType, type Track} from 'shoukaku';
-
-import type {Command} from '@/types/client';
-import type {QueueTrack} from '@/types/music';
+import {createQueue, ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
+import {getEmbedMeta} from '@/features/music/track/embeds';
 import {slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/shared/formatting';
-import {createQueue, ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
-import {getEmbedMeta} from '@/features/music/track/embeds';
+import type {Command} from '@/types/client';
+import type {QueueTrack} from '@/types/music';
 
 /** 검색 결과 선택 대기 타임아웃 (5분) */
 const SEARCH_COLLECTOR_TIMEOUT = 60 * 1000 * 5;
@@ -25,7 +24,7 @@ const SEARCH_PLATFORMS = {
 
 type SearchPlatformKey = keyof typeof SEARCH_PLATFORMS;
 
-export default {
+export const command = {
   data: new SlashCommandBuilder()
     .setName('search')
     .setDescription('음악을 검색해요.')

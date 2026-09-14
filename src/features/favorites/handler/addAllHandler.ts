@@ -1,8 +1,7 @@
-import {ButtonInteraction, MessageFlags} from 'discord.js';
-
+import {type ButtonInteraction, MessageFlags} from 'discord.js';
+import {getUserFavorites} from '@/features/favorites/service';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
-import {getUserFavorites} from '@/features/favorites/service';
 
 import {addFavoritesToQueue} from './selectMenuHandler';
 

@@ -15,14 +15,17 @@ declare namespace NodeJS {
     EMBED_COLOR_ERROR: string;
 
     LOG_PREFIX: string;
+    LOG_LEVEL?: 'debug' | 'info' | 'warn' | 'error';
     DEFAULT_VOLUME?: string;
     NODE_ENV?: 'development' | 'production';
-
-    PLAYER_STATE_PATH?: string;
 
     KOREANBOTS_TOKEN?: string;
     KOREANBOTS_CLIENT_ID?: string;
     KOREANBOTS_UPDATE_INTERVAL?: string;
+
+    PRESENCE_UPDATE_INTERVAL_MS?: string;
+    PRESENCE_INITIAL_MESSAGE?: string;
+    PRESENCE_MESSAGES?: string;
 
     PROGRESS_CIRCLE_START?: string;
     PROGRESS_CIRCLE_MIDDLE?: string;

@@ -1,9 +1,8 @@
-import {ButtonInteraction, CommandInteraction, type InteractionDeferReplyOptions, type InteractionEditReplyOptions, type InteractionReplyOptions, MessageFlags} from 'discord.js';
+import {type ButtonInteraction, type CommandInteraction, type InteractionDeferReplyOptions, type InteractionEditReplyOptions, type InteractionReplyOptions, MessageFlags} from 'discord.js';
 import {RESTJSONErrorCodes} from 'discord-api-types/v10';
-
-import {checkAndMarkInteraction} from './interactionManager';
 import {getClient} from '@/shared/discord/client';
 import {toError} from '@/shared/errors';
+import {checkAndMarkInteraction} from './interactionManager';
 
 const hasDiscordCode = (value: unknown): value is {code: number} => {
   if (typeof value !== 'object' || value === null || !('code' in value)) return false;

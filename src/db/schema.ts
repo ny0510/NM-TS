@@ -16,10 +16,7 @@ export const tracks = pgTable(
     createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
   },
-  table => [
-    uniqueIndex('tracks_source_identifier_unique').on(table.source, table.identifier),
-    index('tracks_source_identifier_idx').on(table.source, table.identifier),
-  ],
+  table => [uniqueIndex('tracks_source_identifier_unique').on(table.source, table.identifier), index('tracks_source_identifier_idx').on(table.source, table.identifier)],
 );
 
 export const trackPlayEvents = pgTable(
@@ -65,8 +62,5 @@ export const userFavorites = pgTable(
       .references(() => tracks.id, {onDelete: 'cascade'}),
     createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
   },
-  table => [
-    uniqueIndex('user_favorites_user_track_unique').on(table.userId, table.trackId),
-    index('user_favorites_user_idx').on(table.userId),
-  ],
+  table => [uniqueIndex('user_favorites_user_track_unique').on(table.userId, table.trackId), index('user_favorites_user_idx').on(table.userId)],
 );

@@ -1,14 +1,13 @@
 import type {Client, User} from 'discord.js';
 import {Connectors, type LavalinkResponse, LoadType, type Node, type NodeOption, Shoukaku} from 'shoukaku';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import {Queue} from '@/features/music/queue/Queue';
-import type {Config} from '@/types/client';
-import type {QueueTrack} from '@/types/music';
-import type {CreateQueueOptions} from '@/types/music';
+import {registerLavalinkEvents, registerPlayerEvents} from '@/managers/lavalink';
 import {isURL} from '@/shared/formatting/patterns';
 import type {ILogger} from '@/shared/logger';
-import {registerLavalinkEvents, registerPlayerEvents} from '@/managers/lavalink';
+import type {Config} from '@/types/client';
+import type {CreateQueueOptions, QueueTrack} from '@/types/music';
 
 /** 재시도 기본 지연 시간 (1초) */
 const RETRY_DELAY_MS = 1000;

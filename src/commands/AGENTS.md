@@ -25,7 +25,7 @@ Flat directory. Each file exports a single command object using `satisfies Comma
 
 - **Type**: Use `satisfies Command` (NOT `as Command`)
 - **Import type**: `import type {Command} from '@/types/client'`
-- **Export**: `export default { ... } satisfies Command`
+- **Export**: `export const command = { ... } satisfies Command`
 - **Client**: Use `getClient(interaction)` (never manual cast)
 - **Reply**: Use `safeReply` from `@/utils/discord/interactions/safeReply`
 - **Validation**: Import `validateMusicCommand` and `ensure*` helpers from `@/utils/music/commandGuard`
@@ -49,7 +49,7 @@ Flat directory. Each file exports a single command object using `satisfies Comma
 ```typescript
 import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder().setName('example').setDescription('설명'),
   permissions: [PermissionsBitField.Flags.Connect],
   cooldown: 3,

@@ -1,5 +1,8 @@
-import {tracks} from '@/db/schema';
+import type {ExtractTablesWithRelations} from 'drizzle-orm';
 import type {PostgresJsTransaction} from 'drizzle-orm/postgres-js';
+import * as schema from '@/db/schema';
+
+const {tracks} = schema;
 
 export interface UpsertTrackData {
   source: string;
@@ -11,10 +14,7 @@ export interface UpsertTrackData {
   artworkUrl: string | null;
 }
 
-export async function upsertTrack(
-  tx: PostgresJsTransaction<any, any>,
-  data: UpsertTrackData,
-): Promise<{id: number}> {
+export async function upsertTrack(tx: PostgresJsTransaction<typeof schema, ExtractTablesWithRelations<typeof schema>>, data: UpsertTrackData): Promise<{id: number}> {
   const [savedTrack] = await tx
     .insert(tracks)
     .values({

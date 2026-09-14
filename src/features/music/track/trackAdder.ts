@@ -1,14 +1,14 @@
-import {ButtonInteraction, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, inlineCode, type HexColorString} from 'discord.js';
+import {type ButtonInteraction, type ChatInputCommandInteraction, EmbedBuilder, type HexColorString, inlineCode, MessageFlags} from 'discord.js';
 import {LoadType} from 'shoukaku';
 
-import type {NMClient} from '@/client/Client';
-import type {AddTrackOptions, QueueTrack} from '@/types/music';
+import type {NMClient} from '@/client';
+import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
+import {createQueue} from '@/features/music/guard';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {playlistPattern, truncateWithEllipsis, videoPattern} from '@/shared/formatting';
-import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
-import {createQueue} from '@/features/music/guard';
+import type {AddTrackOptions, QueueTrack} from '@/types/music';
 import {getEmbedMeta} from './embeds';
 import {filterTracksWithOptions} from './resolver';
 
@@ -21,8 +21,10 @@ function getQueuePositionText(addFirst: boolean, index: number | null): string {
 export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCommandInteraction | ButtonInteraction, options: AddTrackOptions): Promise<void> => {
   let {query} = options;
   const {addFirst = false, index = null, ignorePlaylist = false, excludeCover = false, excludeShorts = false} = options;
+  const guildId = interaction.guildId;
+  if (!guildId) return;
 
-  let queue = client.queues.get(interaction.guildId!);
+  let queue = client.queues.get(guildId);
 
   if (index !== null) {
     const queueSize = queue ? queue.size() : 0;

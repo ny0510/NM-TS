@@ -1,4 +1,4 @@
-import {ButtonInteraction, EmbedBuilder, MessageFlags} from 'discord.js';
+import {type ButtonInteraction, EmbedBuilder, MessageFlags} from 'discord.js';
 
 import {addFavorite, isFavorited} from '@/features/favorites/service';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
@@ -11,7 +11,9 @@ import type {QueueTrack} from '@/types/music';
 
 export async function handleFavToggleButton(interaction: ButtonInteraction): Promise<void> {
   const client = getClient(interaction);
-  const queue = client.queues.get(interaction.guildId!);
+  const guildId = interaction.guildId;
+  if (!guildId) return;
+  const queue = client.queues.get(guildId);
 
   if (!queue) {
     await safeReply(interaction, {

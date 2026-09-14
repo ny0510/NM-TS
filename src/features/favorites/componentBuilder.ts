@@ -1,8 +1,7 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, SectionBuilder, SeparatorBuilder, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextDisplayBuilder} from 'discord.js';
 import type {MessageActionRowComponentBuilder} from 'discord.js';
-
-import {msToTime, truncateWithEllipsis} from '@/shared/formatting';
+import {ActionRowBuilder, ButtonBuilder, ButtonStyle, ContainerBuilder, SectionBuilder, SeparatorBuilder, SeparatorSpacingSize, StringSelectMenuBuilder, StringSelectMenuOptionBuilder, TextDisplayBuilder} from 'discord.js';
 import type {getUserFavorites} from '@/features/favorites/service';
+import {msToTime, truncateWithEllipsis} from '@/shared/formatting';
 
 export const FAVORITES_PER_PAGE = 5;
 

@@ -1,21 +1,20 @@
 import {type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
-
-import type {Command} from '@/types/client';
+import {createChartFilter, disableChartComponents, handleChartCollect, handleChartCollectError} from '@/features/chart/collector';
+import {formatMonthLabel, getChartRanking, getCurrentMonthStart, parseMonthInput} from '@/features/chart/data';
+import {buildChartButtons, buildChartEmbed, TRACKS_PER_PAGE} from '@/features/chart/embed';
 import {getClient} from '@/shared/discord/client';
 import {COLLECTOR_TIMEOUT_1H} from '@/shared/discord/constants';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {toError} from '@/shared/errors';
-import {formatMonthLabel, getChartRanking, getCurrentMonthStart, parseMonthInput} from '@/features/chart/data';
-import {TRACKS_PER_PAGE, buildChartEmbed, buildChartButtons} from '@/features/chart/embed';
-import {createChartFilter, disableChartComponents, handleChartCollect, handleChartCollectError} from '@/features/chart/collector';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder()
     .setName('chart')
     .setDescription('음악 재생 순위를 확인해요.')
     .addStringOption(option => option.setName('scope').setDescription('🌐 조회 범위를 선택해 주세요.').addChoices({name: '🏠 이 서버', value: 'guild'}, {name: '🌐 전체 서버', value: 'global'}))
-    .addStringOption(option => option.setName('month').setDescription('📅 조회할 달을 YYYY-MM 형식으로 입력해 주세요.')),
+    .addStringOption(option => option.setName('month').setDescription('📅 조회할 달을 MM 또는 YYYY-MM 형식으로 입력해 주세요.')),
   cooldown: 5,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = getClient(interaction);
@@ -36,14 +35,14 @@ export default {
 
     if (!month) {
       await safeReply(interaction, {
-        embeds: [createErrorEmbed(client, '입력한 날짜 형식이 올바르지 않아요.', 'YYYY-MM 형식으로 입력해 주세요.')],
+        embeds: [createErrorEmbed(client, '입력한 날짜 형식이 올바르지 않아요.', 'MM 또는 YYYY-MM 형식으로 입력해 주세요.')],
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     try {
-      let ranking = await getChartRanking(month, isGlobal ? null : guildId);
+      const ranking = await getChartRanking(month, isGlobal ? null : guildId);
 
       if (ranking.length === 0) {
         await safeReply(interaction, {
@@ -54,8 +53,8 @@ export default {
       }
 
       const monthLabel = formatMonthLabel(month);
-      let totalPages = Math.max(1, Math.ceil(ranking.length / TRACKS_PER_PAGE));
-      let page = 1;
+      const totalPages = Math.max(1, Math.ceil(ranking.length / TRACKS_PER_PAGE));
+      const page = 1;
       const guildName = interaction.guild?.name ?? null;
 
       const embed = buildChartEmbed(client, ranking, page, totalPages, monthLabel, isGlobal, guildName);

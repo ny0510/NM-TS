@@ -1,5 +1,5 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, EmbedBuilder, MessageFlags} from 'discord.js';
-
+import {ActionRowBuilder, ButtonBuilder, type ButtonInteraction, ButtonStyle, EmbedBuilder, MessageFlags} from 'discord.js';
+import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 import {buildFavoritesComponents} from '@/features/favorites/componentBuilder';
 import {getUserFavorites, removeFavorite} from '@/features/favorites/service';
 import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
@@ -9,14 +9,13 @@ import {createErrorEmbed} from '@/shared/discord/embeds';
 import {toError} from '@/shared/errors';
 import {truncateWithEllipsis} from '@/shared/formatting';
 import {Logger} from '@/shared/logger';
-import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 
 const logger = new Logger('FavoritesList');
 
 const EPHEMERAL_TIMEOUT_MS = 3000;
 
 export async function handleFavoritesDeleteConfirm(interaction: ButtonInteraction): Promise<void> {
-  const client = getClient(interaction);
+  const _client = getClient(interaction);
   const userId = interaction.user.id;
   const customId = interaction.customId;
 
@@ -100,7 +99,7 @@ export async function handleFavoritesDeleteExec(interaction: ButtonInteraction):
 }
 
 export async function handleFavoritesDeleteCancel(interaction: ButtonInteraction): Promise<void> {
-  const client = getClient(interaction);
+  const _client = getClient(interaction);
 
   try {
     await interaction.update({

@@ -1,10 +1,10 @@
 import {getDb} from '@/db';
 import {trackPlayEvents} from '@/db/schema';
-import type {QueueTrack} from '@/types/music';
 import {upsertTrack} from '@/db/trackUpsert';
+import {extractTrackMeta} from '@/features/music/meta';
 import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
-import {extractTrackMeta} from '@/features/music/meta';
+import type {QueueTrack} from '@/types/music';
 
 const logger = new Logger('TrackPlayEvents');
 

@@ -1,13 +1,12 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, MessageFlags} from 'discord.js';
-
+import {ActionRowBuilder, ButtonBuilder, type ButtonInteraction, ButtonStyle, MessageFlags} from 'discord.js';
+import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
+import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
 import type {Queue} from '@/features/music/queue/Queue';
 import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
-import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
-import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
 
-export function createPlayerControls(queue: Queue, trackUri: string): ActionRowBuilder<ButtonBuilder> {
+export function createPlayerControls(queue: Queue, _trackUri: string): ActionRowBuilder<ButtonBuilder> {
   const row = new ActionRowBuilder<ButtonBuilder>();
 
   row.addComponents(
@@ -21,19 +20,16 @@ export function createPlayerControls(queue: Queue, trackUri: string): ActionRowB
   const quickAddRow = createQuickAddButton();
   row.addComponents(quickAddRow.components);
 
-  row.addComponents(
-    new ButtonBuilder()
-      .setCustomId('fav_toggle')
-      .setEmoji('⭐')
-      .setStyle(ButtonStyle.Secondary),
-  );
+  row.addComponents(new ButtonBuilder().setCustomId('fav_toggle').setEmoji('⭐').setStyle(ButtonStyle.Secondary));
 
   return row;
 }
 
 export async function handlePlayerControlsButtons(interaction: ButtonInteraction): Promise<void> {
   const client = getClient(interaction);
-  const queue = client.queues.get(interaction.guildId!);
+  const guildId = interaction.guildId;
+  if (!guildId) return;
+  const queue = client.queues.get(guildId);
 
   if (!queue) {
     await safeReply(interaction, {

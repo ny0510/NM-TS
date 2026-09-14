@@ -1,5 +1,5 @@
-import type {QueueTrack} from '@/types/music';
 import {coverPattern} from '@/shared/formatting';
+import type {QueueTrack} from '@/types/music';
 
 export function isCoverTrack(track: QueueTrack): boolean {
   return coverPattern.test(track.info.title) || coverPattern.test(track.info.author);

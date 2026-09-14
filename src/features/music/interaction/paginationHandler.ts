@@ -1,6 +1,6 @@
-import {ButtonInteraction, LabelBuilder, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle} from 'discord.js';
+import {type ButtonInteraction, LabelBuilder, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import {MODAL_SUBMIT_TIMEOUT} from '@/shared/discord/constants';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 
@@ -26,11 +26,7 @@ export async function handleQueuePageJump(interaction: ButtonInteraction, client
   const totalPages = Math.max(1, Math.ceil((client.queues.get(guildId)?.size() ?? 0) / TRACKS_PER_PAGE));
   const modalId = `queue_page_modal_${interaction.id}`;
   const modal = new ModalBuilder().setCustomId(modalId).setTitle('페이지 이동');
-  const pageInput = new TextInputBuilder()
-    .setCustomId('queue_page_input')
-    .setStyle(TextInputStyle.Short)
-    .setPlaceholder(`1 ~ ${totalPages}`)
-    .setRequired(true);
+  const pageInput = new TextInputBuilder().setCustomId('queue_page_input').setStyle(TextInputStyle.Short).setPlaceholder(`1 ~ ${totalPages}`).setRequired(true);
   const pageLabel = new LabelBuilder().setLabel('이동할 페이지 번호를 입력해 주세요.').setTextInputComponent(pageInput);
   modal.addLabelComponents(pageLabel);
   await interaction.showModal(modal);
@@ -50,7 +46,7 @@ export async function handleQueuePageJump(interaction: ButtonInteraction, client
 
     const currentTotalPages = Math.max(1, Math.ceil(currentQueue.size() / TRACKS_PER_PAGE));
     const inputValue = parseInt(modalInteraction.fields.getTextInputValue('queue_page_input'), 10);
-    if (isNaN(inputValue) || inputValue < 1 || inputValue > currentTotalPages) {
+    if (Number.isNaN(inputValue) || inputValue < 1 || inputValue > currentTotalPages) {
       await modalInteraction.followUp({
         embeds: [createErrorEmbed(client, '유효하지 않은 페이지 번호예요.', `1 ~ ${currentTotalPages} 사이의 번호를 입력해 주세요.`)],
         flags: MessageFlags.Ephemeral,

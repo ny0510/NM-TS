@@ -226,12 +226,8 @@
           "name": "track_play_events_track_id_tracks_id_fk",
           "tableFrom": "track_play_events",
           "tableTo": "tracks",
-          "columnsFrom": [
-            "track_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["track_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -433,12 +429,8 @@
           "name": "user_favorites_track_id_tracks_id_fk",
           "tableFrom": "user_favorites",
           "tableTo": "tracks",
-          "columnsFrom": [
-            "track_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["track_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

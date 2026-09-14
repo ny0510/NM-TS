@@ -1,4 +1,4 @@
-import {ButtonInteraction, MessageFlags} from 'discord.js';
+import {type ButtonInteraction, MessageFlags} from 'discord.js';
 
 import {safeDeferUpdate, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
@@ -20,7 +20,7 @@ export async function handleFavoritesPageNavigation(interaction: ButtonInteracti
   if (!deferred) return;
 
   const pageMatch = interaction.customId.match(/fav_page_(-?\d+)_/);
-  if (!pageMatch || !pageMatch[1]) {
+  if (!pageMatch?.[1]) {
     await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '잘못된 페이지 요청이에요.')],
       flags: MessageFlags.Ephemeral,

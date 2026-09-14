@@ -1,15 +1,16 @@
 import chalk from 'chalk';
-import {type ColorResolvable, EmbedBuilder, Guild, WebhookClient, type WebhookMessageCreateOptions, userMention} from 'discord.js';
+import {type ColorResolvable, EmbedBuilder, type Guild, userMention, WebhookClient, type WebhookMessageCreateOptions} from 'discord.js';
 import {DateTime} from 'luxon';
 
-import type {NMClient} from '@/client/Client';
-import type {ILogger, LogLevel} from '@/types/logger';
+import type {NMClient} from '@/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {truncateWithEllipsis} from '@/shared/formatting';
+import type {ILogger, LogLevel} from '@/types/logger';
+import {writeTerm} from '@/utils/term';
 
 const FALLBACK_ERROR_COLOR = '#ff3333' as ColorResolvable;
 
-export type {LogLevel, ILogger} from '@/types/logger';
+export type {ILogger, LogLevel} from '@/types/logger';
 
 export class Logger implements ILogger {
   private readonly _prefix?: string;
@@ -25,7 +26,7 @@ export class Logger implements ILogger {
       try {
         this._webhook = new WebhookClient({url: webhookUrl});
       } catch (error) {
-        console.error('Failed to initialize Discord webhook:', error);
+        writeTerm(`Failed to initialize Discord webhook: ${error instanceof Error ? error.message : String(error)}\n`);
       }
     }
   }
@@ -94,7 +95,7 @@ export class Logger implements ILogger {
       const webhookOptions = this.createWebhookOptions([embed]);
       await this._webhook.send(webhookOptions);
     } catch (error) {
-      console.error('Failed to send log to Discord:', error);
+      writeTerm(`Failed to send log to Discord: ${error instanceof Error ? error.message : String(error)}\n`);
     }
   }
 
@@ -104,13 +105,13 @@ export class Logger implements ILogger {
 
   public info(message: string): void {
     if (this.shouldLog('info')) {
-      console.log(`${this.prefix} ${message}`);
+      writeTerm(`${this.prefix} ${message}\n`);
     }
   }
 
   public warn(message: string): void {
     if (this.shouldLog('warn')) {
-      console.warn(`${this.prefix} ${chalk.yellowBright('WARN')} ${chalk.yellowBright(message)}`);
+      writeTerm(`${this.prefix} ${chalk.yellowBright('WARN')} ${chalk.yellowBright(message)}\n`);
     }
   }
 
@@ -118,10 +119,9 @@ export class Logger implements ILogger {
     if (this.shouldLog('error')) {
       const message = error instanceof Error ? error.message : 'An error occurred';
       if (typeof Bun !== 'undefined') {
-        console.error(`${this.prefix} ${chalk.redBright('ERROR')} ${chalk.redBright(message)} > ${Bun.inspect(error, {colors: true, sorted: true})}`);
+        writeTerm(`${this.prefix} ${chalk.redBright('ERROR')} ${chalk.redBright(message)} > ${Bun.inspect(error, {colors: true, sorted: true})}\n`);
       } else {
-        console.error(`${this.prefix} ${chalk.redBright('ERROR')} ${chalk.redBright(message)}`);
-        console.error(error);
+        writeTerm(`${this.prefix} ${chalk.redBright('ERROR')} ${chalk.redBright(message)}\n${String(error)}\n`);
       }
       this.sendErrorToDiscord(message, error);
     }
@@ -129,7 +129,7 @@ export class Logger implements ILogger {
 
   public debug(message: string): void {
     if (this.shouldLog('debug')) {
-      console.debug(`${this.prefix} ${chalk.gray('DEBUG')} ${chalk.gray(message)}`);
+      writeTerm(`${this.prefix} ${chalk.gray('DEBUG')} ${chalk.gray(message)}\n`);
     }
   }
 
@@ -149,8 +149,8 @@ export class Logger implements ILogger {
     if (!this._webhook) return;
 
     try {
-      let currentGuildCount = client.guilds.cache.size;
-      let currentUserCount = client.guilds.cache.reduce((acc: number, guild: Guild) => acc + (guild.memberCount || 0), 0);
+      const currentGuildCount = client.guilds.cache.size;
+      const currentUserCount = client.guilds.cache.reduce((acc: number, guild: Guild) => acc + (guild.memberCount || 0), 0);
 
       let currentGuildOwner = '알 수 없음';
       try {
@@ -160,7 +160,7 @@ export class Logger implements ILogger {
         } else {
           currentGuildOwner = guild.ownerId || '알 수 없음';
         }
-      } catch (error) {
+      } catch (_error) {
         currentGuildOwner = guild.ownerId || '알 수 없음';
       }
 
@@ -178,7 +178,7 @@ export class Logger implements ILogger {
       const webhookOptions = this.createWebhookOptions([embed]);
       await this._webhook.send(webhookOptions);
     } catch (error) {
-      console.error('Failed to send guild event to Discord:', error);
+      writeTerm(`Failed to send guild event to Discord: ${error instanceof Error ? error.message : String(error)}\n`);
     }
   }
 }

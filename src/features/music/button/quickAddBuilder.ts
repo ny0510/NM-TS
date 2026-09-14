@@ -1,12 +1,11 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonInteraction, ButtonStyle, MessageFlags, PermissionsBitField, codeBlock} from 'discord.js';
-
+import {ActionRowBuilder, ButtonBuilder, type ButtonInteraction, ButtonStyle, codeBlock, MessageFlags, PermissionsBitField} from 'discord.js';
+import {addTrackToQueue} from '@/features/music/track/trackAdder';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeDeferReply, safeEditReply, safeReply} from '@/shared/discord/interactions';
 import {checkBotPermissions, formatMissingPermissions} from '@/shared/discord/permissions';
 import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
-import {addTrackToQueue} from '@/features/music/track/trackAdder';
 
 // ── UI Builder ──
 

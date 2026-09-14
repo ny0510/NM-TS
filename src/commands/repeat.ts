@@ -1,12 +1,10 @@
-import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
-
-import type {Command} from '@/types/client';
-import {getClient} from '@/shared/discord/client';
+import {type ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {validateMusicCommand} from '@/features/music/guard';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
-import {validateMusicCommand} from '@/features/music/guard';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder()
     .setName('repeat')
     .setDescription('반복 재생을 설정해요.')
@@ -19,8 +17,6 @@ export default {
 
     const queue = await validateMusicCommand(interaction, {requirePlaying: true});
     if (!queue) return;
-    const client = getClient(interaction);
-
     if (subcommand === 'track') {
       const enabled = !queue.trackRepeat;
       queue.setTrackRepeat(enabled);

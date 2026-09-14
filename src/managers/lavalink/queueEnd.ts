@@ -1,6 +1,6 @@
 import {type Message, EmbedBuilder} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';

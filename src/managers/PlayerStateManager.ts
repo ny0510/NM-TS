@@ -1,7 +1,6 @@
-import {type Client} from 'discord.js';
-
-import {saveAllPlayerStates} from '@/managers/playerState/serializer';
+import type {Client} from 'discord.js';
 import {clearAllPlayerStates, restoreAllPlayerStates} from '@/managers/playerState/restorer';
+import {saveAllPlayerStates} from '@/managers/playerState/serializer';
 import type {ILogger} from '@/shared/logger';
 
 export class PlayerStateManager {

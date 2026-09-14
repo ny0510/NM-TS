@@ -1,14 +1,13 @@
-import {type AutocompleteInteraction, type ChatInputCommandInteraction, type ClientEvents, type HexColorString, PermissionsBitField, SlashCommandBuilder, type SlashCommandOptionsOnlyBuilder, type SlashCommandSubcommandsOnlyBuilder} from 'discord.js';
+import type {AutocompleteInteraction, ChatInputCommandInteraction, ClientEvents, HexColorString, PermissionResolvable, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder} from 'discord.js';
 
-import type {CommandManager} from '@/managers/CommandManager';
 import type {CooldownManager} from '@/managers/CooldownManager';
-import type {EventManager} from '@/managers/EventManager';
 import type {LavalinkManager} from '@/managers/LavalinkManager';
 import type {PlayerStateManager} from '@/managers/PlayerStateManager';
+import type {LogLevel} from '@/types/logger';
 
 export interface Command {
   data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder;
-  permissions?: PermissionsBitField[] | bigint[];
+  permissions?: PermissionResolvable[];
   cooldown?: number;
   execute(interaction: ChatInputCommandInteraction): Promise<void>;
   autocomplete?(interaction: AutocompleteInteraction): Promise<void>;
@@ -16,7 +15,7 @@ export interface Command {
 
 export interface Event<K extends keyof ClientEvents = keyof ClientEvents> {
   name: K;
-  once?: boolean;
+  runOnce?: boolean;
   execute(...args: ClientEvents[K]): Promise<void> | void;
 }
 
@@ -44,6 +43,7 @@ export interface EmbedConfig {
 export interface AppConfig {
   DEFAULT_VOLUME: number;
   LOG_PREFIX: string;
+  LOG_LEVEL: LogLevel;
   IS_DEV_MODE: boolean;
 }
 
@@ -62,11 +62,15 @@ export interface KoreanbotsConfig {
   KOREANBOTS_UPDATE_INTERVAL: number;
 }
 
-export interface Config extends DiscordConfig, LavalinkConfig, EmbedConfig, AppConfig, ProgressBarConfig, KoreanbotsConfig {}
+export interface PresenceConfig {
+  readonly PRESENCE_UPDATE_INTERVAL_MS: number;
+  readonly PRESENCE_INITIAL_MESSAGE: string;
+  readonly PRESENCE_MESSAGES: readonly string[];
+}
+
+export interface Config extends DiscordConfig, LavalinkConfig, EmbedConfig, AppConfig, ProgressBarConfig, KoreanbotsConfig, PresenceConfig {}
 
 export interface ClientServices {
-  commandManager: CommandManager;
-  eventManager: EventManager;
   lavalinkManager: LavalinkManager;
   cooldownManager: CooldownManager;
   playerStateManager: PlayerStateManager;

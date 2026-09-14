@@ -6,12 +6,7 @@ import type {QueueTrack} from '@/types/music';
  * Shift the next track from the queue, set play context if missing,
  * and begin playback on the player.
  */
-export const shiftAndPlay = async (
-  tracks: QueueTrack[],
-  player: Player,
-  volume: number,
-  textChannelId: string,
-): Promise<{track: QueueTrack | null; playing: boolean}> => {
+export const shiftAndPlay = async (tracks: QueueTrack[], player: Player, volume: number, textChannelId: string): Promise<{track: QueueTrack | null; playing: boolean}> => {
   const track = tracks.shift();
   if (!track) return {track: null, playing: false};
 

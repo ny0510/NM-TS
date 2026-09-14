@@ -36,8 +36,13 @@ export function getCurrentMonthStart(): Date {
   return DateTime.now().setZone(KST_ZONE).startOf('month').toJSDate();
 }
 
-export function parseMonthInput(value: string): Date | null {
-  const parsed = DateTime.fromFormat(value.trim(), 'yyyy-MM', {zone: KST_ZONE}).startOf('month');
+export function parseMonthInput(value: string, currentYear = DateTime.now().setZone(KST_ZONE).year): Date | null {
+  const match = /^(?:(\d{4})-)?(0?[1-9]|1[0-2])$/.exec(value.trim());
+  const monthInput = match?.[2];
+  if (!monthInput) return null;
+
+  const year = match[1] ? Number.parseInt(match[1], 10) : currentYear;
+  const parsed = DateTime.fromObject({year, month: Number.parseInt(monthInput, 10)}, {zone: KST_ZONE}).startOf('month');
   return parsed.isValid ? parsed.toJSDate() : null;
 }
 
@@ -45,18 +50,12 @@ export function formatMonthLabel(month: Date): string {
   return DateTime.fromJSDate(month, {zone: KST_ZONE}).toFormat('yyyy년 M월');
 }
 
-async function getRanking(
-  month: Date,
-  guildId: string | null,
-): Promise<{trackId: number; title: string; artist: string; uri: string | null; artworkUrl: string | null; playCount: number}[]> {
+async function getRanking(month: Date, guildId: string | null): Promise<{trackId: number; title: string; artist: string; uri: string | null; artworkUrl: string | null; playCount: number}[]> {
   const db = getDb();
   const {currentStart, currentEnd} = getMonthRanges(month);
   const playCount = count().mapWith(Number);
 
-  const conditions = [
-    gte(trackPlayEvents.playedAt, currentStart),
-    lt(trackPlayEvents.playedAt, currentEnd),
-  ];
+  const conditions = [gte(trackPlayEvents.playedAt, currentStart), lt(trackPlayEvents.playedAt, currentEnd)];
   if (guildId) {
     conditions.push(eq(trackPlayEvents.guildId, guildId));
   }
@@ -83,10 +82,7 @@ async function getPrevRankMap(month: Date, guildId: string | null): Promise<Map<
   const {prevStart, prevEnd} = getMonthRanges(month);
   const playCount = count().mapWith(Number);
 
-  const conditions = [
-    gte(trackPlayEvents.playedAt, prevStart),
-    lt(trackPlayEvents.playedAt, prevEnd),
-  ];
+  const conditions = [gte(trackPlayEvents.playedAt, prevStart), lt(trackPlayEvents.playedAt, prevEnd)];
   if (guildId) {
     conditions.push(eq(trackPlayEvents.guildId, guildId));
   }

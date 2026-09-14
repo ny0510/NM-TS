@@ -1,10 +1,9 @@
 import {expect, test} from 'bun:test';
 import {EventEmitter} from 'node:events';
-
+import type {NMClient} from '@/client';
 import {LavalinkManager} from './LavalinkManager';
 import {registerLavalinkEvents} from './lavalink';
 import {shouldRestartRepeatedTrack} from './lavalink/trackEnd';
-import type {NMClient} from '@/client/Client';
 
 test('stops track repeat when the replay finishes again within five seconds', () => {
   expect(shouldRestartRepeatedTrack(10_000, 14_999)).toBe(false);

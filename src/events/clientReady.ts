@@ -1,23 +1,17 @@
 import {ActivityType, type Client, Events, GatewayIntentBits, PresenceUpdateStatus} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
+import {deployCommands} from '@/deploy';
+import {buildPresenceMessages} from '@/features/presence/messages';
 import {toError} from '@/shared/errors';
 import type {Event} from '@/types/client';
 
 let presenceToggle = 0;
 let presenceInterval: ReturnType<typeof setInterval> | undefined;
 
-/** Presence 업데이트 주기 (10초) */
-const PRESENCE_UPDATE_INTERVAL_MS = 10_000;
-
 const updatePresence = (client: NMClient) => {
   const stats = client.getStats();
-
-  const messages = [`NM | ${stats.guilds}개의 서버에서 활동 중!`, '/chart 명령어로 NM 음악 차트를 확인해 보세요', '/favorites 명령어가 추가되었어요!'];
-
-  if (stats.activePlayers) {
-    messages.push(`NM | ${stats.activePlayers}개의 서버에서 음악 재생 중!`);
-  }
+  const messages = buildPresenceMessages(client.config, stats);
 
   const name = messages[presenceToggle++ % messages.length];
 
@@ -52,9 +46,9 @@ const checkRequiredIntents = (client: NMClient): void => {
   }
 };
 
-export default {
+export const event = {
   name: Events.ClientReady,
-  once: true,
+  runOnce: true,
   async execute(client: Client<true>): Promise<void> {
     const nmClient = client as NMClient;
 
@@ -69,7 +63,12 @@ export default {
 
       updatePresence(nmClient);
 
-      await nmClient.deployCommands();
+      try {
+        await deployCommands({scope: nmClient.config.IS_DEV_MODE ? 'guild' : 'global', preserveRemoteCommands: true});
+      } catch (error) {
+        if (!(error instanceof Error)) throw error;
+        nmClient.logger.error(toError(error, 'Failed to deploy application commands'));
+      }
 
       const stats = nmClient.getStats();
       nmClient.logger.info(`Ready! Logged in as ${nmClient.user?.tag}`);
@@ -81,7 +80,7 @@ export default {
 
       checkRequiredIntents(nmClient);
 
-      presenceInterval = setInterval(() => void updatePresence(nmClient), PRESENCE_UPDATE_INTERVAL_MS);
+      presenceInterval = setInterval(() => void updatePresence(nmClient), nmClient.config.PRESENCE_UPDATE_INTERVAL_MS);
     } catch (error) {
       nmClient.logger.error(toError(error, 'Error in clientReady event'));
     }

@@ -20,12 +20,12 @@ export class CooldownManager {
     onCooldown: boolean;
     timeLeft?: number;
   } {
-    if (!this.cooldowns.has(commandName)) {
-      this.cooldowns.set(commandName, new Collection());
-    }
-
     const now = DateTime.now().toMillis();
-    const timestamps = this.cooldowns.get(commandName)!;
+    let timestamps = this.cooldowns.get(commandName);
+    if (!timestamps) {
+      timestamps = new Collection();
+      this.cooldowns.set(commandName, timestamps);
+    }
     const cooldownAmount = cooldownSeconds * 1000;
     const timestamp = timestamps.get(userId);
 

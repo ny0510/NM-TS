@@ -1,17 +1,16 @@
-import {type AutocompleteInteraction, ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, codeBlock} from 'discord.js';
-
-import type {Command} from '@/types/client';
-import {truncateWithEllipsis} from '@/shared/formatting';
+import {type AutocompleteInteraction, type ChatInputCommandInteraction, codeBlock, EmbedBuilder, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {validateMusicCommand} from '@/features/music/guard';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {safeRespondAutocomplete} from '@/shared/discord/interactions/safeAutocomplete';
-import {validateMusicCommand} from '@/features/music/guard';
+import {truncateWithEllipsis} from '@/shared/formatting';
+import type {Command} from '@/types/client';
 
 const MAX_AUTOCOMPLETE_RESULTS = 25;
 
-export default {
+export const command = {
   data: new SlashCommandBuilder()
     .setName('remove')
     .setDescription('대기열에서 음악을 제거해요.')
@@ -26,15 +25,9 @@ export default {
     const userIndex = parseInt(trackValue, 10);
     const index = userIndex - 1;
 
-    if (isNaN(userIndex) || userIndex < 1 || index >= queue.size()) {
+    if (Number.isNaN(userIndex) || userIndex < 1 || index >= queue.size()) {
       return await safeReply(interaction, {
-        embeds: [
-          createErrorEmbed(
-            client,
-            '유효하지 않은 음악 번호예요.',
-            `대기열 범위 내의 번호(1 ~ ${queue.size()})를 입력하거나 자동완성 목록에서 선택해 주세요.`
-          ),
-        ],
+        embeds: [createErrorEmbed(client, '유효하지 않은 음악 번호예요.', `대기열 범위 내의 번호(1 ~ ${queue.size()})를 입력하거나 자동완성 목록에서 선택해 주세요.`)],
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -61,8 +54,13 @@ export default {
   },
   async autocomplete(interaction: AutocompleteInteraction): Promise<void> {
     const client = getClient(interaction);
+    const guildId = interaction.guildId;
+    if (!guildId) {
+      await safeRespondAutocomplete(interaction, []);
+      return;
+    }
 
-    const queue = client.queues.get(interaction.guildId!);
+    const queue = client.queues.get(guildId);
     if (!queue || queue.size() === 0) {
       await safeRespondAutocomplete(interaction, []);
       return;

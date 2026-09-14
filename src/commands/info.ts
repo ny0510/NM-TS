@@ -1,13 +1,13 @@
-import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, time, userMention} from 'discord.js';
+import {type ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, userMention} from 'discord.js';
 
 import {version} from '@/../package.json';
-import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {toError} from '@/shared/errors';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder().setName('info').setDescription('봇의 상태를 확인해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {

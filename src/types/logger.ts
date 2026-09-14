@@ -1,6 +1,6 @@
 import type {Guild} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 

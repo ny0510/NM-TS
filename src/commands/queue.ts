@@ -1,17 +1,16 @@
-import {ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
-
-import type {Command} from '@/types/client';
+import {type ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {validateMusicCommand} from '@/features/music/guard';
+import {buildQueueButtons, disableQueueComponents} from '@/features/music/interaction/buttonBuilder';
+import {createQueueFilter, handleQueueCollect, handleQueueCollectError} from '@/features/music/interaction/collectHandler';
+import {buildQueueEmbed, TRACKS_PER_PAGE} from '@/features/music/interaction/embedBuilder';
 import {getClient} from '@/shared/discord/client';
 import {COLLECTOR_TIMEOUT_1H} from '@/shared/discord/constants';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {toError} from '@/shared/errors';
-import {validateMusicCommand} from '@/features/music/guard';
-import {buildQueueButtons, disableQueueComponents} from '@/features/music/interaction/buttonBuilder';
-import {createQueueFilter, handleQueueCollect, handleQueueCollectError} from '@/features/music/interaction/collectHandler';
-import {buildQueueEmbed, TRACKS_PER_PAGE} from '@/features/music/interaction/embedBuilder';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder()
     .setName('queue')
     .setDescription('대기열을 확인해요.')
@@ -19,6 +18,8 @@ export default {
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     const client = getClient(interaction);
+    const guildId = interaction.guildId;
+    if (!guildId) return;
     const queue = await validateMusicCommand(interaction, {requirePlaying: true});
     if (!queue) return;
 
@@ -54,7 +55,7 @@ export default {
 
     collector.on('collect', async i => {
       try {
-        await handleQueueCollect(i, client, collector, state, interaction.guildId!);
+        await handleQueueCollect(i, client, collector, state, guildId);
       } catch (error) {
         await handleQueueCollectError(error, i, client, collector);
       }

@@ -1,10 +1,16 @@
-import {type BaseInteraction, ChatInputCommandInteraction, type PermissionResolvable, type VoiceBasedChannel} from 'discord.js';
+import type {BaseInteraction, ChatInputCommandInteraction, PermissionResolvable, VoiceBasedChannel} from 'discord.js';
 
 import type {Command} from '@/types/client';
 import type {PermissionResult} from '@/types/discord';
 
 export const checkBotPermissions = async (interaction: BaseInteraction, requiredPermissions: PermissionResolvable[], voiceChannel?: VoiceBasedChannel | null): Promise<PermissionResult> => {
-  const member = await interaction.guild!.members.fetch(interaction.client.user!.id);
+  const guild = interaction.guild;
+  const botUser = interaction.client.user;
+  if (!guild || !botUser) {
+    return {result: false, missing: requiredPermissions.map(permission => permission.toString())};
+  }
+
+  const member = await guild.members.fetch(botUser.id);
   let missing = member.permissions.missing(requiredPermissions);
 
   if (voiceChannel) {
@@ -25,5 +31,5 @@ export const checkPermissions = async (interaction: ChatInputCommandInteraction,
 
   const voiceChannel = interaction.member && 'voice' in interaction.member && interaction.member.voice?.channel ? interaction.member.voice.channel : null;
 
-  return await checkBotPermissions(interaction, command.permissions as PermissionResolvable[], voiceChannel);
+  return await checkBotPermissions(interaction, command.permissions, voiceChannel);
 };

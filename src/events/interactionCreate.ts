@@ -1,19 +1,17 @@
-import {type AutocompleteInteraction, type ChatInputCommandInteraction, EmbedBuilder, Events, type Interaction, MessageFlags, type PermissionsString, codeBlock} from 'discord.js';
-
-import type {Event} from '@/types/client';
+import {type AutocompleteInteraction, type ChatInputCommandInteraction, codeBlock, EmbedBuilder, Events, type Interaction, MessageFlags, type PermissionsString} from 'discord.js';
+import {handleFavoritesInteraction} from '@/features/favorites/interactionRouter';
+import {handlePlayerControlsButtons} from '@/features/music/button/controlsBuilder';
+import {handleQuickAddButton} from '@/features/music/button/quickAddBuilder';
 import {slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
-import {isInteractionProcessed} from '@/shared/discord/interactions';
-import {safeReply} from '@/shared/discord/interactions';
+import {isInteractionProcessed, safeReply} from '@/shared/discord/interactions';
 import {checkPermissions} from '@/shared/discord/permissions';
-import {toError} from '@/shared/errors';
 import PermissionTranslations from '@/shared/discord/permissions/locale/permission';
-import {handlePlayerControlsButtons} from '@/features/music/button/controlsBuilder';
-import {handleFavoritesInteraction} from '@/features/favorites/interactionRouter';
-import {handleQuickAddButton} from '@/features/music/button/quickAddBuilder';
+import {toError} from '@/shared/errors';
+import type {Event} from '@/types/client';
 
-export default {
+export const event = {
   name: Events.InteractionCreate,
   async execute(interaction: Interaction): Promise<void> {
     const client = getClient(interaction);
@@ -39,9 +37,9 @@ export default {
     }
 
     if (interaction.isAutocomplete()) {
-      const command = client.services.commandManager.getCommand(interaction.commandName);
+      const command = client.commands.get(interaction.commandName);
 
-      if (command && command.autocomplete) {
+      if (command?.autocomplete) {
         try {
           await command.autocomplete(interaction as AutocompleteInteraction);
         } catch (error) {
@@ -61,7 +59,7 @@ export default {
       return;
     }
 
-    const command = client.services.commandManager.getCommand(interaction.commandName);
+    const command = client.commands.get(interaction.commandName);
 
     if (!command) return;
 
