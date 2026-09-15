@@ -4,7 +4,7 @@
   "description": "고음질 무료 음악 봇, NM",
   "type": "module",
   "private": true,
-  "version": "2.11.8",
+  "version": "2.12.0",
   "scripts": {
     "preinstall": "npx only-allow bun",
     "start": "NODE_ENV=production bun run ./src/index.ts",

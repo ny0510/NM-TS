@@ -2,7 +2,7 @@
 
 ## OVERVIEW
 
-Discord.js + Lavalink music bot ("NM", v2.11.8). Bun runtime, strict TypeScript, ESM, Drizzle ORM + PostgreSQL, and Shoukaku audio. The bootstrap and module conventions are based on `caru-ini/discord-bot-template`. `data/postgres/` is a live PostgreSQL cluster — treat it as data, not source.
+Discord.js + Lavalink music bot ("NM", v2.12.0). Bun runtime, strict TypeScript, ESM, Drizzle ORM + PostgreSQL, and Shoukaku audio. The bootstrap and module conventions are based on `caru-ini/discord-bot-template`. `data/postgres/` is a live PostgreSQL cluster — treat it as data, not source.
 
 ## Runtime and entrypoints
 
