@@ -38,8 +38,8 @@ const writableRemoteCommand = (command: unknown): unknown | undefined => {
   const name = commandName(command);
   if (!name) return undefined;
 
-  const {id: _id, application_id: _applicationId, guild_id: _guildId, version: _version, ...writableCommand} = command as Record<string, unknown>;
-  return writableCommand;
+  const responseFields = ['id', 'application_id', 'guild_id', 'version', 'name_localized', 'description_localized'];
+  return Object.fromEntries(Object.entries(command).filter(([key]) => !responseFields.includes(key)));
 };
 
 export const mergeCommands = (remoteCommands: readonly unknown[], localCommands: readonly unknown[]): unknown[] => {
@@ -62,7 +62,7 @@ export const deployCommands = async (options: DeployOptions): Promise<number> =>
   const rest = new REST({version: '10'}).setToken(config.DISCORD_TOKEN);
   const route = routeFor(options.scope);
   const localCommands = options.deleteCommands ? [] : (await getCommands()).map(command => command.data.toJSON());
-  const remoteResponse: unknown = options.preserveRemoteCommands ? await rest.get(route) : [];
+  const remoteResponse: unknown = options.preserveRemoteCommands ? await rest.get(route, {query: new URLSearchParams({with_localizations: 'true'})}) : [];
   const remoteCommands = Array.isArray(remoteResponse) ? remoteResponse : [];
   const body = options.preserveRemoteCommands ? mergeCommands(remoteCommands, localCommands) : localCommands;
 

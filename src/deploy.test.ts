@@ -1,8 +1,17 @@
-import {describe, expect, test} from 'bun:test';
+import {describe, expect, spyOn, test} from 'bun:test';
+import {REST} from 'discord.js';
 
-import {mergeCommands} from './deploy';
+import {deployCommands, mergeCommands} from './deploy';
 
 describe('mergeCommands', () => {
+  test('strips localized response-only fields from preserved commands', () => {
+    // Given: a command response with requester-specific translations
+    const remote = [{id: 'id', name: 'remote', type: 1, description: 'Remote', name_localized: '원격', description_localized: '원격 설명'}];
+    // When: the response is prepared for writing
+    const merged = mergeCommands(remote, []);
+    // Then: response-only translations are omitted
+    expect(merged).toEqual([{name: 'remote', type: 1, description: 'Remote'}]);
+  });
   test('removes server-managed fields from preserved remote commands', () => {
     // Given: a Discord REST command response with read-only server fields
     const remote = [{id: 'remote-id', application_id: 'app-id', version: 'version-id', name: 'launch', description: 'Launch activity', options: [], type: 4}];
@@ -64,5 +73,23 @@ describe('mergeCommands', () => {
       {name: 'info', description: '채팅 입력', type: 1},
       {name: 'info', type: 2},
     ]);
+  });
+});
+
+describe('deployCommands localization round trip', () => {
+  test.each(['global', 'guild'] as const)('requests and preserves full localization dictionaries for %s commands', async scope => {
+    // Given: Discord only supplies full dictionaries when requested
+    const localizedCommand = {name: 'remote-localized', type: 1, description: 'Remote', name_localizations: {ko: '원격'}, description_localizations: {ko: '원격 설명'}, options: [{type: 3, name: 'value', description: 'Value', name_localizations: {ko: '값'}, description_localizations: {ko: '값 설명'}}]};
+    const get = spyOn(REST.prototype, 'get').mockImplementation(async (_route, options) => (options?.query?.get('with_localizations') === 'true' ? [localizedCommand] : [{name: 'remote-localized', type: 1, description: 'Remote'}]));
+    const put = spyOn(REST.prototype, 'put').mockResolvedValue([]);
+    try {
+      // When: the real deployment path fetches, merges and overwrites commands
+      await deployCommands({scope, preserveRemoteCommands: true});
+      // Then: the outgoing command retains command and option translations
+      expect(put.mock.calls[0]?.[1]?.body).toContainEqual(localizedCommand);
+    } finally {
+      get.mockRestore();
+      put.mockRestore();
+    }
   });
 });
