@@ -13,8 +13,6 @@ type DeployOptions = {
   readonly preserveRemoteCommands?: boolean;
 };
 
-const logger = new Logger('Deploy', 'info', config.DISCORD_LOG_WEBHOOK_URL);
-
 const routeFor = (scope: DeployScope) => (scope === 'global' ? Routes.applicationCommands(config.DISCORD_CLIENT_ID) : Routes.applicationGuildCommands(config.DISCORD_CLIENT_ID, config.DISCORD_GUILD_ID));
 
 const commandName = (command: unknown): string | undefined => {
@@ -22,14 +20,26 @@ const commandName = (command: unknown): string | undefined => {
   return typeof command.name === 'string' ? command.name : undefined;
 };
 
-const writableRemoteCommand = (command: unknown): unknown | undefined => {
-  const name = commandName(command);
-  if (!name || typeof command !== 'object' || command === null) return undefined;
+const logger = new Logger('Deploy', config.LOG_LEVEL, config.DISCORD_LOG_WEBHOOK_URL);
 
-  const description = 'description' in command && typeof command.description === 'string' ? command.description : 'No description';
-  const options = 'options' in command && Array.isArray(command.options) ? command.options : [];
-  const type = 'type' in command && typeof command.type === 'number' ? command.type : 1;
-  return {name, description, options, type};
+const commandType = (command: unknown): number => {
+  if (typeof command !== 'object' || command === null || !('type' in command)) return 1;
+  return typeof command.type === 'number' ? command.type : 1;
+};
+
+const commandKey = (command: unknown): string | undefined => {
+  const name = commandName(command);
+  if (!name) return undefined;
+  return `${commandType(command)}:${name}`;
+};
+
+const writableRemoteCommand = (command: unknown): unknown | undefined => {
+  if (typeof command !== 'object' || command === null) return undefined;
+  const name = commandName(command);
+  if (!name) return undefined;
+
+  const {id: _id, application_id: _applicationId, guild_id: _guildId, version: _version, ...writableCommand} = command as Record<string, unknown>;
+  return writableCommand;
 };
 
 export const mergeCommands = (remoteCommands: readonly unknown[], localCommands: readonly unknown[]): unknown[] => {
@@ -37,12 +47,12 @@ export const mergeCommands = (remoteCommands: readonly unknown[], localCommands:
 
   for (const command of remoteCommands) {
     const writableCommand = writableRemoteCommand(command);
-    const name = commandName(writableCommand);
-    if (name) commandsByName.set(name, writableCommand);
+    const key = commandKey(writableCommand);
+    if (key) commandsByName.set(key, writableCommand);
   }
   for (const command of localCommands) {
-    const name = commandName(command);
-    if (name) commandsByName.set(name, command);
+    const key = commandKey(command);
+    if (key) commandsByName.set(key, command);
   }
 
   return [...commandsByName.values()];

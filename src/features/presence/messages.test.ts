@@ -30,4 +30,16 @@ describe('buildPresenceMessages', () => {
     // Then: only the always-visible configured messages remain
     expect(messages).toEqual(['서버 12개 · 사용자 345명', '차트 안내', '즐겨찾기 안내']);
   });
+
+  test('keeps at least one message when every template depends on active players', () => {
+    // Given: templates that all include the active-player placeholder
+    const playerOnlyTemplates = {...templates, PRESENCE_MESSAGES: ['재생 서버 {players}개']};
+    const stats = {guilds: 12, users: 345, activePlayers: 0, memoryUsage: 0, cpuUsage: 0};
+
+    // When: rotating messages are built with no active players
+    const messages = buildPresenceMessages(playerOnlyTemplates, stats);
+
+    // Then: a valid fallback message is still produced
+    expect(messages).toEqual(['재생 서버 0개']);
+  });
 });

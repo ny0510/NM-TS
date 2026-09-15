@@ -3,6 +3,7 @@ import {type ColorResolvable, EmbedBuilder, type Guild, userMention, WebhookClie
 import {DateTime} from 'luxon';
 
 import type {NMClient} from '@/client';
+import {config} from '@/shared/config';
 import {COLORS} from '@/shared/discord/embedColors';
 import {truncateWithEllipsis} from '@/shared/formatting';
 import type {ILogger, LogLevel} from '@/types/logger';
@@ -20,7 +21,7 @@ export class Logger implements ILogger {
 
   public constructor(prefix: string, level?: LogLevel, webhookUrl?: string) {
     this._prefix = chalk.yellowBright(`(${prefix})`);
-    this._level = level ?? (process.env.NODE_ENV === 'development' ? 'debug' : 'info');
+    this._level = level ?? config.LOG_LEVEL;
 
     if (webhookUrl) {
       try {
