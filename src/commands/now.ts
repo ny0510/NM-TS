@@ -1,13 +1,12 @@
-import {ChatInputCommandInteraction, EmbedBuilder, type HexColorString, SlashCommandBuilder, hyperlink, inlineCode} from 'discord.js';
+import {type ChatInputCommandInteraction, EmbedBuilder, type HexColorString, hyperlink, inlineCode, SlashCommandBuilder} from 'discord.js';
 import getImageColors from 'get-image-colors';
-
-import type {Command} from '@/types/client';
+import {ensurePlaying} from '@/features/music/guard';
+import {createProgressBar} from '@/features/music/queue/queueOperations';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import {msToTime, truncateWithEllipsis} from '@/shared/formatting';
-import {createProgressBar} from '@/features/music/queue/queueOperations';
-import {ensurePlaying} from '@/features/music/guard';
+import type {Command} from '@/types/client';
 
 const getVolumeIcon = (volume: number): string => {
   if (volume === 0) return '🔇';
@@ -24,17 +23,20 @@ const getRepeatDisplay = (queueRepeat: boolean, trackRepeat: boolean): string =>
 
 const getToggleDisplay = (enabled: boolean): string => (enabled ? '🟢 활성화' : '🔴 비활성화');
 
-export default {
+export const command = {
   data: new SlashCommandBuilder().setName('now').setDescription('현재 재생중인 음악을 확인해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     const client = getClient(interaction);
-    const queue = client.queues.get(interaction.guildId!);
+    const guildId = interaction.guildId;
+    if (!guildId) return;
+    const queue = client.queues.get(guildId);
 
     if (!(await ensurePlaying(interaction))) return;
     if (!queue) return;
 
-    const track = queue.getCurrent()!;
+    const track = queue.getCurrent();
+    if (!track) return;
     const colors = track.info.artworkUrl ? await getImageColors(track.info.artworkUrl.replace('webp', 'png'), {count: 1}) : [];
     const progressBar = createProgressBar(queue);
     const queueSize = queue.size();

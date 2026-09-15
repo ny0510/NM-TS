@@ -1,19 +1,15 @@
-import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
-
-import type {Command} from '@/types/client';
-import {getClient} from '@/shared/discord/client';
+import {type ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
+import {validateMusicCommand} from '@/features/music/guard';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
-import {validateMusicCommand} from '@/features/music/guard';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder().setName('autoplay').setDescription('자동 재생을 설정해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     const queue = await validateMusicCommand(interaction, {requirePlaying: true});
     if (!queue) return;
-    const client = getClient(interaction);
-
     if (queue.isAutoplay) {
       queue.setAutoplay(false);
 

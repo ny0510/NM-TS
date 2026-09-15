@@ -1,19 +1,15 @@
-import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
-
-import type {Command} from '@/types/client';
-import {getClient} from '@/shared/discord/client';
+import {type ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
+import {validateMusicCommand} from '@/features/music/guard';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
-import {validateMusicCommand} from '@/features/music/guard';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder().setName('autoshuffle').setDescription('노래가 추가될 때마다 자동으로 대기열을 셔플해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     const queue = await validateMusicCommand(interaction, {requirePlaying: true});
     if (!queue) return;
-    const client = getClient(interaction);
-
     const enabled = queue.isAutoShuffle;
     queue.setAutoShuffle(!enabled);
 

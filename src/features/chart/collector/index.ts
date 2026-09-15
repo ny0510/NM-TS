@@ -1,13 +1,13 @@
 import {type ChatInputCommandInteraction, EmbedBuilder, type MessageComponentInteraction, MessageFlags} from 'discord.js';
 import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import {slashCommandMention} from '@/shared/discord';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {toError} from '@/shared/errors';
 
-export {handleChartCollect} from './handler';
 export {handleChartCollectError} from './errorHandler';
+export {handleChartCollect} from './handler';
 export type {MutablePage, MutableRanking, MutableTotalPages} from './types';
 
 export function createChartFilter(interaction: ChatInputCommandInteraction, client: NMClient) {
@@ -32,10 +32,7 @@ export function createChartFilter(interaction: ChatInputCommandInteraction, clie
   };
 }
 
-export async function disableChartComponents(
-  interaction: ChatInputCommandInteraction,
-  client: NMClient,
-): Promise<void> {
+export async function disableChartComponents(interaction: ChatInputCommandInteraction, client: NMClient): Promise<void> {
   try {
     const message = await interaction.fetchReply().catch(() => null);
     if (message) {

@@ -1,4 +1,4 @@
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
 import type {QueueTrack} from '@/types/music';
 import {Logger} from '@/shared/logger';

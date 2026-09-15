@@ -1,8 +1,7 @@
 import {Events} from 'discord.js';
 import {request as undiciRequest} from 'undici';
-
+import type {NMClient} from '@/client';
 import {toError} from '@/shared/errors';
-import type {NMClient} from '@/client/Client';
 import type {ILogger} from '@/shared/logger';
 
 export class KoreanbotsManager {

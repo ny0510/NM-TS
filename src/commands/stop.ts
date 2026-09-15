@@ -1,13 +1,12 @@
-import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
-
-import type {Command} from '@/types/client';
+import {type ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
+import {validateMusicCommand} from '@/features/music/guard';
+import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
-import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
-import {validateMusicCommand} from '@/features/music/guard';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder().setName('stop').setDescription('음악을 정지해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {

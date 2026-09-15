@@ -1,13 +1,12 @@
-import {type AutocompleteInteraction, ChatInputCommandInteraction, MessageFlags, PermissionsBitField, SlashCommandBuilder} from 'discord.js';
-
-import type {Command} from '@/types/client';
+import {type AutocompleteInteraction, type ChatInputCommandInteraction, PermissionsBitField, SlashCommandBuilder} from 'discord.js';
+import {ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
+import {addTrackToQueue} from '@/features/music/track/trackAdder';
 import {getGoogleSuggestions} from '@/shared/autocomplete/googleSuggest';
 import {getClient} from '@/shared/discord/client';
 import {safeRespondAutocomplete} from '@/shared/discord/interactions/safeAutocomplete';
-import {ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
-import {addTrackToQueue} from '@/features/music/track/trackAdder';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder()
     .setName('play')
     .setDescription('음악을 재생해요.')
@@ -60,7 +59,7 @@ export default {
       try {
         const suggestions = await getGoogleSuggestions(query);
         const choices = suggestions.map(suggestion => ({
-          name: suggestion.length > 100 ? suggestion.substring(0, 97) + '...' : suggestion,
+          name: suggestion.length > 100 ? `${suggestion.substring(0, 97)}...` : suggestion,
           value: suggestion.length > 100 ? suggestion.substring(0, 100) : suggestion,
         }));
 

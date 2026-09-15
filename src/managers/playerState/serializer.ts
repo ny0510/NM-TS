@@ -1,11 +1,11 @@
 import type {Client} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
-import type {PersistedQueueState} from '@/types/playerState';
-import type {ILogger} from '@/shared/logger';
-import {clearPlayerStates, replacePlayerStates} from './persistence';
 import {toError} from '@/shared/errors';
+import type {ILogger} from '@/shared/logger';
+import type {PersistedQueueState} from '@/types/playerState';
+import {clearPlayerStates, replacePlayerStates} from './persistence';
 
 export function serializeQueueState(queue: Queue): PersistedQueueState {
   const current = queue.getCurrent();

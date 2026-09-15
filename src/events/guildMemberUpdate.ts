@@ -1,12 +1,12 @@
 import {Events, type GuildMember} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
-import type {Event} from '@/types/client';
-import {toError} from '@/shared/errors';
-import {isTimedOut} from '@/shared/discord/permissions/isTimedOut';
+import type {NMClient} from '@/client';
 import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
+import {isTimedOut} from '@/shared/discord/permissions/isTimedOut';
+import {toError} from '@/shared/errors';
+import type {Event} from '@/types/client';
 
-export default {
+export const event = {
   name: Events.GuildMemberUpdate,
   async execute(oldMember: GuildMember, newMember: GuildMember): Promise<void> {
     try {

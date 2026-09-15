@@ -2,6 +2,14 @@ import type {QueueTrack} from '@/types/music';
 
 export const MAX_QUEUE_SIZE = 10_000;
 
+const swap = <T>(items: T[], leftIndex: number, rightIndex: number): void => {
+  const left = items[leftIndex];
+  const right = items[rightIndex];
+  if (left === undefined || right === undefined) return;
+  items[leftIndex] = right;
+  items[rightIndex] = left;
+};
+
 // ────────────────────────────────────────────
 // Shuffle
 // ────────────────────────────────────────────
@@ -11,7 +19,7 @@ export const shuffleQueue = (tracks: QueueTrack[]): QueueTrack[] => {
   const result = [...tracks];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [result[i]!, result[j]!] = [result[j]!, result[i]!];
+    swap(result, i, j);
   }
   return result;
 };
@@ -33,14 +41,14 @@ export const roundRobinShuffle = (tracks: QueueTrack[]): QueueTrack[] => {
   for (const requesterTracks of byRequester.values()) {
     for (let i = requesterTracks.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
-      [requesterTracks[i]!, requesterTracks[j]!] = [requesterTracks[j]!, requesterTracks[i]!];
+      swap(requesterTracks, i, j);
     }
   }
 
   const requesters = [...byRequester.keys()];
   for (let i = requesters.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [requesters[i]!, requesters[j]!] = [requesters[j]!, requesters[i]!];
+    swap(requesters, i, j);
   }
 
   const result: QueueTrack[] = [];
@@ -69,11 +77,7 @@ export const roundRobinShuffle = (tracks: QueueTrack[]): QueueTrack[] => {
  * Add track(s) to the tracks array in place.
  * Returns `false` if the queue would exceed MAX_QUEUE_SIZE.
  */
-export const addTracks = (
-  tracks: QueueTrack[],
-  trackOrTracks: QueueTrack | QueueTrack[],
-  position?: number,
-): boolean => {
+export const addTracks = (tracks: QueueTrack[], trackOrTracks: QueueTrack | QueueTrack[], position?: number): boolean => {
   const tracksToAdd = Array.isArray(trackOrTracks) ? trackOrTracks : [trackOrTracks];
   if (tracks.length + tracksToAdd.length > MAX_QUEUE_SIZE) {
     return false;

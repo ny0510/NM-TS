@@ -1,0 +1,4 @@
+pre-commit:
+  commands:
+    check:
+      run: bun run check

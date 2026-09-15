@@ -1,16 +1,11 @@
-import {MessageFlags, type MessageComponentInteraction} from 'discord.js';
+import {type MessageComponentInteraction, MessageFlags} from 'discord.js';
 import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {toError} from '@/shared/errors';
 
-export async function handleChartCollectError(
-  error: unknown,
-  i: MessageComponentInteraction,
-  client: NMClient,
-  collector: {stop: () => void},
-): Promise<void> {
+export async function handleChartCollectError(error: unknown, i: MessageComponentInteraction, client: NMClient, collector: {stop: () => void}): Promise<void> {
   if (error && typeof error === 'object' && 'code' in error) {
     const discordError = error as {code: number};
 

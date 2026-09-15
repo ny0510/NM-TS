@@ -1,13 +1,13 @@
-import {EmbedBuilder, type Client} from 'discord.js';
+import {type Client, EmbedBuilder} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import {handleEmptyChannel} from '@/events/voiceStateUpdate/activityManager';
-import type {QueueTrack} from '@/types/music';
-import {PLAYER_STATE_VERSION, type PersistedQueueState} from '@/types/playerState';
-import type {ILogger} from '@/shared/logger';
-import {clearPlayerStates, loadPlayerStates} from './persistence';
 import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
+import type {ILogger} from '@/shared/logger';
+import type {QueueTrack} from '@/types/music';
+import {type PersistedQueueState, PLAYER_STATE_VERSION} from '@/types/playerState';
+import {clearPlayerStates, loadPlayerStates} from './persistence';
 
 const RESTORE_TIMEOUT_MS = 3_000;
 

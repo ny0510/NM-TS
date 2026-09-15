@@ -1,4 +1,4 @@
-import {ButtonInteraction, StringSelectMenuInteraction} from 'discord.js';
+import type {ButtonInteraction, StringSelectMenuInteraction} from 'discord.js';
 
 import {handleFavToggleButton} from './favToggleHandler';
 import {handleFavoritesAddAll} from './handler/addAllHandler';

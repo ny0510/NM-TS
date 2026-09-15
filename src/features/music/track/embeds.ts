@@ -1,6 +1,6 @@
 import type {Queue} from '@/features/music/queue/Queue';
-import type {QueueTrack} from '@/types/music';
 import {msToTime} from '@/shared/formatting';
+import type {QueueTrack} from '@/types/music';
 import {getAlbumColors} from './colors';
 
 function getQueueInfo(queue: Queue) {

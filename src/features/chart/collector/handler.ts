@@ -1,10 +1,10 @@
-import {type MessageComponentInteraction, ModalBuilder, TextInputBuilder, TextInputStyle, LabelBuilder, MessageFlags} from 'discord.js';
+import {LabelBuilder, type MessageComponentInteraction, MessageFlags, ModalBuilder, TextInputBuilder, TextInputStyle} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
+import {getChartRanking} from '@/features/chart/data';
+import {buildChartButtons, buildChartEmbed, TRACKS_PER_PAGE} from '@/features/chart/embed';
 import {MODAL_SUBMIT_TIMEOUT} from '@/shared/discord/constants';
 import {createErrorEmbed} from '@/shared/discord/embeds';
-import {getChartRanking} from '@/features/chart/data';
-import {TRACKS_PER_PAGE, buildChartEmbed, buildChartButtons} from '@/features/chart/embed';
 import type {MutablePage, MutableRanking, MutableTotalPages} from './types';
 
 export async function handleChartCollect(
@@ -29,14 +29,8 @@ export async function handleChartCollect(
   if (i.isButton() && i.customId === 'chart_page') {
     const modalId = `chart_page_modal_${i.id}`;
     const modal = new ModalBuilder().setCustomId(modalId).setTitle('페이지 이동');
-    const pageInput = new TextInputBuilder()
-      .setCustomId('chart_page_input')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder(`1 ~ ${totalPagesRef.value}`)
-      .setRequired(true);
-    const pageLabel = new LabelBuilder()
-      .setLabel('이동할 페이지 번호를 입력해 주세요.')
-      .setTextInputComponent(pageInput);
+    const pageInput = new TextInputBuilder().setCustomId('chart_page_input').setStyle(TextInputStyle.Short).setPlaceholder(`1 ~ ${totalPagesRef.value}`).setRequired(true);
+    const pageLabel = new LabelBuilder().setLabel('이동할 페이지 번호를 입력해 주세요.').setTextInputComponent(pageInput);
     modal.addLabelComponents(pageLabel);
     await i.showModal(modal);
 
@@ -45,7 +39,7 @@ export async function handleChartCollect(
       await modalInteraction.deferUpdate();
 
       const inputValue = parseInt(modalInteraction.fields.getTextInputValue('chart_page_input'), 10);
-      if (isNaN(inputValue) || inputValue < 1 || inputValue > totalPagesRef.value) {
+      if (Number.isNaN(inputValue) || inputValue < 1 || inputValue > totalPagesRef.value) {
         await modalInteraction.followUp({
           embeds: [createErrorEmbed(client, '유효하지 않은 페이지 번호예요.', `1 ~ ${totalPagesRef.value} 사이의 번호를 입력해 주세요.`)],
           flags: MessageFlags.Ephemeral,

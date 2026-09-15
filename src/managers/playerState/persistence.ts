@@ -2,8 +2,8 @@ import {eq} from 'drizzle-orm';
 
 import {getDb} from '@/db';
 import {playerStates} from '@/db/schema';
-import {PLAYER_STATE_VERSION, type PersistedQueueState} from '@/types/playerState';
 import {Logger} from '@/shared/logger';
+import {type PersistedQueueState, PLAYER_STATE_VERSION} from '@/types/playerState';
 
 const logger = new Logger('PlayerStateDB');
 

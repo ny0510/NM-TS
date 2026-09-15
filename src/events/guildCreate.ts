@@ -1,18 +1,20 @@
 import {EmbedBuilder, Events, type Guild} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {checkMissingPermissions, generateInviteLink} from '@/shared/discord/permissions/basicPermissions';
 import {toError} from '@/shared/errors';
 
-export default {
+export const event = {
   name: Events.GuildCreate,
   execute: async (guild: Guild) => {
     const client = guild.client as NMClient;
     client.logger.guildJoined(guild, client);
+    const botUser = client.user;
+    if (!botUser) return;
 
     try {
-      const botMember = await guild.members.fetch(client.user!.id);
+      const botMember = await guild.members.fetch(botUser.id);
       const missingPermissions = checkMissingPermissions(botMember.permissions);
 
       if (missingPermissions.length > 0) {
@@ -20,7 +22,7 @@ export default {
 
         try {
           const owner = await guild.fetchOwner();
-          const inviteLink = generateInviteLink(client.user!.id);
+          const inviteLink = generateInviteLink(botUser.id);
 
           await owner.send({
             embeds: [

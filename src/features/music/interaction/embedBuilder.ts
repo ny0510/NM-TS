@@ -1,14 +1,14 @@
 import {EmbedBuilder} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
-import type {QueueTrack} from '@/types/music';
 import {COLORS} from '@/shared/discord/embedColors';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/shared/formatting';
+import type {QueueTrack} from '@/types/music';
 
 export const TRACKS_PER_PAGE = 10;
 
-export function buildQueueEmbed(client: NMClient, queue: Queue, page: number): EmbedBuilder {
+export function buildQueueEmbed(_client: NMClient, queue: Queue, page: number): EmbedBuilder {
   const start = (page - 1) * TRACKS_PER_PAGE;
   const end = start + TRACKS_PER_PAGE;
   const tracks = queue.getSlice(start, end);

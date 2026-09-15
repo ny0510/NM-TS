@@ -1,11 +1,11 @@
+import {and, eq, inArray} from 'drizzle-orm';
 import {getDb} from '@/db';
 import {tracks, userFavorites} from '@/db/schema';
-import type {QueueTrack} from '@/types/music';
 import {upsertTrack} from '@/db/trackUpsert';
 import {extractTrackMeta} from '@/features/music/meta';
-import {and, eq, inArray} from 'drizzle-orm';
 import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
+import type {QueueTrack} from '@/types/music';
 
 const logger = new Logger('FavoritesService');
 
@@ -101,7 +101,11 @@ export async function isFavorited(userId: string, source: string, identifier: st
   const db = getDb();
 
   try {
-    const track = await db.select({id: tracks.id}).from(tracks).where(and(eq(tracks.source, source), eq(tracks.identifier, identifier))).limit(1);
+    const track = await db
+      .select({id: tracks.id})
+      .from(tracks)
+      .where(and(eq(tracks.source, source), eq(tracks.identifier, identifier)))
+      .limit(1);
 
     if (!track[0]) return false;
 
@@ -155,7 +159,10 @@ export async function getFavoritesByTrackIds(userId: string, trackIds: number[])
 
     const map = new Map<number, boolean>();
     for (const trackId of trackIds) {
-      map.set(trackId, favorites.some(f => f.trackId === trackId));
+      map.set(
+        trackId,
+        favorites.some(f => f.trackId === trackId),
+      );
     }
     return map;
   } catch (error) {

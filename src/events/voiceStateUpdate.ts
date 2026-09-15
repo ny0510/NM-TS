@@ -1,11 +1,11 @@
-import {Events, VoiceState} from 'discord.js';
+import {Events, type VoiceState} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import type {Event} from '@/types/client';
-import {isBotStateChange, handleBotKicked} from './voiceStateUpdate/botHandler';
 import {getNonBotMembers, handleEmptyChannel, handleMemberJoin} from './voiceStateUpdate/activityManager';
+import {handleBotKicked, isBotStateChange} from './voiceStateUpdate/botHandler';
 
-export default {
+export const event = {
   name: Events.VoiceStateUpdate,
   async execute(oldState: VoiceState, newState: VoiceState): Promise<void> {
     const client = oldState.client as NMClient;

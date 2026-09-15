@@ -1,7 +1,7 @@
-import {ActionRowBuilder, ButtonBuilder, ButtonStyle, type ChatInputCommandInteraction, EmbedBuilder, type Message} from 'discord.js';
+import {ActionRowBuilder, ButtonBuilder, ButtonStyle, type ChatInputCommandInteraction, EmbedBuilder} from 'discord.js';
 import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import {slashCommandMention} from '@/shared/discord';
 import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
@@ -27,19 +27,12 @@ export function buildQueueButtons(page: number, totalPages: number): ActionRowBu
   );
 }
 
-export async function disableQueueComponents(
-  interaction: ChatInputCommandInteraction,
-  client: NMClient,
-): Promise<void> {
+export async function disableQueueComponents(interaction: ChatInputCommandInteraction, client: NMClient): Promise<void> {
   try {
     const message = await interaction.fetchReply().catch(() => null);
     if (message) {
       await message.edit({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'queue')} 명령어를 사용해 다시 확인해 주세요.`)
-            .setColor(COLORS.normal),
-        ],
+        embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${await slashCommandMention(interaction, 'queue')} 명령어를 사용해 다시 확인해 주세요.`).setColor(COLORS.normal)],
         components: [],
       });
     }

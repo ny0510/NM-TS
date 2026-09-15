@@ -1,11 +1,10 @@
-import {ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
+import {type ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 import {DateTime} from 'luxon';
-
-import type {Command} from '@/types/client';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder().setName('ping').setDescription('봇의 지연시간을 확인해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {

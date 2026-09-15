@@ -1,8 +1,8 @@
 import {Events, type Guild} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 
-export default {
+export const event = {
   name: Events.GuildDelete,
   execute: async (guild: Guild) => {
     const client = guild.client as NMClient;

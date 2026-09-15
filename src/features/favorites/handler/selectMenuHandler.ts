@@ -1,18 +1,16 @@
-import {EmbedBuilder, type HexColorString, type MessageComponentInteraction, MessageFlags, StringSelectMenuInteraction} from 'discord.js';
+import {EmbedBuilder, type HexColorString, type MessageComponentInteraction, MessageFlags, type StringSelectMenuInteraction} from 'discord.js';
 import {LoadType} from 'shoukaku';
-
-import type {QueueTrack} from '@/types/music';
-import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
+import {buildFavoritesComponents, FAVORITES_PER_PAGE} from '@/features/favorites/componentBuilder';
+import type {FavoriteTrack} from '@/features/favorites/service';
+import {getUserFavorites} from '@/features/favorites/service';
+import {getEmbedMeta} from '@/features/music/track/embeds';
 import {getClient} from '@/shared/discord/client';
-import {createErrorEmbed} from '@/shared/discord/embeds';
 import {COLORS} from '@/shared/discord/embedColors';
+import {createErrorEmbed} from '@/shared/discord/embeds';
 import {toError} from '@/shared/errors';
 import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
 import {Logger} from '@/shared/logger';
-import {FAVORITES_PER_PAGE, buildFavoritesComponents} from '@/features/favorites/componentBuilder';
-import {getUserFavorites} from '@/features/favorites/service';
-import type {FavoriteTrack} from '@/features/favorites/service';
-import {getEmbedMeta} from '@/features/music/track/embeds';
+import type {QueueTrack} from '@/types/music';
 
 const logger = new Logger('FavoritesList');
 
@@ -23,13 +21,7 @@ function extractPageFromCustomId(customId: string, prefix: string): number {
   return match?.[1] ? parseInt(match[1], 10) : 0;
 }
 
-async function refreshSelectionAndShowError(
-  interaction: MessageComponentInteraction,
-  client: ReturnType<typeof getClient>,
-  favorites: Awaited<ReturnType<typeof getUserFavorites>>,
-  page: number,
-  errorMessage: string,
-): Promise<void> {
+async function refreshSelectionAndShowError(interaction: MessageComponentInteraction, client: ReturnType<typeof getClient>, favorites: Awaited<ReturnType<typeof getUserFavorites>>, page: number, errorMessage: string): Promise<void> {
   const totalPages = Math.max(1, Math.ceil(favorites.length / FAVORITES_PER_PAGE));
   const validPage = Math.min(Math.max(page, 0), totalPages - 1);
   await interaction.update({components: buildFavoritesComponents(favorites, validPage, Date.now().toString(36))});
@@ -62,7 +54,9 @@ export async function handleFavoritesSelectMenu(interaction: StringSelectMenuInt
 export async function addFavoritesToQueue(interaction: MessageComponentInteraction, selectedFavorites: FavoriteTrack[], page: number): Promise<void> {
   const client = getClient(interaction);
   const userId = interaction.user.id;
-  const guildId = interaction.guildId!;
+  const guildId = interaction.guildId;
+  const textChannelId = interaction.channelId;
+  if (!guildId || !textChannelId) return;
 
   const member = interaction.guild?.members.cache.get(userId);
   const voiceChannelId = member?.voice.channelId;
@@ -85,7 +79,7 @@ export async function addFavoritesToQueue(interaction: MessageComponentInteracti
       queue = await client.services.lavalinkManager.createQueue({
         guildId,
         voiceChannelId,
-        textChannelId: interaction.channelId!,
+        textChannelId,
         shardId: 0,
         volume: client.config.DEFAULT_VOLUME,
         deaf: true,

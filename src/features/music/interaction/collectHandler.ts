@@ -1,7 +1,7 @@
 import {type ChatInputCommandInteraction, type MessageComponentInteraction, MessageFlags} from 'discord.js';
 import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 
-import type {NMClient} from '@/client/Client';
+import type {NMClient} from '@/client';
 import {slashCommandMention} from '@/shared/discord';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {toError} from '@/shared/errors';
@@ -36,13 +36,7 @@ export function createQueueFilter(interaction: ChatInputCommandInteraction, clie
   };
 }
 
-export async function handleQueueCollect(
-  i: MessageComponentInteraction,
-  client: NMClient,
-  collector: {stop: () => void},
-  pageRef: {value: number},
-  guildId: string,
-): Promise<void> {
+export async function handleQueueCollect(i: MessageComponentInteraction, client: NMClient, collector: {stop: () => void}, pageRef: {value: number}, guildId: string): Promise<void> {
   if (i.replied || i.deferred) {
     client.logger.warn('Interaction already handled, skipping...');
     return;
@@ -91,12 +85,7 @@ export async function handleQueueCollect(
   });
 }
 
-export async function handleQueueCollectError(
-  error: unknown,
-  i: MessageComponentInteraction,
-  client: NMClient,
-  collector: {stop: () => void},
-): Promise<void> {
+export async function handleQueueCollectError(error: unknown, i: MessageComponentInteraction, client: NMClient, collector: {stop: () => void}): Promise<void> {
   if (error && typeof error === 'object' && 'code' in error) {
     const discordError = error as {code: number};
 

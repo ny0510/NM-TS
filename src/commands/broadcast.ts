@@ -1,11 +1,10 @@
-import {EmbedBuilder, MessageFlags, SlashCommandBuilder, Team, User, codeBlock} from 'discord.js';
 import type {ChatInputCommandInteraction} from 'discord.js';
-
-import type {Command} from '@/types/client';
+import {codeBlock, EmbedBuilder, MessageFlags, SlashCommandBuilder, Team, User} from 'discord.js';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
+import type {Command} from '@/types/client';
 
-export default {
+export const command = {
   data: new SlashCommandBuilder()
     .setName('broadcast')
     .setDescription('현재 재생중인 모든 서버에 공지사항을 보내요.')
@@ -57,7 +56,7 @@ export default {
     const tasks = queues.map(queue =>
       (async () => {
         const channel = client.channels.cache.get(queue.textChannelId || '');
-        if (!channel || !channel.isSendable()) {
+        if (!channel?.isSendable()) {
           throw new Error('Channel not sendable');
         }
         const embed = new EmbedBuilder().setTitle('📢 공지사항').setDescription(message).setColor(COLORS.normal);

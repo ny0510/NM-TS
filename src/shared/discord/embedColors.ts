@@ -1,4 +1,4 @@
-import {type HexColorString} from 'discord.js';
+import type {HexColorString} from 'discord.js';
 
 import {config} from '@/shared/config';
 

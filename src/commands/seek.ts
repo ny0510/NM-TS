@@ -1,12 +1,11 @@
-import {ChatInputCommandInteraction, EmbedBuilder, MessageFlags, SlashCommandBuilder, inlineCode} from 'discord.js';
-
-import type {Command} from '@/types/client';
+import {type ChatInputCommandInteraction, EmbedBuilder, inlineCode, MessageFlags, SlashCommandBuilder} from 'discord.js';
+import {validateMusicCommand} from '@/features/music/guard';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {msToTime} from '@/shared/formatting';
-import {validateMusicCommand} from '@/features/music/guard';
+import type {Command} from '@/types/client';
 
 const parseTimeToSeconds = (time: string): number | null => {
   if (/^\d+$/.test(time)) return parseInt(time, 10);
@@ -30,7 +29,7 @@ const formatTime = (seconds: number): string => {
   return result.trim();
 };
 
-export default {
+export const command = {
   data: new SlashCommandBuilder()
     .setName('seek')
     .setDescription('지정한 시간으로 건너뛰어요.')

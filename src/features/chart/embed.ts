@@ -1,8 +1,8 @@
 import {ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, inlineCode} from 'discord.js';
 
-import type {NMClient} from '@/client/Client';
-import {truncateWithEllipsis} from '@/shared/formatting';
+import type {NMClient} from '@/client';
 import {COLORS} from '@/shared/discord/embedColors';
+import {truncateWithEllipsis} from '@/shared/formatting';
 import {type ChartRankingRow, getTotalPlayCount} from './data';
 
 export const TRACKS_PER_PAGE = 5;
@@ -14,7 +14,7 @@ function getRankChangeIndicator(rankChange: number | null): string {
   return '➖';
 }
 
-export function buildChartEmbed(client: NMClient, ranking: ChartRankingRow[], page: number, totalPages: number, monthLabel: string, isGlobal: boolean, guildName: string | null): EmbedBuilder {
+export function buildChartEmbed(_client: NMClient, ranking: ChartRankingRow[], page: number, totalPages: number, monthLabel: string, isGlobal: boolean, guildName: string | null): EmbedBuilder {
   const start = (page - 1) * TRACKS_PER_PAGE;
   const end = Math.min(start + TRACKS_PER_PAGE, ranking.length);
   const pageItems = ranking.slice(start, end);
