@@ -1,4 +1,5 @@
 import type {Client, User} from 'discord.js';
+import {GatewayOpcodes} from 'discord-api-types/v10';
 import {Connectors, type LavalinkResponse, LoadType, type Node, type NodeOption, Shoukaku} from 'shoukaku';
 
 import type {NMClient} from '@/client';
@@ -58,9 +59,7 @@ export class LavalinkManager {
     if (existing) return existing;
 
     if (this.shoukaku.players.has(options.guildId) || this.shoukaku.connections.has(options.guildId)) {
-      try {
-        await this.shoukaku.leaveVoiceChannel(options.guildId);
-      } catch {}
+      await this.shoukaku.leaveVoiceChannel(options.guildId);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
     }
 
@@ -94,18 +93,34 @@ export class LavalinkManager {
       } catch (e) {
         lastError = e;
         const isTimeout = e instanceof Error && e.message.includes('voice connection is not established');
-        if (!isTimeout || attempt === MAX_RETRIES) break;
+        if (!isTimeout) break;
+
+        this.disconnectTimedOutVoiceSession(options);
+
+        if (attempt === MAX_RETRIES) break;
 
         this.logger.warn(`Voice connection attempt ${attempt + 1} failed, retrying...`);
-        /* 재시도 전 남은 연결 정리 */
-        try {
-          await this.shoukaku.leaveVoiceChannel(options.guildId);
-        } catch {}
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
       }
     }
 
     throw lastError;
+  }
+
+  private disconnectTimedOutVoiceSession(options: CreateQueueOptions): void {
+    this.shoukaku.connector.sendPacket(
+      options.shardId,
+      {
+        op: GatewayOpcodes.VoiceStateUpdate,
+        d: {
+          guild_id: options.guildId,
+          channel_id: null,
+          self_deaf: false,
+          self_mute: false,
+        },
+      },
+      false,
+    );
   }
 
   public async destroyQueue(guildId: string): Promise<void> {
