@@ -31,6 +31,7 @@ Discord.js + Lavalink music bot ("NM", v2.12.0). Bun runtime, strict TypeScript,
 
 - TypeScript is strict, `noUncheckedIndexedAccess` is on, `verbatimModuleSyntax` forces `import type`, module resolution is `bundler`, and `@/*` maps to `./src/*`. `noUnusedLocals`/`noUnusedParameters` are OFF.
 - Biome owns formatting and linting. It uses single quotes, no bracket spacing, 2-space indentation, trailing commas, and a 320-column limit.
+- Keep test files under `src/test/`, mirroring the production path when useful (for example, `src/managers/Foo.ts` → `src/test/managers/Foo.test.ts`). Keep shared test setup in `src/test/` as well.
 - User-facing text is Korean throughout the command/event flow.
 - Nested instruction files in `src/commands`, `src/features`, `src/managers`, `src/events`, and `src/shared` carry area-specific rules — consult them before editing those directories.
 

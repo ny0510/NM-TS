@@ -1,7 +1,7 @@
 import {describe, expect, spyOn, test} from 'bun:test';
 import {REST} from 'discord.js';
 
-import {deployCommands, mergeCommands} from './deploy';
+import {deployCommands, mergeCommands} from '@/deploy';
 
 describe('mergeCommands', () => {
   test('strips localized response-only fields from preserved commands', () => {

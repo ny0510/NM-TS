@@ -1,7 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 import {DateTime} from 'luxon';
 
-import {parseMonthInput} from './data';
+import {parseMonthInput} from '@/features/chart/data';
 
 const KST_ZONE = 'Asia/Seoul';
 const CURRENT_YEAR = 2026;

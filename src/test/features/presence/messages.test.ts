@@ -1,6 +1,6 @@
 import {describe, expect, test} from 'bun:test';
 
-import {buildPresenceMessages} from './messages';
+import {buildPresenceMessages} from '@/features/presence/messages';
 
 const templates = {
   PRESENCE_UPDATE_INTERVAL_MS: 10_000,
