@@ -1,15 +1,17 @@
-import {type ButtonInteraction, type CommandInteraction, type InteractionDeferReplyOptions, type InteractionEditReplyOptions, type InteractionReplyOptions, MessageFlags} from 'discord.js';
+import {type CommandInteraction, type InteractionDeferReplyOptions, type InteractionEditReplyOptions, type InteractionReplyOptions, type MessageComponentInteraction, MessageFlags} from 'discord.js';
 import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 import {getClient} from '@/shared/discord/client';
 import {toError} from '@/shared/errors';
 import {checkAndMarkInteraction} from './interactionManager';
+
+type ReplyInteraction = CommandInteraction | MessageComponentInteraction;
 
 const hasDiscordCode = (value: unknown): value is {code: number} => {
   if (typeof value !== 'object' || value === null || !('code' in value)) return false;
   return typeof (value as {code?: unknown}).code === 'number';
 };
 
-const logInteractionError = (interaction: CommandInteraction | ButtonInteraction, action: string, error: unknown): void => {
+const logInteractionError = (interaction: ReplyInteraction, action: string, error: unknown): void => {
   const client = getClient(interaction);
 
   if (hasDiscordCode(error) && error.code === RESTJSONErrorCodes.UnknownInteraction) {
@@ -19,7 +21,7 @@ const logInteractionError = (interaction: CommandInteraction | ButtonInteraction
   }
 };
 
-export async function safeReply(interaction: CommandInteraction | ButtonInteraction, content: string | InteractionReplyOptions, options?: InteractionReplyOptions): Promise<void> {
+export async function safeReply(interaction: ReplyInteraction, content: string | InteractionReplyOptions, options?: InteractionReplyOptions): Promise<void> {
   const client = getClient(interaction);
 
   if (checkAndMarkInteraction(interaction.id)) {
@@ -58,7 +60,7 @@ export async function safeReply(interaction: CommandInteraction | ButtonInteract
   }
 }
 
-export async function safeDeferReply(interaction: CommandInteraction | ButtonInteraction, options?: InteractionDeferReplyOptions): Promise<boolean> {
+export async function safeDeferReply(interaction: ReplyInteraction, options?: InteractionDeferReplyOptions): Promise<boolean> {
   try {
     await interaction.deferReply(options);
     return true;
@@ -68,7 +70,7 @@ export async function safeDeferReply(interaction: CommandInteraction | ButtonInt
   }
 }
 
-export async function safeDeferUpdate(interaction: ButtonInteraction): Promise<boolean> {
+export async function safeDeferUpdate(interaction: MessageComponentInteraction): Promise<boolean> {
   try {
     await interaction.deferUpdate();
     return true;
@@ -78,7 +80,7 @@ export async function safeDeferUpdate(interaction: ButtonInteraction): Promise<b
   }
 }
 
-export async function safeEditReply(interaction: CommandInteraction | ButtonInteraction, options: string | InteractionEditReplyOptions): Promise<boolean> {
+export async function safeEditReply(interaction: ReplyInteraction, options: string | InteractionEditReplyOptions): Promise<boolean> {
   try {
     await interaction.editReply(options);
     return true;

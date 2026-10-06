@@ -1,4 +1,4 @@
-import {type ButtonInteraction, type ChatInputCommandInteraction, channelMention, codeBlock, type GuildMember, MessageFlags, PermissionFlagsBits} from 'discord.js';
+import {type ButtonInteraction, type ChatInputCommandInteraction, channelMention, codeBlock, type GuildMember, MessageFlags, PermissionFlagsBits, type StringSelectMenuInteraction} from 'discord.js';
 
 import type {Queue} from '@/features/music/queue/Queue';
 import {getClient} from '@/shared/discord/client';
@@ -10,7 +10,7 @@ import {isTimedOut} from '@/shared/discord/permissions/isTimedOut';
 
 // ── Types ──
 
-type MusicInteraction = ChatInputCommandInteraction | ButtonInteraction;
+type MusicInteraction = ChatInputCommandInteraction | ButtonInteraction | StringSelectMenuInteraction;
 
 // ═══════════════════════════════════════════════════════════════
 // validateMusicCommand — primary entry for most commands
@@ -67,7 +67,7 @@ export async function validateMusicCommand(interaction: ChatInputCommandInteract
 // Individual guard helpers (return boolean)
 // ═══════════════════════════════════════════════════════════════
 
-export const ensureVoiceChannel = async (interaction: ChatInputCommandInteraction): Promise<boolean> => {
+export const ensureVoiceChannel = async (interaction: MusicInteraction): Promise<boolean> => {
   const client = getClient(interaction);
   const member = interaction.member as GuildMember;
 

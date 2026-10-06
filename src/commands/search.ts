@@ -1,6 +1,8 @@
 import {ActionRowBuilder, type ChatInputCommandInteraction, ComponentType, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, type StringSelectMenuInteraction} from 'discord.js';
 import {LoadType, type Track} from 'shoukaku';
+import {z} from 'zod';
 import {createQueue, ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
+import {handlePlaylistSearch} from '@/features/music/playlist/playlistSearchHandler';
 import {getEmbedMeta} from '@/features/music/track/embeds';
 import {slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
@@ -20,25 +22,31 @@ const SEARCH_PLATFORMS = {
   ytsearch: '유튜브',
   spsearch: '스포티파이',
   scsearch: '사운드클라우드',
+  ytplaylist: '유튜브 플레이리스트',
 } as const;
 
-type SearchPlatformKey = keyof typeof SEARCH_PLATFORMS;
+const searchPlatformSchema = z.enum(['ytsearch', 'spsearch', 'scsearch', 'ytplaylist']);
 
 export const command = {
   data: new SlashCommandBuilder()
     .setName('search')
-    .setDescription('음악을 검색해요.')
-    .addStringOption(option => option.setName('query').setDescription('🔍 검색할 음악의 제목이나 URL을 입력해 주세요.').setRequired(true))
-    .addStringOption(option => option.setName('searchplatform').setDescription('🌐 검색할 플랫폼을 선택해 주세요.').addChoices({name: '▶️ 유튜브', value: 'ytsearch'}, {name: '🎵 스포티파이', value: 'spsearch'}, {name: '☁️ 사운드클라우드', value: 'scsearch'})),
+    .setDescription('음악이나 공개 플레이리스트를 검색해요.')
+    .addStringOption(option => option.setName('query').setDescription('🔍 검색할 음악이나 플레이리스트의 제목, 검색어 또는 URL을 입력해 주세요.').setRequired(true))
+    .addStringOption(option => option.setName('searchplatform').setDescription('🌐 검색할 플랫폼을 선택해 주세요.').addChoices({name: '▶️ 유튜브', value: 'ytsearch'}, {name: '📜 유튜브 플레이리스트', value: 'ytplaylist'}, {name: '🎵 스포티파이', value: 'spsearch'}, {name: '☁️ 사운드클라우드', value: 'scsearch'})),
   permissions: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = getClient(interaction);
 
+    const searchPlatform = searchPlatformSchema.parse(interaction.options.getString('searchplatform') ?? 'ytsearch');
+    if (searchPlatform === 'ytplaylist') {
+      await handlePlaylistSearch(interaction);
+      return;
+    }
+
     await interaction.deferReply();
 
     const query = interaction.options.getString('query', true);
-    const searchPlatform = (interaction.options.getString('searchplatform') as SearchPlatformKey | null) ?? 'ytsearch';
     const platformDisplayName = SEARCH_PLATFORMS[searchPlatform];
 
     const res = await client.services.lavalinkManager.search(`${searchPlatform}:${query}`, interaction.user);

@@ -1,4 +1,4 @@
-import {type ButtonInteraction, type ChatInputCommandInteraction, EmbedBuilder, type HexColorString, inlineCode, MessageFlags} from 'discord.js';
+import {type ButtonInteraction, type ChatInputCommandInteraction, EmbedBuilder, type HexColorString, inlineCode, MessageFlags, type StringSelectMenuInteraction} from 'discord.js';
 import {LoadType} from 'shoukaku';
 
 import type {NMClient} from '@/client';
@@ -18,7 +18,7 @@ function getQueuePositionText(addFirst: boolean, index: number | null): string {
   return '에';
 }
 
-export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCommandInteraction | ButtonInteraction, options: AddTrackOptions): Promise<void> => {
+export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCommandInteraction | ButtonInteraction | StringSelectMenuInteraction, options: AddTrackOptions): Promise<void> => {
   let {query} = options;
   const {addFirst = false, index = null, ignorePlaylist = false, excludeCover = false, excludeShorts = false} = options;
   const guildId = interaction.guildId;
