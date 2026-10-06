@@ -43,8 +43,10 @@ export async function validateMusicCommand(interaction: ChatInputCommandInteract
     return;
   }
 
-  // 3. Queue existence check (silent — matches existing ensurePlayerReady behavior)
-  if (!queue) return;
+  if (!queue) {
+    await ensurePlaying(interaction);
+    return;
+  }
 
   // 4. Optional playing check
   if (options?.requirePlaying) {
