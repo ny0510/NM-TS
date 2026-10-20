@@ -1,7 +1,6 @@
 import {EmbedBuilder} from 'discord.js';
 import type {TrackStartEvent} from 'shoukaku';
 
-import type {QueueTrack} from '@/types/music';
 import {COLORS} from '@/shared/discord/embedColors';
 import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
 import {Logger} from '@/shared/logger';
@@ -14,7 +13,8 @@ const logger = new Logger('Lavalink');
 
 export const handleTrackStart = async (ctx: PlayerEventContext, data: TrackStartEvent): Promise<void> => {
   const {queue, client, guildName, guildId} = ctx;
-  const track = data.track as QueueTrack;
+  const currentTrack = queue.getCurrent();
+  const track = currentTrack?.encoded === data.track.encoded ? currentTrack : data.track;
 
   logger.info(`Player ${guildName} (${guildId}) track start. Track: ${track.info.title}`);
   queue.set('trackStartedAt', Date.now());

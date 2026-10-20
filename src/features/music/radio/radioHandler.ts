@@ -93,11 +93,18 @@ export async function handleRadio(interaction: ChatInputCommandInteraction): Pro
     filter: i => i.user.id === interaction.user.id && i.customId.startsWith('radio:'),
   });
 
+  let selectingStation = false;
   collector.on('collect', async i => {
+    if (selectingStation || collector.ended) {
+      await safeDeferUpdate(i);
+      return;
+    }
+
     try {
       if (i.isButton()) {
         await handleRegionButton(i);
       } else if (i.isStringSelectMenu()) {
+        selectingStation = true;
         if (await handleStationSelect(i)) {
           collector.stop('selected');
           return;
@@ -109,6 +116,8 @@ export async function handleRadio(interaction: ChatInputCommandInteraction): Pro
     } catch (error) {
       client.logger.error(toError(error, 'Failed to handle radio interaction'));
       await safeReply(i, {embeds: [createErrorEmbed(client, '라디오를 추가하는 중 오류가 발생했어요.', '잠시 후 다시 시도해 주세요.')], flags: MessageFlags.Ephemeral});
+    } finally {
+      if (i.isStringSelectMenu()) selectingStation = false;
     }
   });
 
