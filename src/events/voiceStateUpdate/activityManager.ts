@@ -3,6 +3,7 @@ import type {GuildMember, VoiceState} from 'discord.js';
 import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
 import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {CHANNEL_EMPTY_TIMEOUT_MS} from '@/shared/discord/constants';
 import {createPausedEmbed, createResumedEmbed, sendTextChannelMessage} from './notifications';
 
@@ -23,7 +24,7 @@ export function getNonBotMembers(voiceChannel: VoiceState['channel']) {
 export async function handleEmptyChannel(client: NMClient, guildId: string, guild: VoiceState['guild'], queue: Queue): Promise<void> {
   if (!queue.paused) await queue.pause(true);
   const endTime = Math.floor((Date.now() + CHANNEL_EMPTY_TIMEOUT_MS) / 1000);
-  const embed = createPausedEmbed(client, endTime);
+  const embed = createPausedEmbed(client, endTime, isRadioTrack(queue.getCurrent()));
 
   const message = await sendTextChannelMessage(guild, queue.textChannelId, {embeds: [embed]});
 
@@ -49,7 +50,7 @@ export async function handleEmptyChannel(client: NMClient, guildId: string, guil
 
 export async function handleMemberJoin(client: NMClient, guildId: string, guild: VoiceState['guild'], queue: Queue): Promise<void> {
   if (queue.paused) {
-    await sendTextChannelMessage(guild, queue.textChannelId, {embeds: [createResumedEmbed(client)]});
+    await sendTextChannelMessage(guild, queue.textChannelId, {embeds: [createResumedEmbed(client, isRadioTrack(queue.getCurrent()))]});
     await queue.pause(false);
   }
 
