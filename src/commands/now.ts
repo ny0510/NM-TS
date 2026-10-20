@@ -1,6 +1,7 @@
 import {type ChatInputCommandInteraction, EmbedBuilder, type HexColorString, hyperlink, inlineCode, SlashCommandBuilder} from 'discord.js';
 import getImageColors from 'get-image-colors';
 import {ensurePlaying} from '@/features/music/guard';
+import {formatMusicDuration} from '@/features/music/queue/duration';
 import {createProgressBar} from '@/features/music/queue/queueOperations';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
@@ -69,7 +70,7 @@ export const command = {
             },
             {
               name: '📋 남은 대기열',
-              value: `${inlineCode(`${queueSize}곡`)} · ${inlineCode(msToTime(queueDuration))}`,
+              value: `${inlineCode(`${queueSize}곡`)} · ${inlineCode(formatMusicDuration(queueDuration))}`,
               inline: true,
             },
             {
