@@ -6,7 +6,7 @@ import {getCommands, getEvents} from '@/utils/core';
 describe('dynamic module loading', () => {
   test('loads every migrated command by name', async () => {
     // Given: the template-style command modules in src/commands
-    const expectedNames = ['autoplay', 'autoshuffle', 'broadcast', 'chart', 'clear', 'favorites', 'info', 'now', 'pause', 'ping', 'play', 'queue', 'remove', 'repeat', 'resume', 'search', 'seek', 'shuffle', 'skip', 'speed', 'stop', 'volume'];
+    const expectedNames = ['autoplay', 'autoshuffle', 'broadcast', 'chart', 'clear', 'favorites', 'info', 'now', 'pause', 'ping', 'play', 'queue', 'radio', 'remove', 'repeat', 'resume', 'search', 'seek', 'shuffle', 'skip', 'speed', 'stop', 'volume'];
 
     // When: the central loader discovers command modules
     const commands = await getCommands();
