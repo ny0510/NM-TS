@@ -1,4 +1,4 @@
-import {type AutocompleteInteraction, type ChatInputCommandInteraction, codeBlock, EmbedBuilder, Events, type Interaction, MessageFlags, type PermissionsString} from 'discord.js';
+import {type AutocompleteInteraction, type ChatInputCommandInteraction, codeBlock, EmbedBuilder, Events, type Interaction, MessageFlags, PermissionFlagsBits, type PermissionsString, Team, User} from 'discord.js';
 import {handleFavoritesInteraction} from '@/features/favorites/interactionRouter';
 import {handlePlayerControlsButtons} from '@/features/music/button/controlsBuilder';
 import {handleQuickAddButton} from '@/features/music/button/quickAddBuilder';
@@ -63,18 +63,34 @@ export const event = {
 
     if (!command) return;
 
-    const cooldownResult = client.services.cooldownManager.checkCooldown(command.data.name, interaction.user.id, command.cooldown);
+    const isAdministrator = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ?? false;
 
-    if (cooldownResult.onCooldown) {
-      return await safeReply(interaction, {
-        embeds: [
-          new EmbedBuilder()
-            .setTitle('잠시 후에 다시 시도해 주세요.')
-            .setDescription(`${await slashCommandMention(interaction, command.data.name)} 명령어는 \`${cooldownResult.timeLeft}초\` 후에 사용할 수 있어요.`)
-            .setColor(COLORS.error),
-        ],
-        flags: MessageFlags.Ephemeral,
-      });
+    if (!isAdministrator && client.application && !client.application.owner) {
+      try {
+        await client.application.fetch();
+      } catch (error) {
+        if (!(error instanceof Error)) throw error;
+        client.logger.warn(`Failed to fetch application owner: ${error.message}`);
+      }
+    }
+
+    const owner = client.application?.owner;
+    const isOwner = (owner instanceof User && owner.id === interaction.user.id) || (owner instanceof Team && owner.members.some(member => member.user.id === interaction.user.id));
+
+    if (!isAdministrator && !isOwner) {
+      const cooldownResult = client.services.cooldownManager.checkCooldown(command.data.name, interaction.user.id, command.cooldown);
+
+      if (cooldownResult.onCooldown) {
+        return await safeReply(interaction, {
+          embeds: [
+            new EmbedBuilder()
+              .setTitle('잠시 후에 다시 시도해 주세요.')
+              .setDescription(`${await slashCommandMention(interaction, command.data.name)} 명령어는 \`${cooldownResult.timeLeft}초\` 후에 사용할 수 있어요.`)
+              .setColor(COLORS.error),
+          ],
+          flags: MessageFlags.Ephemeral,
+        });
+      }
     }
 
     const {result, missing} = await checkPermissions(interaction as ChatInputCommandInteraction, command);
