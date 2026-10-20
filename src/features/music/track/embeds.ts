@@ -1,4 +1,5 @@
 import type {Queue} from '@/features/music/queue/Queue';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {msToTime} from '@/shared/formatting';
 import type {QueueTrack} from '@/types/music';
 import {getAlbumColors} from './colors';
@@ -25,7 +26,7 @@ export const getEmbedMeta = async (trackOrTracks: QueueTrack | QueueTrack[], isP
     const colors = await getAlbumColors(track.info.artworkUrl);
     const actionText = action === 'add' ? '추가된' : '재생중인';
     const {queueSize, actualQueueDuration} = getQueueInfo(queue);
-    const footerText = `${actionText} 음악 · ${track.info.isStream ? '실시간 스트리밍' : msToTime(track.info.length)} | 대기열에 ${queueSize}곡 · ${msToTime(actualQueueDuration)}`;
+    const footerText = `${actionText} ${isRadioTrack(track) ? '라디오' : '음악'} · ${track.info.isStream ? '실시간 스트리밍' : msToTime(track.info.length)} | 대기열에 ${queueSize}곡 · ${msToTime(actualQueueDuration)}`;
     return {colors, footerText};
   }
 };

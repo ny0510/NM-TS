@@ -133,9 +133,16 @@ export class Queue {
     if (this.previous.length > 25) this.previous.shift();
   }
   async play(): Promise<void> {
-    const {track, playing} = await shiftAndPlay(this.tracks, this.player, this._volume, this.textChannelId);
-    this.current = track;
-    this.playing = playing;
+    const previousTrack = this.current;
+    this.current = this.tracks[0] ?? null;
+    try {
+      const {track, playing} = await shiftAndPlay(this.tracks, this.player, this._volume, this.textChannelId);
+      this.current = track;
+      this.playing = playing;
+    } catch (error) {
+      this.current = previousTrack;
+      throw error;
+    }
   }
   async stop(count?: number): Promise<void> {
     await stopAndTrim(this.tracks, this.player, count);

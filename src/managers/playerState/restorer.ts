@@ -2,6 +2,7 @@ import {type Client, EmbedBuilder} from 'discord.js';
 
 import type {NMClient} from '@/client';
 import {handleEmptyChannel} from '@/events/voiceStateUpdate/activityManager';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 import type {ILogger} from '@/shared/logger';
@@ -194,7 +195,7 @@ async function restoreQueueFromState(client: Client, state: PersistedQueueState,
       const isPaused = state.currentTrack?.paused ?? false;
       const embed = new EmbedBuilder()
         .setTitle('NM이 재시작되어 이전 재생 상태를 복구했어요.')
-        .setDescription(isPaused ? '일시정지 상태로 복구되었어요.' : '음악을 이어서 재생할게요.')
+        .setDescription(isPaused ? '일시정지 상태로 복구되었어요.' : isRadioTrack(queue.getCurrent()) ? '라디오를 이어서 재생할게요.' : '음악을 이어서 재생할게요.')
         .setColor(COLORS.normal);
 
       await textChannel.send({embeds: [embed]});

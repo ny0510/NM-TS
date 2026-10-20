@@ -2,6 +2,7 @@ import {getDb} from '@/db';
 import {trackPlayEvents} from '@/db/schema';
 import {upsertTrack} from '@/db/trackUpsert';
 import {extractTrackMeta} from '@/features/music/meta';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
 import type {QueueTrack} from '@/types/music';
@@ -9,6 +10,11 @@ import type {QueueTrack} from '@/types/music';
 const logger = new Logger('TrackPlayEvents');
 
 export async function recordTrackPlayEvent(guildId: string, track: QueueTrack, requesterId?: string): Promise<void> {
+  if (isRadioTrack(track)) {
+    logger.debug(`라디오는 음악 차트에 집계하지 않아 재생 기록을 저장하지 않았어요. track=${track.info.title}`);
+    return;
+  }
+
   const resolvedRequesterId = requesterId ?? track.requester?.id;
 
   if (!resolvedRequesterId) {

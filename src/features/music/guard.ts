@@ -1,6 +1,7 @@
 import {type ButtonInteraction, type ChatInputCommandInteraction, channelMention, codeBlock, type GuildMember, MessageFlags, PermissionFlagsBits, type StringSelectMenuInteraction} from 'discord.js';
 
 import type {Queue} from '@/features/music/queue/Queue';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
@@ -127,7 +128,7 @@ export const ensurePaused = async (interaction: ChatInputCommandInteraction): Pr
   const queue = client.queues.get(guildId);
   if (!queue || queue.paused) {
     await safeReply(interaction, {
-      embeds: [createErrorEmbed(client, '음악이 이미 일시정지 상태에요.', `${await slashCommandMention(interaction, 'resume')} 명령어로 다시 재생할 수 있어요.`)],
+      embeds: [createErrorEmbed(client, isRadioTrack(queue?.getCurrent()) ? '라디오가 이미 일시정지 상태에요.' : '음악이 이미 일시정지 상태에요.', `${await slashCommandMention(interaction, 'resume')} 명령어로 다시 재생할 수 있어요.`)],
       flags: MessageFlags.Ephemeral,
     });
     return false;
@@ -142,7 +143,7 @@ export const ensureResumed = async (interaction: ChatInputCommandInteraction): P
   const queue = client.queues.get(guildId);
   if (!queue?.paused) {
     await safeReply(interaction, {
-      embeds: [createErrorEmbed(client, '음악이 이미 재생중이에요.', `${await slashCommandMention(interaction, 'pause')} 명령어로 일시 정지할 수 있어요.`)],
+      embeds: [createErrorEmbed(client, isRadioTrack(queue?.getCurrent()) ? '라디오가 이미 재생중이에요.' : '음악이 이미 재생중이에요.', `${await slashCommandMention(interaction, 'pause')} 명령어로 일시 정지할 수 있어요.`)],
       flags: MessageFlags.Ephemeral,
     });
     return false;

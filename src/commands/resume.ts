@@ -1,5 +1,6 @@
 import {type ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 import {ensureResumed, validateMusicCommand} from '@/features/music/guard';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
 import type {Command} from '@/types/client';
@@ -14,6 +15,6 @@ export const command = {
     if (!isResumed) return;
 
     await queue.pause(false);
-    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle('음악을 다시 재생했어요.').setColor(COLORS.normal)]});
+    await safeReply(interaction, {embeds: [new EmbedBuilder().setTitle(isRadioTrack(queue.getCurrent()) ? '라디오를 다시 재생했어요.' : '음악을 다시 재생했어요.').setColor(COLORS.normal)]});
   },
 } satisfies Command;
