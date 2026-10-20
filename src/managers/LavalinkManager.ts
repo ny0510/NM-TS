@@ -4,8 +4,9 @@ import {Connectors, type LavalinkResponse, LoadType, type Node, type NodeOption,
 
 import type {NMClient} from '@/client';
 import {Queue} from '@/features/music/queue/Queue';
+import {radioRegions} from '@/features/music/radio/radioStations';
+import {getMusicResolveQuery} from '@/features/music/track/queryPolicy';
 import {registerLavalinkEvents, registerPlayerEvents} from '@/managers/lavalink';
-import {isURL} from '@/shared/formatting/patterns';
 import type {ILogger} from '@/shared/logger';
 import type {Config} from '@/types/client';
 import type {CreateQueueOptions, QueueTrack} from '@/types/music';
@@ -135,16 +136,24 @@ export class LavalinkManager {
   }
 
   public async search(query: string, requester?: User): Promise<LavalinkResponse | undefined> {
+    const resolveQuery = getMusicResolveQuery(query, this.config.LAVALINK_SEARCH_PREFIX);
+    if (!resolveQuery) return undefined;
+    return this.resolve(resolveQuery, requester);
+  }
+
+  public async loadRadio(url: string, requester?: User): Promise<LavalinkResponse | undefined> {
+    if (!radioRegions.some(region => region.stations.some(station => station.url === url))) return undefined;
+    return this.resolve(url, requester);
+  }
+
+  private async resolve(query: string, requester?: User): Promise<LavalinkResponse | undefined> {
     const node = this.shoukaku.getIdealNode();
     if (!node) {
       this.logger.error('No available Lavalink nodes for search');
       return undefined;
     }
 
-    const normalizedQuery = query.trim();
-    const hasSearchPrefix = /^(ytsearch|spsearch|scsearch):/i.test(normalizedQuery);
-    const resolveQuery = isURL.test(normalizedQuery) || hasSearchPrefix ? normalizedQuery : `${this.config.LAVALINK_SEARCH_PREFIX}${normalizedQuery}`;
-    const result = await node.rest.resolve(resolveQuery);
+    const result = await node.rest.resolve(query);
     if (!result) return undefined;
 
     if (requester) {

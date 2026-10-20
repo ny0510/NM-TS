@@ -11,16 +11,13 @@ export async function handleAutoplay(queue: Queue, client: NMClient): Promise<bo
   const seed = queue.previous.at(-1);
   if (!seed) return false;
 
-  const node = client.services.lavalinkManager.getNode();
-  if (!node) return false;
-
   for (let attempt = 0; attempt < MAX_AUTOPLAY_RETRIES; attempt++) {
     try {
       const identifier = seed.info.identifier;
       const randomIndex = Math.floor(Math.random() * 23) + 2;
       const autoplayQuery = `https://youtube.com/watch?v=${identifier}&list=RD${identifier}&index=${randomIndex}`;
 
-      const result = await node.rest.resolve(autoplayQuery);
+      const result = await client.services.lavalinkManager.search(autoplayQuery);
       if (!result || result.loadType !== 'playlist') continue;
 
       const candidates = result.data.tracks.filter((t: {info: {identifier: string; uri?: string; title: string}}) => !isDuplicate(t as QueueTrack, queue.previous));

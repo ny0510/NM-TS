@@ -23,7 +23,7 @@ test.each([false, true])('adds one station despite concurrent selections (retry 
     queues: new Map([['guild', queue]]),
     services: {
       lavalinkManager: {
-        search: () => {
+        loadRadio: () => {
           if (retryAfterFailure && attempts++ === 0) return Promise.resolve({loadType: LoadType.EMPTY, data: {}} satisfies LavalinkResponse);
           started.resolve();
           return lookup.promise;

@@ -53,7 +53,7 @@ async function handleStationSelect(selection: StringSelectMenuInteraction): Prom
 
   if (!(await safeDeferUpdate(selection))) return false;
 
-  const res = await client.services.lavalinkManager.search(station.url, selection.user);
+  const res = await client.services.lavalinkManager.loadRadio(station.url, selection.user);
   if (!res || res.loadType !== LoadType.TRACK) {
     await safeReply(selection, {embeds: [createErrorEmbed(client, '라디오에 연결할 수 없어요.', '잠시 후 다시 시도하거나 다른 채널을 선택해 주세요.')], flags: MessageFlags.Ephemeral});
     return false;
