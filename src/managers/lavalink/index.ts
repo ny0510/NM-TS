@@ -3,8 +3,8 @@ import {EmbedBuilder} from 'discord.js';
 import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
 import {COLORS} from '@/shared/discord/embedColors';
-import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
+import {describeNodeError, EARLY_SOCKET_CLOSE, isTransientNodeError, unwrapNodeError} from './nodeError';
 import {handlePlayerClosed} from './playerClosed';
 import {handleTrackEnd} from './trackEnd';
 import {handleTrackException} from './trackException';
@@ -38,6 +38,7 @@ export type {PlayerEventContext} from './types';
 export const registerLavalinkEvents = (client: NMClient): void => {
   const shoukaku = client.services.lavalinkManager.getShoukaku();
   const reconnectingNodes = new Set<string>();
+  const lastFailureWasNetwork = new Map<string, boolean>();
 
   const notifyReconnecting = (name: string): void => {
     if (reconnectingNodes.has(name)) return;
@@ -46,6 +47,7 @@ export const registerLavalinkEvents = (client: NMClient): void => {
   };
 
   shoukaku.on('ready', (name: string, lavalinkResume: boolean, libraryResume: boolean) => {
+    lastFailureWasNetwork.delete(name);
     logger.info(`Node ${name} connected (lavalinkResume: ${lavalinkResume}, libraryResume: ${libraryResume})`);
     if (reconnectingNodes.delete(name)) {
       void notifyActiveQueues(client, '음악 서버 연결이 복구됐어요.', '이제 음악을 다시 재생할 수 있어요.');
@@ -53,7 +55,12 @@ export const registerLavalinkEvents = (client: NMClient): void => {
   });
 
   shoukaku.on('error', (name: string, error: unknown) => {
-    logger.error(toError(error, `Node ${name} error`));
+    const cause = unwrapNodeError(error);
+    const isTerminalClose = cause.message === EARLY_SOCKET_CLOSE;
+    const transient = isTerminalClose ? lastFailureWasNetwork.get(name) === true : isTransientNodeError(cause);
+    if (!isTerminalClose) lastFailureWasNetwork.set(name, transient);
+    if (reconnectingNodes.has(name) && transient) logger.warn(`Node ${name} reconnect failed: ${describeNodeError(cause)}`);
+    else logger.error(new Error(`Node ${name} error: ${describeNodeError(cause)}`, {cause}));
     client.services.lavalinkManager.restoreNode(name);
   });
   shoukaku.on('close', (name: string, code: number, reason: string) => {
