@@ -19,13 +19,16 @@ const track = (encoded: string): QueueTrack => ({encoded, info: {identifier: enc
 const options = {guildId: 'guild', voiceChannelId: 'voice', textChannelId: 'text', shardId: 0};
 function fixture() {
   const calls: string[] = [];
+  const volumes: number[] = [];
   const player = Object.assign(new EventEmitter(), {
     paused: false,
     position: 0,
     playTrack: async (input: {track: {encoded: string}}) => {
       calls.push(input.track.encoded);
     },
-    setGlobalVolume: async () => {},
+    setGlobalVolume: async (volume: number) => {
+      volumes.push(volume);
+    },
     setPaused: async (state: boolean) => {
       player.paused = state;
     },
@@ -42,9 +45,44 @@ function fixture() {
     },
   };
   const manager: LavalinkManager = Object.create(LavalinkManager.prototype);
-  Object.assign(manager, {shoukaku, queues: new Map(), radios: new Map(), locks: new Map(), client: null});
-  return {manager, player, calls};
+  Object.assign(manager, {shoukaku, queues: new Map(), radios: new Map(), locks: new Map(), musicVolumes: new Map(), client: null});
+  return {manager, player, calls, volumes};
 }
+
+test('radio starts at 100 and music without a previous volume uses its default', async () => {
+  const {manager, volumes} = fixture();
+  const radio = await manager.createRadioSession({...options, volume: 20});
+  await radio.tune('seoul', station, track('radio'));
+  expect(radio.volume).toBe(100);
+  expect(volumes.at(-1)).toBe(100);
+  await manager.destroySession('guild', radio.sessionId);
+  const music = await manager.createQueue({...options, volume: 20});
+  music.add(track('music'));
+  await music.play();
+  expect(music.volume).toBe(20);
+  expect(volumes.at(-1)).toBe(20);
+});
+
+test.each([0, 37])('music volume %i survives a radio switch and radio volume changes stay separate', async musicVolume => {
+  const {manager, volumes} = fixture();
+  const previous = await manager.createQueue({...options, volume: 20});
+  await previous.setVolume(musicVolume);
+  await manager.destroySession('guild', previous.sessionId);
+  const radio = await manager.createRadioSession({...options, volume: 20});
+  await radio.tune('seoul', station, track('radio'));
+  expect(volumes.at(-1)).toBe(100);
+  await radio.setVolume(65);
+  await radio.tune('seoul', station, track('next-radio'));
+  expect(volumes.at(-1)).toBe(65);
+  await manager.destroySession('guild', radio.sessionId);
+  const music = await manager.createQueue({...options, volume: 20});
+  music.add(track('music'));
+  await music.play();
+  expect(music.volume).toBe(musicVolume);
+  expect(volumes.at(-1)).toBe(musicVolume);
+  const otherGuild = await manager.createQueue({...options, guildId: 'other-guild', volume: 20});
+  expect(otherGuild.volume).toBe(20);
+});
 
 test('concurrent radio creation has one owner and never enters music queue', async () => {
   const {manager, calls} = fixture();
@@ -201,6 +239,7 @@ test('radio restore resolves the station again and never seeks its old stream', 
   expect(resolved).toEqual([station.url]);
   expect(calls).toEqual(['join', 'fresh-encoding']);
   expect(manager.getRadioSession('guild')?.paused).toBe(true);
+  expect(manager.getRadioSession('guild')?.volume).toBe(100);
   expect(manager.getQueues().size).toBe(0);
 });
 

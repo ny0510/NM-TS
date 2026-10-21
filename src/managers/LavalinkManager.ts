@@ -24,6 +24,7 @@ export class LavalinkManager {
   private readonly config: Config;
   private readonly queues = new Map<string, Queue>();
   private readonly radios = new Map<string, RadioSession>();
+  private readonly musicVolumes = new Map<string, number>();
   private readonly locks = new Map<string, Promise<void>>();
   private client: NMClient | null = null;
   constructor(client: Client, logger: ILogger, config: Config) {
@@ -111,7 +112,7 @@ export class LavalinkManager {
     if (existing) return existing;
     if (this.radios.has(options.guildId)) throw new Error('Radio session is active');
     const player = await this.joinVoice(options);
-    const queue = new Queue({...options, player, shoukaku: this.shoukaku});
+    const queue = new Queue({...options, volume: this.musicVolumes.get(options.guildId) ?? options.volume, player, shoukaku: this.shoukaku});
     this.queues.set(options.guildId, queue);
     if (this.client) registerPlayerEvents(queue, this.client);
     return queue;
@@ -126,7 +127,7 @@ export class LavalinkManager {
     if (existing) return existing;
     if (this.queues.has(options.guildId)) throw new Error('Music session is active');
     const player = await this.joinVoice(options);
-    const session = new RadioSession({...options, player, shoukaku: this.shoukaku});
+    const session = new RadioSession({...options, volume: 100, player, shoukaku: this.shoukaku});
     this.radios.set(options.guildId, session);
     if (this.client) registerRadioEvents(session, this.client);
     return session;
@@ -196,6 +197,7 @@ export class LavalinkManager {
   private async destroySessionUnlocked(guildId: string, expectedSessionId: string): Promise<boolean> {
     const session = this.getSession(guildId);
     if (!session || session.sessionId !== expectedSessionId) return false;
+    if (session.mode === 'music') this.musicVolumes.set(guildId, session.volume);
     try {
       await session.destroy();
     } finally {

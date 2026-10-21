@@ -46,7 +46,7 @@ function setup(regionKey = 'seoul', savedRegionKey = regionKey) {
     debug: () => {},
   });
   const manager: LavalinkManager = Object.create(LavalinkManager.prototype);
-  Object.assign(manager, {shoukaku, queues: new Map(), radios: new Map(), locks: new Map(), client: null, logger});
+  Object.assign(manager, {shoukaku, queues: new Map(), radios: new Map(), locks: new Map(), musicVolumes: new Map(), client: null, logger});
   const client: NMClient = Object.create(null);
   Object.assign(client, {
     services: {lavalinkManager: manager},
