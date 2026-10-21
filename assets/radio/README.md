@@ -2,8 +2,6 @@
 
 기존 Figma 원본의 색상과 128×128 크기를 유지했습니다. `progress_*` 6개는 이미 등록된 원본이며, `radio_*` 9개가 추가 업로드 대상입니다. PNG는 Discord에 바로 업로드할 수 있습니다.
 
-Figma: https://www.figma.com/design/ph9dRUORq025KysbuRVnMk/NM?node-id=105-35
-
 | 이모지 이름 | 환경 변수 |
 | --- | --- |
 | radio_marker_filled_start | RADIO_MARKER_FILLED_START |
