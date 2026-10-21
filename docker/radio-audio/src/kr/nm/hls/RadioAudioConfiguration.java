@@ -6,6 +6,7 @@ import com.sedmelluq.discord.lavaplayer.source.http.HttpAudioSourceManager;
 import com.sedmelluq.discord.lavaplayer.tools.io.HttpClientTools;
 import com.sedmelluq.discord.lavaplayer.tools.io.HttpInterfaceManager;
 import com.sedmelluq.discord.lavaplayer.tools.io.ThreadLocalHttpInterfaceManager;
+import com.sedmelluq.discord.lavaplayer.tools.http.ExtendedHttpClientBuilder;
 import dev.arbjerg.lavalink.api.AudioPlayerManagerConfiguration;
 import java.io.IOException;
 import lavalink.server.config.HttpConfig;
@@ -55,9 +56,12 @@ public final class RadioAudioConfiguration implements AudioPlayerManagerConfigur
   }
 
   private void configureHttp(HttpClientBuilder builder) {
+    ((ExtendedHttpClientBuilder) builder).setSslConnectionSocketFactory(RadioSslSocketFactory.create());
     builder.setConnectionReuseStrategy((response, context) -> {
       HttpHost host = HttpClientContext.adapt(context).getTargetHost();
-      return (host == null || !"ebsonair.ebs.co.kr".equalsIgnoreCase(host.getHostName()))
+      return (host == null || !("ebsonair.ebs.co.kr".equalsIgnoreCase(host.getHostName())
+          || "live.andongmbc.co.kr".equalsIgnoreCase(host.getHostName())
+          || "onairsfm.jejumbc.com".equalsIgnoreCase(host.getHostName())))
           && DefaultClientConnectionReuseStrategy.INSTANCE.keepAlive(response, context);
     });
     HttpConfig proxy = config.getHttpConfig();
