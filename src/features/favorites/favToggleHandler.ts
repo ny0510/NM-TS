@@ -2,6 +2,7 @@ import {type ButtonInteraction, EmbedBuilder, MessageFlags} from 'discord.js';
 
 import {addFavorite, isFavorited} from '@/features/favorites/service';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {safeDeferUpdate, safeReply, slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
@@ -30,6 +31,14 @@ export async function handleFavToggleButton(interaction: ButtonInteraction): Pro
   if (!currentTrack) {
     await safeReply(interaction, {
       embeds: [createErrorEmbed(client, '현재 재생 중인 음악이 없어요.')],
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  if (isRadioTrack(currentTrack)) {
+    await safeReply(interaction, {
+      embeds: [createErrorEmbed(client, '라디오는 즐겨찾기에 추가할 수 없어요.')],
       flags: MessageFlags.Ephemeral,
     });
     return;

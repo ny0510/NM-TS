@@ -3,6 +3,7 @@ import {getDb} from '@/db';
 import {tracks, userFavorites} from '@/db/schema';
 import {upsertTrack} from '@/db/trackUpsert';
 import {extractTrackMeta} from '@/features/music/meta';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
 import type {QueueTrack} from '@/types/music';
@@ -23,6 +24,8 @@ export interface FavoriteTrack {
 }
 
 export async function addFavorite(userId: string, track: QueueTrack): Promise<boolean> {
+  if (isRadioTrack(track)) return false;
+
   const {source, identifier, title, artist, durationMs} = extractTrackMeta(track);
 
   if (!identifier || !title) {

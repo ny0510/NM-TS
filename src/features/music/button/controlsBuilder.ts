@@ -2,6 +2,7 @@ import {ActionRowBuilder, ButtonBuilder, type ButtonInteraction, ButtonStyle, Me
 import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
 import type {Queue} from '@/features/music/queue/Queue';
+import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
@@ -20,7 +21,7 @@ export function createPlayerControls(queue: Queue, _trackUri: string): ActionRow
   const quickAddRow = createQuickAddButton();
   row.addComponents(quickAddRow.components);
 
-  row.addComponents(new ButtonBuilder().setCustomId('fav_toggle').setEmoji('⭐').setStyle(ButtonStyle.Secondary));
+  row.addComponents(new ButtonBuilder().setCustomId('fav_toggle').setEmoji('⭐').setStyle(ButtonStyle.Secondary).setDisabled(isRadioTrack(queue.getCurrent())));
 
   return row;
 }
