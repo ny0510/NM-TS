@@ -1,11 +1,10 @@
 import type {TrackEndEvent} from 'shoukaku';
-
-import type {QueueTrack} from '@/types/music';
-import {Logger} from '@/shared/logger';
 import {recordTrackPlayEvent} from '@/features/analytics/trackPlayEvents';
-import type {PlayerEventContext} from './types';
+import {Logger} from '@/shared/logger';
+import type {QueueTrack} from '@/types/music';
 import {handleAutoplay} from './autoplay';
 import {handleQueueEnd} from './queueEnd';
+import type {PlayerEventContext} from './types';
 
 const logger = new Logger('Lavalink');
 const MIN_REPEAT_PLAYBACK_MS = 5_000;
@@ -16,6 +15,7 @@ export function shouldRestartRepeatedTrack(startedAt: number | undefined, endedA
 
 export const handleTrackEnd = async (ctx: PlayerEventContext, data: TrackEndEvent): Promise<void> => {
   const {queue, client, guildName, guildId} = ctx;
+  if (client.services.lavalinkManager.getSession(guildId) !== queue) return;
   const track = data.track as QueueTrack;
 
   logger.info(`Player ${guildName} (${guildId}) track end. Track: ${track.info.title} (reason: ${data.reason})`);
@@ -35,6 +35,7 @@ export const handleTrackEnd = async (ctx: PlayerEventContext, data: TrackEndEven
     await recordTrackPlayEvent(queue.guildId, track, requesterId);
   }
 
+  if (client.services.lavalinkManager.getSession(guildId) !== queue) return;
   if (queue.trackRepeat && data.reason === 'finished') {
     const startedAt = queue.get<number>('trackStartedAt');
     if (shouldRestartRepeatedTrack(startedAt, Date.now())) {

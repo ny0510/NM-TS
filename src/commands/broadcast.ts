@@ -35,7 +35,7 @@ export const command = {
     const message = interaction.options.getString('message', true);
     const preview = interaction.options.getBoolean('preview') || false;
 
-    const queues = Array.from(client.queues.values()).filter(q => q.playing);
+    const queues = Array.from(client.services.lavalinkManager.getSessions().values()).filter(q => q.playing);
     if (queues.length === 0) {
       await interaction.reply({content: '현재 재생중인 서버가 없습니다.', flags: [MessageFlags.Ephemeral]});
       return;

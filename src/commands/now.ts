@@ -3,6 +3,7 @@ import getImageColors from 'get-image-colors';
 import {ensurePlaying} from '@/features/music/guard';
 import {formatMusicDuration} from '@/features/music/queue/duration';
 import {createProgressBar} from '@/features/music/queue/queueOperations';
+import {handleRadio} from '@/features/radio/radioHandler';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {safeReply} from '@/shared/discord/interactions';
@@ -25,12 +26,16 @@ const getRepeatDisplay = (queueRepeat: boolean, trackRepeat: boolean): string =>
 const getToggleDisplay = (enabled: boolean): string => (enabled ? '🟢 활성화' : '🔴 비활성화');
 
 export const command = {
-  data: new SlashCommandBuilder().setName('now').setDescription('현재 재생중인 음악을 확인해요.'),
+  data: new SlashCommandBuilder().setName('now').setDescription('현재 재생중인 음악이나 라디오를 확인해요.'),
   cooldown: 3,
   async execute(interaction: ChatInputCommandInteraction) {
     const client = getClient(interaction);
     const guildId = interaction.guildId;
     if (!guildId) return;
+    if (client.services.lavalinkManager.getRadioSession(guildId)) {
+      await handleRadio(interaction);
+      return;
+    }
     const queue = client.queues.get(guildId);
 
     if (!(await ensurePlaying(interaction))) return;

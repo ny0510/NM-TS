@@ -56,6 +56,7 @@ export async function handlePlaylistSearch(interaction: ChatInputCommandInteract
         }
 
         await addTrackToQueue(client, selection, {query: `https://www.youtube.com/playlist?list=${selected.id}`});
+        await safeEditReply(selection, {components: []});
       };
 
       void addPlaylist().catch(async error => {
@@ -65,6 +66,7 @@ export async function handlePlaylistSearch(interaction: ChatInputCommandInteract
     });
 
     collector.once('end', (_collected, reason) => {
+      if (reason !== 'time') return;
       if (reason === 'time') messageOptions.embeds[0]?.setFooter({text: '검색 결과가 만료됐어요. /search 명령어로 다시 검색해 주세요.'});
       void safeEditReply(interaction, {...messageOptions, components: []});
     });

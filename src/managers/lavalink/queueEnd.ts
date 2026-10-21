@@ -1,15 +1,15 @@
-import {type Message, EmbedBuilder} from 'discord.js';
+import {EmbedBuilder, type Message} from 'discord.js';
 
 import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {Logger} from '@/shared/logger';
-import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
 
 const logger = new Logger('Lavalink');
 
 export async function handleQueueEnd(queue: Queue, client: NMClient): Promise<void> {
+  if (client.services.lavalinkManager.getSession(queue.guildId) !== queue) return;
   const channel = client.channels.cache.get(queue.textChannelId);
 
   queue.playing = false;
@@ -39,10 +39,14 @@ export async function handleQueueEnd(queue: Queue, client: NMClient): Promise<vo
     logger.warn(`Failed to send queue end message: ${sendError}`);
   }
 
-  setTimeout(async () => {
+  const timeout = setTimeout(async () => {
     try {
       if (!queue.playing && queue.size() === 0) {
-        await destroyQueueSafely(client, queue.guildId, `Queue destroyed after 30 seconds of inactivity (${queue.guildId})`);
+        const destroyed = await client.services.lavalinkManager.runWithSessionLock(queue.guildId, async scope => {
+          if (scope.getSession() !== queue || queue.playing || queue.size() > 0) return false;
+          return scope.destroySession(queue.sessionId);
+        });
+        if (!destroyed) return;
 
         if (message?.editable) {
           await message.edit({embeds: [embed.setDescription('30초가 지나 자동으로 연결을 종료했어요.')]});
@@ -52,4 +56,5 @@ export async function handleQueueEnd(queue: Queue, client: NMClient): Promise<vo
       logger.warn(`Failed to edit queue end message: ${error}`);
     }
   }, 30_000);
+  queue.onCleanup(() => clearTimeout(timeout));
 }

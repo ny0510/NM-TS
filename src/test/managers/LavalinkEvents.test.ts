@@ -74,7 +74,7 @@ test('notifies active queues once when Lavalink restarts and recovers', () => {
     services: {
       lavalinkManager: {
         getShoukaku: () => shoukaku,
-        getQueues: () => new Map([['guild', {textChannelId: 'text'}]]),
+        getSessions: () => new Map([['guild', {textChannelId: 'text'}]]),
         restoreNode: () => undefined,
       },
     },

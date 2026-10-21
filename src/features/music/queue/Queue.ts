@@ -6,6 +6,13 @@ import {addTracks, MAX_QUEUE_SIZE, removeTrack, roundRobinShuffle, shuffleQueue}
 import {shiftAndPlay, stopAndTrim} from './navigation';
 
 export class Queue {
+  public readonly mode = 'music' as const;
+  public readonly sessionId = crypto.randomUUID();
+  private destroyed = false;
+  private readonly cleanup = new Set<() => void>();
+  onCleanup(callback: () => void): void {
+    this.cleanup.add(callback);
+  }
   public readonly shoukaku: Shoukaku;
   public readonly player: Player;
   public readonly guildId: string;
@@ -114,6 +121,7 @@ export class Queue {
     return this.tracks.length >= MAX_QUEUE_SIZE;
   }
   add(trackOrTracks: QueueTrack | QueueTrack[], position?: number): void {
+    if (this.destroyed) return;
     addTracks(this.tracks, trackOrTracks, position);
   }
   remove(index: number): QueueTrack | undefined {
@@ -133,6 +141,7 @@ export class Queue {
     if (this.previous.length > 25) this.previous.shift();
   }
   async play(): Promise<void> {
+    if (this.destroyed) return;
     const previousTrack = this.current;
     this.current = this.tracks[0] ?? null;
     try {
@@ -145,14 +154,31 @@ export class Queue {
     }
   }
   async stop(count?: number): Promise<void> {
+    if (this.destroyed) return;
     await stopAndTrim(this.tracks, this.player, count);
   }
   async destroy(): Promise<void> {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    const errors: unknown[] = [];
+    for (const callback of this.cleanup) {
+      try {
+        callback();
+      } catch (error) {
+        errors.push(error);
+      }
+    }
+    this.cleanup.clear();
     this.clear();
     this.current = null;
     this.playing = false;
     this.player.removeAllListeners();
-    await this.shoukaku.leaveVoiceChannel(this.guildId);
+    try {
+      await this.shoukaku.leaveVoiceChannel(this.guildId);
+    } catch (error) {
+      errors.push(error);
+    }
     this.metadata.clear();
+    if (errors.length) throw new AggregateError(errors, 'Failed to clean music session');
   }
 }

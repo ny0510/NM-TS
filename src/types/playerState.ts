@@ -1,4 +1,4 @@
-export const PLAYER_STATE_VERSION = 1;
+export const PLAYER_STATE_VERSION = 2;
 
 export interface PersistedTrackInfo {
   identifier: string;
@@ -21,6 +21,7 @@ export interface PersistedTrack {
 }
 
 export interface PersistedQueueState {
+  mode?: 'music';
   guildId: string;
   voiceChannelId: string;
   textChannelId: string;
@@ -41,7 +42,20 @@ export interface PersistedQueueState {
   savedAt: number;
 }
 
-export type PlayerStateSnapshot = PersistedQueueState[];
+export interface PersistedRadioState {
+  mode: 'radio';
+  guildId: string;
+  voiceChannelId: string;
+  textChannelId: string;
+  regionKey: string;
+  stationId: string;
+  volume: number;
+  paused: boolean;
+  requesterId?: string;
+  savedAt: number;
+}
+export type PersistedPlaybackState = PersistedQueueState | PersistedRadioState;
+export type PlayerStateSnapshot = PersistedPlaybackState[];
 
 export interface PlayerStateFile {
   version: typeof PLAYER_STATE_VERSION;

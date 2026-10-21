@@ -1,18 +1,18 @@
 import {EmbedBuilder} from 'discord.js';
 import type {TrackStartEvent} from 'shoukaku';
-
-import {COLORS} from '@/shared/discord/embedColors';
-import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
-import {Logger} from '@/shared/logger';
 import {createPlayerControls} from '@/features/music/button/controlsBuilder';
 import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
 import {getEmbedMeta} from '@/features/music/track/embeds';
+import {COLORS} from '@/shared/discord/embedColors';
+import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
+import {Logger} from '@/shared/logger';
 import type {PlayerEventContext} from './types';
 
 const logger = new Logger('Lavalink');
 
 export const handleTrackStart = async (ctx: PlayerEventContext, data: TrackStartEvent): Promise<void> => {
   const {queue, client, guildName, guildId} = ctx;
+  if (client.services.lavalinkManager.getSession(guildId) !== queue) return;
   const currentTrack = queue.getCurrent();
   const track = currentTrack?.encoded === data.track.encoded ? currentTrack : data.track;
 
@@ -41,6 +41,7 @@ export const handleTrackStart = async (ctx: PlayerEventContext, data: TrackStart
     }
 
     const trackMeta = await getEmbedMeta(track, false, queue, 'play');
+    if (client.services.lavalinkManager.getSession(guildId) !== queue) return;
 
     const message = await channel.send({
       embeds: [

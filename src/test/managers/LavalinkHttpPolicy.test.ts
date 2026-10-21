@@ -1,6 +1,6 @@
 import {expect, mock, test} from 'bun:test';
 import {LoadType} from 'shoukaku';
-import {radioRegions} from '@/features/music/radio/radioStations';
+import {radioRegions} from '@/features/radio/radioStations';
 import {LavalinkManager} from '@/managers/LavalinkManager';
 
 function createManager() {

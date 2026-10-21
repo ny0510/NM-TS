@@ -10,6 +10,7 @@ const logger = new Logger('Lavalink');
 
 export const handleTrackException = async (ctx: PlayerEventContext, data: TrackExceptionEvent): Promise<void> => {
   const {queue, client, guildName, guildId} = ctx;
+  if (client.services.lavalinkManager.getSession(guildId) !== queue) return;
   const {exception} = data;
   const errorMessage = exception.message ?? 'Unknown Error';
 

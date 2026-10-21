@@ -1,7 +1,7 @@
 import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
-import type {QueueTrack} from '@/types/music';
 import {Logger} from '@/shared/logger';
+import type {QueueTrack} from '@/types/music';
 
 const logger = new Logger('Lavalink');
 
@@ -18,12 +18,14 @@ export async function handleAutoplay(queue: Queue, client: NMClient): Promise<bo
       const autoplayQuery = `https://youtube.com/watch?v=${identifier}&list=RD${identifier}&index=${randomIndex}`;
 
       const result = await client.services.lavalinkManager.search(autoplayQuery);
-      if (!result || result.loadType !== 'playlist') continue;
+      if (client.services.lavalinkManager.getSession(queue.guildId) !== queue) return false;
+      if (result?.loadType !== 'playlist') continue;
 
       const candidates = result.data.tracks.filter((t: {info: {identifier: string; uri?: string; title: string}}) => !isDuplicate(t as QueueTrack, queue.previous));
       if (candidates.length === 0) continue;
 
-      const picked = candidates[Math.floor(Math.random() * candidates.length)]!;
+      const picked = candidates[Math.floor(Math.random() * candidates.length)];
+      if (!picked) continue;
       const autoplayTrack: QueueTrack = {...picked, requester: queue.getAutoplayRequester(), isAutoplay: true, playContext: {playContext: 'autoplay', requestChannelId: queue.textChannelId}};
 
       queue.add(autoplayTrack);

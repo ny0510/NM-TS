@@ -1,10 +1,9 @@
-import type {Client} from 'discord.js';
-
 import type {NMClient} from '@/client';
 import type {Queue} from '@/features/music/queue/Queue';
+import type {RadioSession} from '@/features/radio/RadioSession';
 import {toError} from '@/shared/errors';
 import type {ILogger} from '@/shared/logger';
-import type {PersistedQueueState} from '@/types/playerState';
+import type {PersistedPlaybackState, PersistedQueueState, PersistedRadioState} from '@/types/playerState';
 import {clearPlayerStates, replacePlayerStates} from './persistence';
 
 export function serializeQueueState(queue: Queue): PersistedQueueState {
@@ -12,6 +11,7 @@ export function serializeQueueState(queue: Queue): PersistedQueueState {
   const repeatMode = queue.trackRepeat ? 'track' : queue.queueRepeat ? 'queue' : 'off';
 
   return {
+    mode: 'music',
     guildId: queue.guildId,
     voiceChannelId: queue.voiceChannelId,
     textChannelId: queue.textChannelId,
@@ -43,21 +43,31 @@ export function serializeQueueState(queue: Queue): PersistedQueueState {
   };
 }
 
-export async function saveAllPlayerStates(client: Client, logger: ILogger): Promise<void> {
-  const nmClient = client as unknown as NMClient;
+export function serializeRadioState(session: RadioSession): PersistedRadioState | undefined {
+  if (!session.station || !session.regionKey) return undefined;
+  return {mode: 'radio', guildId: session.guildId, voiceChannelId: session.voiceChannelId, textChannelId: session.textChannelId, regionKey: session.regionKey, stationId: session.station.id, volume: session.volume, paused: session.paused, requesterId: session.getCurrent()?.requester?.id, savedAt: Date.now()};
+}
+
+export async function saveAllPlayerStates(nmClient: NMClient, logger: ILogger): Promise<void> {
   const queues = nmClient.queues;
 
   try {
-    if (queues.size === 0) {
+    if (nmClient.services.lavalinkManager.getSessions().size === 0) {
       await clearPlayerStates();
       logger.info('No active queues, deleted persisted player states if they existed');
       return;
     }
 
-    const states: PersistedQueueState[] = [];
+    const states: PersistedPlaybackState[] = [];
 
     for (const queue of queues.values()) {
       states.push(serializeQueueState(queue));
+    }
+    for (const session of nmClient.services.lavalinkManager.getSessions().values()) {
+      if (session.mode !== 'radio') continue;
+      const radio = nmClient.services.lavalinkManager.getRadioSession(session.guildId);
+      const state = radio && serializeRadioState(radio);
+      if (state) states.push(state);
     }
 
     await replacePlayerStates(states);

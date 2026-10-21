@@ -1,13 +1,35 @@
-import {type ButtonInteraction, type ChatInputCommandInteraction, channelMention, codeBlock, type GuildMember, MessageFlags, PermissionFlagsBits, type StringSelectMenuInteraction} from 'discord.js';
+import {type ButtonInteraction, type ChatInputCommandInteraction, channelMention, codeBlock, EmbedBuilder, type GuildMember, MessageFlags, PermissionFlagsBits, type StringSelectMenuInteraction} from 'discord.js';
 
 import type {Queue} from '@/features/music/queue/Queue';
-import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {slashCommandMention} from '@/shared/discord/mention';
 import {formatMissingPermissions} from '@/shared/discord/permissions/formatPermissions';
 import {isTimedOut} from '@/shared/discord/permissions/isTimedOut';
+import {isRadioTrack} from '@/shared/playback/radioUrl';
+import {getPlaybackOptions, playbackError} from '@/shared/playback/sessionGuard';
+import {requestPlaybackAction} from '@/shared/playback/switchHandler';
+import type {PlaybackSession, SessionMutation} from '@/types/playback';
+
+export async function withPlaybackSession(interaction: ChatInputCommandInteraction, execute: (session: PlaybackSession, context: SessionMutation) => Promise<void>): Promise<void> {
+  const options = await getPlaybackOptions(interaction);
+  if (!options) return;
+  await getClient(interaction).services.lavalinkManager.runWithSessionLock(options.guildId, async context => {
+    const freshOptions = await getPlaybackOptions(interaction);
+    if (!freshOptions || freshOptions.voiceChannelId !== options.voiceChannelId) return;
+    const session = context.getSession();
+    if (!session) {
+      await playbackError(interaction, '현재 재생 중인 음악이나 라디오가 없어요.');
+      return;
+    }
+    if (session.voiceChannelId !== options.voiceChannelId) {
+      await playbackError(interaction, '재생 상태가 바뀌었어요. 다시 시도해 주세요.');
+      return;
+    }
+    await execute(session, context);
+  });
+}
 
 // ── Types ──
 
@@ -34,6 +56,13 @@ export async function validateMusicCommand(interaction: ChatInputCommandInteract
   }
 
   const queue = client.queues.get(guildId);
+
+  if (client.services?.lavalinkManager.getRadioSession(guildId)) {
+    await requestPlaybackAction(interaction, 'music', async currentInteraction => {
+      await safeReply(currentInteraction, {embeds: [new EmbedBuilder().setTitle('음악 모드로 전환했어요.').setDescription('/play 명령어로 음악을 재생해 주세요.').setColor(client.config.EMBED_COLOR_NORMAL)], components: []});
+    });
+    return;
+  }
 
   // 2. Same voice channel check (skip when no queue exists yet)
   if (queue && member.voice.channel.id !== queue.voiceChannelId) {
@@ -88,7 +117,7 @@ export const ensureSameVoiceChannel = async (interaction: MusicInteraction): Pro
   const member = interaction.member as GuildMember;
   const guildId = interaction.guildId;
   if (!guildId) return false;
-  const queue = client.queues.get(guildId);
+  const queue = client.services?.lavalinkManager.getSession(guildId) ?? client.queues.get(guildId);
 
   if (queue && member.voice.channel?.id !== queue.voiceChannelId) {
     await safeReply(interaction, {

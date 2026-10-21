@@ -7,9 +7,11 @@ import {getEmbedMeta} from '@/features/music/track/embeds';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
+import {safeReply} from '@/shared/discord/interactions';
 import {toError} from '@/shared/errors';
 import {hyperlink, truncateWithEllipsis} from '@/shared/formatting';
 import {Logger} from '@/shared/logger';
+import {requestPlaybackAction} from '@/shared/playback/switchHandler';
 import type {QueueTrack} from '@/types/music';
 
 const logger = new Logger('FavoritesList');
@@ -73,29 +75,6 @@ export async function addFavoritesToQueue(interaction: MessageComponentInteracti
 
   await interaction.deferUpdate();
 
-  let queue = client.queues.get(guildId);
-  if (!queue) {
-    try {
-      queue = await client.services.lavalinkManager.createQueue({
-        guildId,
-        voiceChannelId,
-        textChannelId,
-        shardId: 0,
-        volume: client.config.DEFAULT_VOLUME,
-        deaf: true,
-        mute: false,
-      });
-    } catch (error) {
-      logger.error(toError(error, 'Failed to create queue from favorites'));
-      await interaction.editReply({
-        embeds: [createErrorEmbed(client, '플레이어를 생성하지 못했어요. 잠시 후 다시 시도해 주세요.')],
-      });
-      return;
-    }
-  }
-
-  if (!queue) return;
-
   const addedQueueTracks: QueueTrack[] = [];
   const results: AddResult[] = [];
 
@@ -123,8 +102,6 @@ export async function addFavoritesToQueue(interaction: MessageComponentInteracti
 
       track.requester = interaction.user;
       track.playContext = {playContext: 'play', requestChannelId: interaction.channelId};
-      queue.add(track);
-      if (!queue.playing && !queue.paused) await queue.play();
       addedQueueTracks.push(track);
       results.push({title: fav.title, uri: fav.uri, success: true});
     } catch (error) {
@@ -134,61 +111,26 @@ export async function addFavoritesToQueue(interaction: MessageComponentInteracti
     }
   }
 
-  const refreshedFavorites = await getUserFavorites(userId);
-  const totalPages = Math.max(1, Math.ceil(refreshedFavorites.length / FAVORITES_PER_PAGE));
-  const validPage = Math.min(Math.max(page, 0), totalPages - 1);
-  await interaction.editReply({
-    components: buildFavoritesComponents(refreshedFavorites, validPage),
-  });
-
-  const description = truncateWithEllipsis(results.map(({title, uri, success, error}) => `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(title, 50), uri ?? '')}`).join('\n'), 4096);
-
-  const addedCount = results.filter(r => r.success).length;
-  const firstTrackThumbnail = addedQueueTracks[0]?.info.artworkUrl ?? selectedFavorites[0]?.artworkUrl ?? null;
-  const embedTitle = addedCount > 0 ? `💿 선택한 ${results.length}곡 중 ${addedCount}곡을 대기열에 추가했어요.` : '⚠️ 선택한 곡을 대기열에 추가하지 못했어요.';
-
-  const isPlaylist = addedQueueTracks.length > 1;
-  const firstAddedTrack = addedQueueTracks[0];
-  const metaSource =
-    firstAddedTrack ??
-    (selectedFavorites[0]
-      ? {
-          info: {
-            title: selectedFavorites[0].title,
-            author: selectedFavorites[0].artist,
-            length: selectedFavorites[0].durationMs,
-            uri: selectedFavorites[0].uri ?? '',
-            identifier: selectedFavorites[0].identifier,
-            sourceName: selectedFavorites[0].source,
-            artworkUrl: selectedFavorites[0].artworkUrl ?? '',
-            isStream: false,
-            isSeekable: true,
-            position: 0,
-          },
-          encoded: '',
-          pluginInfo: {},
-        }
-      : null);
-
-  let colors: Awaited<ReturnType<typeof getEmbedMeta>>['colors'] = [];
-  let footerText = '';
-  if (metaSource) {
-    const meta = await getEmbedMeta(isPlaylist && addedQueueTracks.length > 1 ? addedQueueTracks : (metaSource as QueueTrack), isPlaylist && addedQueueTracks.length > 1, queue);
-    colors = meta.colors;
-    footerText = meta.footerText;
-  } else {
-    footerText = `대기열에 ${queue.size()}곡`;
+  if (!addedQueueTracks.length) {
+    await safeReply(interaction, {embeds: [createErrorEmbed(client, '선택한 음악을 찾을 수 없어요.')], components: []});
+    return;
   }
-
-  const resultEmbed = new EmbedBuilder()
-    .setTitle(embedTitle)
-    .setDescription(description || '음악을 찾을 수 없어요.')
-    .setThumbnail(firstTrackThumbnail)
-    .setFooter({text: footerText})
-    .setColor((colors[0]?.hex?.() ?? COLORS.normal) as HexColorString);
-
-  await interaction.followUp({
-    embeds: [resultEmbed],
-    ephemeral: true,
+  await requestPlaybackAction(interaction, 'music', async (currentInteraction, context, options) => {
+    const queue = context.getQueue() ?? (await context.createQueue(options));
+    queue.add(addedQueueTracks);
+    if (!queue.playing && !queue.paused) await queue.play();
+    const meta = await getEmbedMeta(addedQueueTracks, true, queue);
+    const description = truncateWithEllipsis(results.map(({title, uri, success, error}) => `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(title, 50), uri ?? '')}`).join('\n'), 4096);
+    await safeReply(currentInteraction, {
+      flags: MessageFlags.Ephemeral,
+      embeds: [
+        new EmbedBuilder()
+          .setTitle(`💿 즐겨찾기 ${addedQueueTracks.length}곡을 대기열에 추가했어요.`)
+          .setDescription(description)
+          .setFooter({text: meta.footerText})
+          .setColor((meta.colors[0]?.hex?.() ?? COLORS.normal) as HexColorString),
+      ],
+      components: [],
+    });
   });
 }

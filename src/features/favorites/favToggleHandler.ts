@@ -2,12 +2,12 @@ import {type ButtonInteraction, EmbedBuilder, MessageFlags} from 'discord.js';
 
 import {addFavorite, isFavorited} from '@/features/favorites/service';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
-import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {safeDeferUpdate, safeReply, slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {truncateWithEllipsis} from '@/shared/formatting';
+import {isRadioTrack} from '@/shared/playback/radioUrl';
 import type {QueueTrack} from '@/types/music';
 
 export async function handleFavToggleButton(interaction: ButtonInteraction): Promise<void> {

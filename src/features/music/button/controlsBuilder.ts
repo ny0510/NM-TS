@@ -2,10 +2,10 @@ import {ActionRowBuilder, ButtonBuilder, type ButtonInteraction, ButtonStyle, Me
 import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
 import {ensurePlaying, ensureSameVoiceChannel} from '@/features/music/guard';
 import type {Queue} from '@/features/music/queue/Queue';
-import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
+import {isRadioTrack} from '@/shared/playback/radioUrl';
 
 export function createPlayerControls(queue: Queue, _trackUri: string): ActionRowBuilder<ButtonBuilder> {
   const row = new ActionRowBuilder<ButtonBuilder>();
@@ -65,23 +65,29 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
   const deferred = await safeDeferUpdate(interaction);
   if (!deferred) return;
 
-  switch (interaction.customId) {
-    case 'control_pause':
-      await queue.pause(!queue.paused);
-      await safeEditReply(interaction, {
-        components: [createPlayerControls(queue, currentTrack.info.uri ?? '')],
-      });
-      break;
-
-    case 'control_next':
-      if (!queue.size()) {
-        return await safeReply(interaction, {
-          embeds: [createErrorEmbed(client, '대기열에 있는 음악보다 더 많은 곡을 건너뛸 수 없어요.', `대기열에 ${queue.size()}곡이 있어요.`)],
-          flags: MessageFlags.Ephemeral,
+  await client.services.lavalinkManager.runWithSessionLock(guildId, async context => {
+    if (context.getQueue() !== queue) {
+      await safeReply(interaction, {embeds: [createErrorEmbed(client, '만료된 음악 컨트롤러예요.')], flags: MessageFlags.Ephemeral});
+      return;
+    }
+    switch (interaction.customId) {
+      case 'control_pause':
+        await queue.pause(!queue.paused);
+        await safeEditReply(interaction, {
+          components: [createPlayerControls(queue, currentTrack.info.uri ?? '')],
         });
-      } else {
-        await queue.stop();
-      }
-      break;
-  }
+        break;
+
+      case 'control_next':
+        if (!queue.size()) {
+          return await safeReply(interaction, {
+            embeds: [createErrorEmbed(client, '대기열에 있는 음악보다 더 많은 곡을 건너뛸 수 없어요.', `대기열에 ${queue.size()}곡이 있어요.`)],
+            flags: MessageFlags.Ephemeral,
+          });
+        } else {
+          await queue.stop();
+        }
+        break;
+    }
+  });
 }

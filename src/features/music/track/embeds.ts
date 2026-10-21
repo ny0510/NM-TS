@@ -1,7 +1,7 @@
 import {calculateQueueDuration, formatMusicDuration} from '@/features/music/queue/duration';
 import type {Queue} from '@/features/music/queue/Queue';
-import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {msToTime} from '@/shared/formatting';
+import {isRadioTrack} from '@/shared/playback/radioUrl';
 import type {QueueTrack} from '@/types/music';
 import {getAlbumColors} from './colors';
 

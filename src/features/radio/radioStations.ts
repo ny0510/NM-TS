@@ -1,4 +1,8 @@
-import type {QueueTrack} from '@/types/music';
+import type {RadioRegion, RadioStation} from '@/types/radio';
+import {resolveRadioRegionKey as resolveRegionKey, splitRadioRegion} from './radioRegionGroups';
+
+export {isRadioTrack} from '@/shared/playback/radioUrl';
+export type {RadioRegion, RadioStation} from '@/types/radio';
 
 const RADIO_STREAM_URL = 'https://radio.bsod.kr/stream';
 
@@ -32,18 +36,6 @@ export interface RadioStreamParams {
   stn: RadioProvider;
   ch?: string;
   city?: string;
-}
-
-export interface RadioStation {
-  name: string;
-  url: string;
-  provider: string;
-}
-
-export interface RadioRegion {
-  key: string;
-  label: string;
-  stations: RadioStation[];
 }
 
 interface RadioRegionEntry {
@@ -342,10 +334,258 @@ export const getRadioStreamUrl = ({stn, ch, city}: RadioStreamParams): string =>
   return `${RADIO_STREAM_URL}?${params}`;
 };
 
+const FREQUENCIES_KHZ: Readonly<Record<string, number>> = {
+  'kbs:1radio:default': 97300,
+  'kbs:2radio:default': 106100,
+  'kbs:1fm:default': 93100,
+  'kbs:1radio:chuncheon': 99500,
+  'kbs:2radio:chuncheon': 98700,
+  'kbs:1fm:chuncheon': 91100,
+  'kbs:1radio:gangneung': 98900,
+  'kbs:2radio:gangneung': 102100,
+  'kbs:1fm:gangneung': 89100,
+  'kbs:1radio:wonju': 97100,
+  'kbs:1fm:wonju': 89500,
+  'kbs:1radio:chungju': 92100,
+  'kbs:1fm:chungju': 100300,
+  'kbs:1radio:cheongju': 89300,
+  'kbs:2radio:cheongju': 90900,
+  'kbs:1fm:cheongju': 102100,
+  'kbs:1radio:andong': 90500,
+  'kbs:1fm:andong': 88100,
+  'kbs:1radio:daejeon': 94700,
+  'kbs:2radio:daejeon': 100900,
+  'kbs:1fm:daejeon': 98500,
+  'kbs:1radio:jeonju': 96900,
+  'kbs:2radio:jeonju': 92900,
+  'kbs:1fm:jeonju': 100700,
+  'kbs:1radio:daegu': 101300,
+  'kbs:2radio:daegu': 102300,
+  'kbs:1fm:daegu': 89700,
+  'kbs:1radio:pohang': 95900,
+  'kbs:1fm:pohang': 93500,
+  'kbs:1radio:ulsan': 90700,
+  'kbs:1fm:ulsan': 101900,
+  'kbs:1radio:gwangju': 90500,
+  'kbs:2radio:gwangju': 95500,
+  'kbs:1fm:gwangju': 92300,
+  'kbs:1radio:suncheon': 95700,
+  'kbs:2radio:suncheon': 102700,
+  'kbs:1fm:suncheon': 94500,
+  'kbs:1radio:jinju': 90300,
+  'kbs:1fm:jinju': 89300,
+  'kbs:1radio:changwon': 91700,
+  'kbs:2radio:changwon': 106100,
+  'kbs:1fm:changwon': 93900,
+  'kbs:1radio:busan': 103700,
+  'kbs:2radio:busan': 97100,
+  'kbs:1fm:busan': 92700,
+  'kbs:1radio:mokpo': 105900,
+  'kbs:1fm:mokpo': 98300,
+  'kbs:1radio:jeju': 99100,
+  'kbs:2radio:jeju': 91900,
+  'kbs:1fm:jeju': 96300,
+  'kbs:3radio:default': 104900,
+  'kbs:2fm:default': 89100,
+  'mbc:sfm:default': 95900,
+  'mbc:fm4u:default': 91900,
+  'mbc:sfm:busan': 95900,
+  'mbc:fm4u:busan': 88900,
+  'mbc:sfm:daegu': 96500,
+  'mbc:fm4u:daegu': 95300,
+  'mbc:sfm:gwangju': 93900,
+  'mbc:fm4u:gwangju': 91500,
+  'mbc:sfm:daejeon': 92500,
+  'mbc:fm4u:daejeon': 97500,
+  'mbc:sfm:jeonju': 101700,
+  'mbc:fm4u:jeonju': 99100,
+  'mbc:sfm:changwon': 98900,
+  'mbc:fm4u:changwon': 100500,
+  'mbc:sfm:chuncheon': 92300,
+  'mbc:fm4u:chuncheon': 94500,
+  'mbc:sfm:cheongju': 107100,
+  'mbc:fm4u:cheongju': 99700,
+  'mbc:sfm:jeju': 97900,
+  'mbc:fm4u:jeju': 90100,
+  'mbc:sfm:ulsan': 97500,
+  'mbc:fm4u:ulsan': 98700,
+  'mbc:sfm:gangneung': 96300,
+  'mbc:fm4u:gangneung': 94300,
+  'mbc:sfm:mokpo': 89100,
+  'mbc:fm4u:mokpo': 102300,
+  'mbc:sfm:yeosu': 100300,
+  'mbc:fm4u:yeosu': 98300,
+  'mbc:sfm:andong': 100100,
+  'mbc:fm4u:andong': 91300,
+  'mbc:sfm:wonju': 102500,
+  'mbc:fm4u:wonju': 98900,
+  'mbc:sfm:pohang': 100700,
+  'mbc:fm4u:pohang': 97900,
+  'sbs:powerfm:default': 107700,
+  'sbs:powerfm:busan': 99900,
+  'sbs:powerfm:ulsan': 92300,
+  'sbs:powerfm:daegu': 99300,
+  'sbs:powerfm:gwangju': 101100,
+  'sbs:powerfm:daejeon': 95700,
+  'sbs:powerfm:jeonju': 90100,
+  'sbs:powerfm:cheongju': 101500,
+  'sbs:powerfm:chuncheon': 105100,
+  'sbs:powerfm:jeju': 101500,
+  'sbs:lovefm:default': 103500,
+  'sbs:lovefm:busan': 105700,
+  'cbs:sfm:default': 98100,
+  'cbs:sfm:daegu': 103100,
+  'cbs:sfm:busan': 102900,
+  'cbs:sfm:gwangju': 103100,
+  'cbs:sfm:jeonbuk': 103700,
+  'cbs:sfm:cheongju': 91500,
+  'cbs:sfm:chuncheon': 93700,
+  'cbs:sfm:daejeon': 91700,
+  'cbs:sfm:pohang': 91500,
+  'cbs:sfm:gyeongnam': 106900,
+  'cbs:sfm:jeju': 93300,
+  'cbs:sfm:youngdong': 91500,
+  'cbs:sfm:jeonnam': 102100,
+  'cbs:sfm:ulsan': 100300,
+  'cbs:mfm:default': 93900,
+  'cbs:mfm:daegu': 97100,
+  'cbs:mfm:busan': 102100,
+  'cbs:mfm:gwangju': 98100,
+  'tbn:default:default': 100500,
+  'tbn:default:busan': 94900,
+  'tbn:default:daegu': 103900,
+  'tbn:default:gwangju': 97300,
+  'tbn:default:daejeon': 102900,
+  'tbn:default:ulsan': 104100,
+  'tbn:default:gangwon': 105900,
+  'tbn:default:chungbuk': 103300,
+  'tbn:default:chungnam': 103900,
+  'tbn:default:jeonbuk': 102500,
+  'tbn:default:gyeongbuk': 103500,
+  'tbn:default:gyeongnam': 95500,
+  'tbn:default:jeju': 105500,
+  'febc:default:default': 106900,
+  'febc:default:jeonbuk': 91100,
+  'febc:default:jeonnam': 97500,
+  'febc:default:daejeon': 93300,
+  'febc:default:jeju': 104700,
+  'febc:default:mokpo': 100500,
+  'febc:default:daegu': 91900,
+  'febc:default:pohang': 90300,
+  'febc:default:busan': 93300,
+  'febc:default:ulsan': 107300,
+  'febc:default:gwangju': 93100,
+  'febc:default:changwon': 98100,
+  'febc:default:gangwon': 90100,
+  'bbs:default:default': 101900,
+  'bbs:default:busan': 89900,
+  'bbs:default:gwangju': 89700,
+  'bbs:default:daegu': 94500,
+  'bbs:default:jeju': 94900,
+  'wbs:default:default': 89700,
+  'wbs:default:busan': 104900,
+  'wbs:default:daegu': 98300,
+  'wbs:default:gwangju': 107900,
+  'wbs:default:jeonbuk': 97900,
+  'cpbc:default:default': 105300,
+  'cpbc:default:busan': 101100,
+  'cpbc:default:daegu': 93100,
+  'cpbc:default:gwangju': 99900,
+  'kugak:default:default': 99100,
+  'kugak:default:gwangju': 99300,
+  'kugak:default:daejeon': 90500,
+  'kugak:default:jeonju': 95300,
+  'obs:default:default': 99900,
+  'ifm:default:default': 90700,
+  'ytn:default:default': 94500,
+  'tbs:fm:default': 95100,
+  'tbs:efm:default': 101300,
+  'befm:default:default': 90500,
+};
+const EBS_REGIONAL_FREQUENCIES_KHZ: Readonly<Record<string, number>> = {
+  seoul: 104500,
+  busan: 107700,
+  daegu: 105100,
+  gwangju: 105300,
+  daejeon: 105700,
+  gangwon: 106500,
+  chungbuk: 105100,
+  jeonbuk: 106900,
+  jeju: 107300,
+};
+const DEFENSE_REGIONAL_FREQUENCIES_KHZ: Readonly<Record<string, number>> = {
+  seoul: 96700,
+  gangwon: 96700,
+  daejeon: 100100,
+  gwangju: 96500,
+  jeju: 94100,
+  daegu: 92700,
+};
+const LOCALITIES: Readonly<Record<string, string>> = {
+  default: '서울·수도권',
+  busan: '부산',
+  daegu: '대구',
+  gwangju: '광주',
+  daejeon: '대전',
+  jeonju: '전주',
+  jeonbuk: '전북',
+  chuncheon: '춘천',
+  gangneung: '강릉',
+  wonju: '원주',
+  cheongju: '청주',
+  chungju: '충주',
+  chungbuk: '충북',
+  chungnam: '충남',
+  andong: '안동',
+  pohang: '포항',
+  ulsan: '울산',
+  suncheon: '순천',
+  jinju: '진주',
+  changwon: '창원',
+  mokpo: '목포',
+  yeosu: '여수',
+  jeju: '제주',
+  jeonnam: '전남',
+  gyeongnam: '경남',
+  gyeongbuk: '경북',
+  gangwon: '강원',
+  youngdong: '강원 영동',
+};
+const REGION_LOCALITIES: Readonly<Record<string, string>> = {seoul: '서울·수도권', busan: '부산', daegu: '대구', gwangju: '광주', daejeon: '대전', gangwon: '춘천', chungbuk: '청주', jeonbuk: '전주', jeju: '제주'};
+const REGIONAL_LOCALITY_OVERRIDES: Readonly<Record<string, string>> = {'kookbang:daegu': '포항·영덕', 'kookbang:jeju': '서귀포', 'febc:gangwon': '강원 영동'};
+const NON_FM_IDS = new Set(['kbs:hanminjok:default', 'mbc:chm:default', 'mbc:bora:default', 'sbs:dmb:default', 'ebs:bandi:default', 'cbs:joy4u:default']);
+
+const getStationId = ({stn, ch, city}: RadioStreamParams): string => `${stn}:${ch ?? 'default'}:${city ?? 'default'}`;
+
+const createStation = (regionKey: string, {name, ...params}: RadioStreamParams & {name: string}): RadioStation => {
+  const id = getStationId(params);
+  const base = {id, name, url: getRadioStreamUrl(params), provider: RADIO_PROVIDERS[params.stn]};
+  if (NON_FM_IDS.has(id)) return {...base, band: 'other'};
+  const frequencyKHz = params.stn === 'ebs' ? EBS_REGIONAL_FREQUENCIES_KHZ[regionKey] : params.stn === 'kookbang' ? DEFENSE_REGIONAL_FREQUENCIES_KHZ[regionKey] : FREQUENCIES_KHZ[id];
+  if (frequencyKHz === undefined) return {...base, band: 'unknown'};
+  const locality = REGIONAL_LOCALITY_OVERRIDES[`${params.stn}:${regionKey}`] ?? (params.stn === 'ebs' || params.stn === 'kookbang' ? REGION_LOCALITIES[regionKey] : LOCALITIES[params.city ?? 'default']);
+  return {...base, band: 'fm', frequencyKHz, locality};
+};
+
 export const radioRegions: readonly RadioRegion[] = RADIO_REGIONS.map(({key, label, stations}) => ({
   key,
-  label,
-  stations: stations.map(({name, ...params}) => ({name, url: getRadioStreamUrl(params), provider: RADIO_PROVIDERS[params.stn]})),
-}));
+  label: key === 'seoul' ? '서울·수도권' : label,
+  stations: stations.map(station => createStation(key, station)),
+})).flatMap(splitRadioRegion);
 
-export const isRadioTrack = (track: QueueTrack | null | undefined): boolean => track?.info.uri?.startsWith(`${RADIO_STREAM_URL}?`) ?? false;
+export const resolveRadioRegionKey = (regionKey: string, stationId: string): string => resolveRegionKey(radioRegions, regionKey, stationId);
+
+const allowedRadioUrls = new Set(radioRegions.flatMap(region => region.stations.map(station => station.url)));
+export const isAllowedRadioUrl = (url: string): boolean => allowedRadioUrls.has(url);
+
+export const findRadioStation = (regionKey: string, stationId: string): RadioStation | undefined => radioRegions.find(region => region.key === regionKey)?.stations.find(station => station.id === stationId);
+
+export const getFmStations = (region: RadioRegion): RadioStation[] => region.stations.filter(station => station.band === 'fm' && station.frequencyKHz !== undefined).sort((a, b) => (a.frequencyKHz ?? 0) - (b.frequencyKHz ?? 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+
+export const getAdjacentStation = (region: RadioRegion, currentStation: RadioStation | undefined, direction: 'lower' | 'higher'): RadioStation | undefined => {
+  const stations = getFmStations(region);
+  const frequency = currentStation?.band === 'fm' ? currentStation.frequencyKHz : undefined;
+  const targetFrequency =
+    direction === 'higher' ? (stations.find(station => frequency === undefined || (station.frequencyKHz ?? 0) > frequency)?.frequencyKHz ?? stations[0]?.frequencyKHz) : (stations.findLast(station => frequency === undefined || (station.frequencyKHz ?? 0) < frequency)?.frequencyKHz ?? stations.at(-1)?.frequencyKHz);
+  return stations.find(station => station.frequencyKHz === targetFrequency);
+};

@@ -48,6 +48,15 @@ export interface AppConfig {
 }
 
 export interface ProgressBarConfig {
+  RADIO_CIRCLE_END?: string;
+  RADIO_FILLED_END?: string;
+  RADIO_UNFILLED_START?: string;
+  RADIO_MARKER_FILLED_START?: string;
+  RADIO_MARKER_FILLED_MIDDLE?: string;
+  RADIO_MARKER_FILLED_END?: string;
+  RADIO_MARKER_UNFILLED_START?: string;
+  RADIO_MARKER_UNFILLED_MIDDLE?: string;
+  RADIO_MARKER_UNFILLED_END?: string;
   PROGRESS_CIRCLE_START: string;
   PROGRESS_CIRCLE_MIDDLE: string;
   PROGRESS_FILLED_START: string;

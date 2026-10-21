@@ -16,7 +16,7 @@ const logger = new Logger('Lavalink');
 
 const notifyActiveQueues = async (client: NMClient, title: string, description: string): Promise<void> => {
   const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(COLORS.normal);
-  const sends = Array.from(client.services.lavalinkManager.getQueues().values()).map(async queue => {
+  const sends = Array.from(client.services.lavalinkManager.getSessions().values()).map(async queue => {
     const channel = client.channels.cache.get(queue.textChannelId);
     if (!channel?.isSendable()) return;
     await channel.send({embeds: [embed]});
@@ -25,14 +25,14 @@ const notifyActiveQueues = async (client: NMClient, title: string, description: 
   await Promise.allSettled(sends);
 };
 
-export type {PlayerEventContext} from './types';
+export {handleAutoplay} from './autoplay';
 export {handlePlayerClosed} from './playerClosed';
+export {handleQueueEnd} from './queueEnd';
 export {handleTrackEnd} from './trackEnd';
 export {handleTrackException} from './trackException';
 export {handleTrackStart} from './trackStart';
 export {handleTrackStuck} from './trackStuck';
-export {handleAutoplay} from './autoplay';
-export {handleQueueEnd} from './queueEnd';
+export type {PlayerEventContext} from './types';
 
 /** Register Lavalink node-level events (ready, error, close, disconnect, reconnecting, debug). */
 export const registerLavalinkEvents = (client: NMClient): void => {
@@ -76,9 +76,19 @@ export const registerPlayerEvents = (queue: Queue, client: NMClient): void => {
 
   const ctx: PlayerEventContext = {queue, client, guildName, guildId};
 
-  player.on('start', async data => { await handleTrackStart(ctx, data); });
-  player.on('end', async data => { await handleTrackEnd(ctx, data); });
-  player.on('stuck', async data => { await handleTrackStuck(ctx, data); });
-  player.on('exception', async data => { await handleTrackException(ctx, data); });
-  player.on('closed', data => { handlePlayerClosed(ctx, data); });
+  player.on('start', async data => {
+    await handleTrackStart(ctx, data);
+  });
+  player.on('end', async data => {
+    await handleTrackEnd(ctx, data);
+  });
+  player.on('stuck', async data => {
+    await handleTrackStuck(ctx, data);
+  });
+  player.on('exception', async data => {
+    await handleTrackException(ctx, data);
+  });
+  player.on('closed', data => {
+    handlePlayerClosed(ctx, data);
+  });
 };

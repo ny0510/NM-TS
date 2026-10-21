@@ -19,6 +19,7 @@ test.each(['matching', 'different', 'early'] as const)('uses queued metadata for
   const sent: EmbedBuilder[] = [];
   const client: NMClient = Object.create(null);
   Object.assign(client, {
+    services: {lavalinkManager: {getSession: () => queue}},
     channels: {
       cache: new Map([
         [

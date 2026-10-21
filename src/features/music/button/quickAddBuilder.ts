@@ -1,4 +1,5 @@
 import {ActionRowBuilder, ButtonBuilder, type ButtonInteraction, ButtonStyle, codeBlock, MessageFlags, PermissionsBitField} from 'discord.js';
+import {ensureSameVoiceChannel} from '@/features/music/guard';
 import {addTrackToQueue} from '@/features/music/track/trackAdder';
 import {getClient} from '@/shared/discord/client';
 import {createErrorEmbed} from '@/shared/discord/embeds';
@@ -54,6 +55,7 @@ export async function handleQuickAddButton(interaction: ButtonInteraction): Prom
 
   const deferred = await safeDeferReply(interaction, {flags: MessageFlags.Ephemeral});
   if (!deferred) return;
+  if (!(await ensureSameVoiceChannel(interaction))) return;
 
   try {
     await addTrackToQueue(client, interaction, {query: url, source: 'quick_add'});

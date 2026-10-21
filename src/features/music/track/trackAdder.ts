@@ -3,11 +3,11 @@ import {LoadType} from 'shoukaku';
 
 import type {NMClient} from '@/client';
 import {createQuickAddButton} from '@/features/music/button/quickAddBuilder';
-import {createQueue} from '@/features/music/guard';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
 import {safeReply} from '@/shared/discord/interactions';
 import {playlistPattern, truncateWithEllipsis, videoPattern} from '@/shared/formatting';
+import {requestPlaybackAction} from '@/shared/playback/switchHandler';
 import type {AddTrackOptions, QueueTrack} from '@/types/music';
 import {getEmbedMeta} from './embeds';
 import {filterTracksWithOptions} from './resolver';
@@ -24,7 +24,7 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
   const guildId = interaction.guildId;
   if (!guildId) return;
 
-  let queue = client.queues.get(guildId);
+  const queue = client.queues.get(guildId);
 
   if (index !== null) {
     const queueSize = queue ? queue.size() : 0;
@@ -93,8 +93,8 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
       break;
   }
 
-  if ((excludeCover || excludeShorts) && extractedTracks.length > 0 && res.loadType !== LoadType.PLAYLIST) {
-    const filterResult = filterTracksWithOptions(extractedTracks, excludeCover, excludeShorts, '검색된');
+  if ((excludeCover || excludeShorts) && extractedTracks.length > 0) {
+    const filterResult = filterTracksWithOptions(extractedTracks, excludeCover, excludeShorts, res.loadType === LoadType.PLAYLIST ? '재생목록의' : '검색된');
     extractedTracks = filterResult.tracks;
 
     if (extractedTracks.length === 0) {
@@ -106,115 +106,112 @@ export const addTrackToQueue = async (client: NMClient, interaction: ChatInputCo
     }
   }
 
-  queue = queue ?? (await createQueue(interaction));
-  if (!queue) return;
-
-  switch (res.loadType) {
-    case LoadType.TRACK:
-    case LoadType.SEARCH: {
-      const track = extractedTracks[0] as QueueTrack;
-      track.playContext = {playContext: 'play', requestChannelId: interaction.channelId ?? undefined};
-      if (addFirst) queue.add(track, 0);
-      else if (index !== null) queue.add(track, index);
-      else queue.add(track);
-
-      if (queue.isAutoShuffle && !addFirst && index === null && queue.size() > 1) {
-        queue.shuffle();
-      }
-
-      if (!queue.playing && !queue.paused) await queue.play();
-
-      const {colors, footerText} = await getEmbedMeta(track, false, queue, 'add');
-
-      const queuePosition = getQueuePositionText(addFirst, index);
-      let trackTitle = `음악을 대기열${queuePosition} 추가했어요.`;
-      if (excludeCover && excludeShorts) {
-        trackTitle = `커버 곡과 쇼츠를 제외하고 음악을 대기열${queuePosition} 추가했어요.`;
-      } else if (excludeCover) {
-        trackTitle = `커버 곡을 제외하고 음악을 대기열${queuePosition} 추가했어요.`;
-      } else if (excludeShorts) {
-        trackTitle = `쇼츠를 제외하고 음악을 대기열${queuePosition} 추가했어요.`;
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle(truncateWithEllipsis(`💿 ${track.info.title}`, 50))
-        .setDescription(trackTitle)
-        .setThumbnail(track.info.artworkUrl ?? null)
-        .setFooter({text: footerText})
-        .setURL(track.info.uri ?? null)
-        .setColor((colors[0]?.hex?.() ?? COLORS.normal) as HexColorString);
-
-      await safeReply(interaction, {
-        embeds: [embed],
-        components: [createQuickAddButton()],
-      });
-      break;
-    }
-    case LoadType.PLAYLIST: {
-      let playlistTracks = extractedTracks;
-
-      if ((excludeCover || excludeShorts) && playlistTracks.length > 0) {
-        const filterResult = filterTracksWithOptions(playlistTracks, excludeCover, excludeShorts, '재생목록의');
-        playlistTracks = filterResult.tracks;
-
-        if (playlistTracks.length === 0) {
-          await safeReply(interaction, {
-            embeds: [createErrorEmbed(client, '필터링된 결과가 없어요.', filterResult.errorMessage)],
-            flags: MessageFlags.Ephemeral,
-          });
-          return;
-        }
-      }
-
-      for (const track of playlistTracks) {
-        track.playContext = {playContext: 'play', requestChannelId: interaction.channelId ?? undefined};
-      }
-
-      if (addFirst) queue.add(playlistTracks, 0);
-      else if (index !== null) queue.add(playlistTracks, index);
-      else queue.add(playlistTracks);
-
-      if (queue.isAutoShuffle && !addFirst && index === null && queue.size() > 1) {
-        queue.shuffle();
-      }
-
-      const playlistQueueSize = queue.size();
-      if (!queue.playing && !queue.paused && playlistQueueSize) await queue.play();
-
-      const {colors: playlistColors, footerText: playlistFooterText} = await getEmbedMeta(playlistTracks, true, queue);
-
-      const playlistInfo = res.data.info;
-      const originalPlaylistCount = res.data.tracks.length;
-
-      const queuePosition = getQueuePositionText(addFirst, index);
-      let playlistTitle = `재생목록에 포함된 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
-
-      const isFiltered = playlistTracks.length !== originalPlaylistCount;
-
-      if (isFiltered) {
-        if (excludeCover && excludeShorts) {
-          playlistTitle = `재생목록에서 커버 곡과 쇼츠를 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
-        } else if (excludeCover) {
-          playlistTitle = `재생목록에서 커버 곡을 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
-        } else if (excludeShorts) {
-          playlistTitle = `재생목록에서 쇼츠를 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
-        }
-      }
-
-      const firstPlaylistTrack = res.data.tracks[0];
-      const embed = new EmbedBuilder()
-        .setTitle(truncateWithEllipsis(`📜 ${playlistInfo.name}`, 50))
-        .setDescription(playlistTitle)
-        .setThumbnail(firstPlaylistTrack?.info.artworkUrl ?? null)
-        .setURL(query)
-        .setFooter({text: `최대 100곡까지 한번에 추가할 수 있어요.\n${playlistFooterText}`})
-        .setColor((playlistColors[0]?.hex?.() ?? COLORS.normal) as HexColorString);
-
-      await safeReply(interaction, {
-        embeds: [embed],
-        components: [createQuickAddButton()],
-      });
-      break;
-    }
+  if (!extractedTracks.length) {
+    await safeReply(interaction, {embeds: [createErrorEmbed(client, '음악을 찾을 수 없어요.')], flags: MessageFlags.Ephemeral});
+    return;
   }
+
+  await requestPlaybackAction(interaction, 'music', async (interaction, context, queueOptions) => {
+    const queue = context.getQueue() ?? (await context.createQueue(queueOptions));
+    if (index !== null && (index > queue.size() || (!queue.playing && !queue.paused && queue.size() === 0))) {
+      await safeReply(interaction, {embeds: [createErrorEmbed(client, '대기열이 바뀌었어요. 인덱스를 다시 확인해 주세요.')], flags: MessageFlags.Ephemeral});
+      return;
+    }
+
+    switch (res.loadType) {
+      case LoadType.TRACK:
+      case LoadType.SEARCH: {
+        const track = extractedTracks[0] as QueueTrack;
+        track.playContext = {playContext: 'play', requestChannelId: interaction.channelId ?? undefined};
+        if (addFirst) queue.add(track, 0);
+        else if (index !== null) queue.add(track, index);
+        else queue.add(track);
+
+        if (queue.isAutoShuffle && !addFirst && index === null && queue.size() > 1) {
+          queue.shuffle();
+        }
+
+        if (!queue.playing && !queue.paused) await queue.play();
+
+        const {colors, footerText} = await getEmbedMeta(track, false, queue, 'add');
+
+        const queuePosition = getQueuePositionText(addFirst, index);
+        let trackTitle = `음악을 대기열${queuePosition} 추가했어요.`;
+        if (excludeCover && excludeShorts) {
+          trackTitle = `커버 곡과 쇼츠를 제외하고 음악을 대기열${queuePosition} 추가했어요.`;
+        } else if (excludeCover) {
+          trackTitle = `커버 곡을 제외하고 음악을 대기열${queuePosition} 추가했어요.`;
+        } else if (excludeShorts) {
+          trackTitle = `쇼츠를 제외하고 음악을 대기열${queuePosition} 추가했어요.`;
+        }
+
+        const embed = new EmbedBuilder()
+          .setTitle(truncateWithEllipsis(`💿 ${track.info.title}`, 50))
+          .setDescription(trackTitle)
+          .setThumbnail(track.info.artworkUrl ?? null)
+          .setFooter({text: footerText})
+          .setURL(track.info.uri ?? null)
+          .setColor((colors[0]?.hex?.() ?? COLORS.normal) as HexColorString);
+
+        await safeReply(interaction, {
+          embeds: [embed],
+          components: [createQuickAddButton()],
+        });
+        break;
+      }
+      case LoadType.PLAYLIST: {
+        const playlistTracks = extractedTracks;
+
+        for (const track of playlistTracks) {
+          track.playContext = {playContext: 'play', requestChannelId: interaction.channelId ?? undefined};
+        }
+
+        if (addFirst) queue.add(playlistTracks, 0);
+        else if (index !== null) queue.add(playlistTracks, index);
+        else queue.add(playlistTracks);
+
+        if (queue.isAutoShuffle && !addFirst && index === null && queue.size() > 1) {
+          queue.shuffle();
+        }
+
+        const playlistQueueSize = queue.size();
+        if (!queue.playing && !queue.paused && playlistQueueSize) await queue.play();
+
+        const {colors: playlistColors, footerText: playlistFooterText} = await getEmbedMeta(playlistTracks, true, queue);
+
+        const playlistInfo = res.data.info;
+        const originalPlaylistCount = res.data.tracks.length;
+
+        const queuePosition = getQueuePositionText(addFirst, index);
+        let playlistTitle = `재생목록에 포함된 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+
+        const isFiltered = playlistTracks.length !== originalPlaylistCount;
+
+        if (isFiltered) {
+          if (excludeCover && excludeShorts) {
+            playlistTitle = `재생목록에서 커버 곡과 쇼츠를 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+          } else if (excludeCover) {
+            playlistTitle = `재생목록에서 커버 곡을 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+          } else if (excludeShorts) {
+            playlistTitle = `재생목록에서 쇼츠를 제외한 음악 ${playlistTracks.length}곡을 대기열${queuePosition} 추가했어요.`;
+          }
+        }
+
+        const firstPlaylistTrack = res.data.tracks[0];
+        const embed = new EmbedBuilder()
+          .setTitle(truncateWithEllipsis(`📜 ${playlistInfo.name}`, 50))
+          .setDescription(playlistTitle)
+          .setThumbnail(firstPlaylistTrack?.info.artworkUrl ?? null)
+          .setURL(query)
+          .setFooter({text: `최대 100곡까지 한번에 추가할 수 있어요.\n${playlistFooterText}`})
+          .setColor((playlistColors[0]?.hex?.() ?? COLORS.normal) as HexColorString);
+
+        await safeReply(interaction, {
+          embeds: [embed],
+          components: [createQuickAddButton()],
+        });
+        break;
+      }
+    }
+  });
 };

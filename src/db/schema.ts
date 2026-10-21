@@ -1,6 +1,6 @@
 import {boolean, index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex} from 'drizzle-orm/pg-core';
 
-import type {PersistedQueueState} from '@/types/playerState';
+import type {PersistedPlaybackState} from '@/types/playerState';
 
 export const tracks = pgTable(
   'tracks',
@@ -47,7 +47,7 @@ export const trackPlayEvents = pgTable(
 export const playerStates = pgTable('player_states', {
   guildId: text('guild_id').primaryKey(),
   version: integer('version').notNull(),
-  state: jsonb('state').$type<PersistedQueueState>().notNull(),
+  state: jsonb('state').$type<PersistedPlaybackState>().notNull(),
   createdAt: timestamp('created_at', {withTimezone: true}).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', {withTimezone: true}).defaultNow().notNull(),
 });

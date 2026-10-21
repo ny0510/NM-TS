@@ -1,4 +1,4 @@
-import {type CommandInteraction, type InteractionDeferReplyOptions, type InteractionEditReplyOptions, type InteractionReplyOptions, type MessageComponentInteraction, MessageFlags} from 'discord.js';
+import {type CommandInteraction, type InteractionDeferReplyOptions, type InteractionEditReplyOptions, type InteractionReplyOptions, type Message, type MessageComponentInteraction, MessageFlags} from 'discord.js';
 import {RESTJSONErrorCodes} from 'discord-api-types/v10';
 import {getClient} from '@/shared/discord/client';
 import {toError} from '@/shared/errors';
@@ -67,6 +67,15 @@ export async function safeDeferReply(interaction: ReplyInteraction, options?: In
   } catch (error) {
     logInteractionError(interaction, 'defer reply', error);
     return false;
+  }
+}
+
+export async function safeFollowUp(interaction: ReplyInteraction, options: InteractionReplyOptions): Promise<Message | undefined> {
+  try {
+    return await interaction.followUp(options);
+  } catch (error) {
+    logInteractionError(interaction, 'send follow-up', error);
+    return undefined;
   }
 }
 

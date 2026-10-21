@@ -3,19 +3,19 @@ import {eq} from 'drizzle-orm';
 import {getDb} from '@/db';
 import {playerStates} from '@/db/schema';
 import {Logger} from '@/shared/logger';
-import {type PersistedQueueState, PLAYER_STATE_VERSION} from '@/types/playerState';
+import {type PersistedPlaybackState, PLAYER_STATE_VERSION} from '@/types/playerState';
 
 const logger = new Logger('PlayerStateDB');
 
 export interface PlayerStateRecord {
   guildId: string;
   version: number;
-  state: PersistedQueueState;
+  state: PersistedPlaybackState;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export async function replacePlayerStates(states: PersistedQueueState[]): Promise<void> {
+export async function replacePlayerStates(states: PersistedPlaybackState[]): Promise<void> {
   const db = getDb();
 
   await db.transaction(async tx => {

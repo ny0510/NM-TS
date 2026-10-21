@@ -10,6 +10,7 @@ const logger = new Logger('Lavalink');
 
 export const handleTrackStuck = async (ctx: PlayerEventContext, data: TrackStuckEvent): Promise<void> => {
   const {queue, client, guildName, guildId} = ctx;
+  if (client.services.lavalinkManager.getSession(guildId) !== queue) return;
 
   logger.warn(`Player ${guildName} (${guildId}) track stuck. Threshold: ${data.thresholdMs}ms`);
 
@@ -29,5 +30,5 @@ export const handleTrackStuck = async (ctx: PlayerEventContext, data: TrackStuck
     logger.error(toError(sendError, 'Failed to send track stuck message'));
   }
 
-  await queue.stop();
+  if (client.services.lavalinkManager.getSession(guildId) === queue) await queue.stop();
 };

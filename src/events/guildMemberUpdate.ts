@@ -1,7 +1,6 @@
 import {Events, type GuildMember} from 'discord.js';
 
 import type {NMClient} from '@/client';
-import {destroyQueueSafely} from '@/features/music/queue/queueOperations';
 import {isTimedOut} from '@/shared/discord/permissions/isTimedOut';
 import {toError} from '@/shared/errors';
 import type {Event} from '@/types/client';
@@ -18,11 +17,11 @@ export const event = {
       const isTimedOutNow = isTimedOut(newMember);
 
       if (!wasTimedOut && isTimedOutNow) {
-        const queue = client.queues.get(newMember.guild.id);
+        const queue = client.services.lavalinkManager.getSession(newMember.guild.id);
 
         if (queue) {
           queue.set('stoppedByCommand', true);
-          await destroyQueueSafely(client, newMember.guild.id, `${newMember.user.tag} was timed out in guild ${newMember.guild.name} (${newMember.guild.id})`);
+          await client.services.lavalinkManager.destroySession(newMember.guild.id, queue.sessionId);
         }
       }
     } catch (error) {

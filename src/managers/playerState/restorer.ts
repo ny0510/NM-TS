@@ -1,207 +1,152 @@
-import {type Client, EmbedBuilder} from 'discord.js';
-
+import {EmbedBuilder} from 'discord.js';
+import {LoadType} from 'shoukaku';
 import type {NMClient} from '@/client';
 import {handleEmptyChannel} from '@/events/voiceStateUpdate/activityManager';
-import {isRadioTrack} from '@/features/music/radio/radioStations';
+import {findRadioStation, radioRegions, resolveRadioRegionKey} from '@/features/radio/radioStations';
 import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 import type {ILogger} from '@/shared/logger';
 import type {QueueTrack} from '@/types/music';
-import {type PersistedQueueState, PLAYER_STATE_VERSION} from '@/types/playerState';
-import {clearPlayerStates, loadPlayerStates} from './persistence';
+import {type PersistedPlaybackState, type PersistedTrack, PLAYER_STATE_VERSION} from '@/types/playerState';
+import {clearPlayerStates, deletePersistedPlayerState, loadPlayerStates} from './persistence';
 
 const RESTORE_TIMEOUT_MS = 3_000;
-
-function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 export async function clearAllPlayerStates(): Promise<void> {
-  try {
-    await clearPlayerStates();
-  } catch {}
+  await clearPlayerStates();
 }
 
-export async function restoreAllPlayerStates(client: Client, logger: ILogger): Promise<{restored: number; total: number; failed: number}> {
+export function migratePlaybackState(state: PersistedPlaybackState, logger: ILogger): PersistedPlaybackState {
+  if (state.mode === 'radio') return {...state, regionKey: resolveRadioRegionKey(state.regionKey, state.stationId)};
+  const radio = radioRegions.flatMap(region => region.stations.map(station => ({region, station}))).find(({station}) => station.url === state.currentTrack?.info.uri);
+  if (radio) {
+    if (state.tracks.length) logger.warn(`Discarding legacy mixed radio queue for ${state.guildId}`);
+    return {mode: 'radio', guildId: state.guildId, voiceChannelId: state.voiceChannelId, textChannelId: state.textChannelId, volume: state.volume, paused: state.currentTrack?.paused ?? false, regionKey: radio.region.key, stationId: radio.station.id, requesterId: state.currentTrack?.requesterId, savedAt: state.savedAt};
+  }
+  const isMusic = (track: PersistedTrack): boolean => !radioRegions.some(region => region.stations.some(station => station.url === track.info.uri));
+  const tracks = state.tracks.filter(isMusic);
+  const previous = state.previous.filter(isMusic);
+  if (tracks.length !== state.tracks.length || previous.length !== state.previous.length) logger.warn(`Discarding legacy radio entries from music queue for ${state.guildId}`);
+  return {...state, mode: 'music', tracks, previous};
+}
+
+export async function restoreAllPlayerStates(client: NMClient, logger: ILogger): Promise<{restored: number; total: number; failed: number}> {
   const result = {restored: 0, total: 0, failed: 0};
-
   try {
-    const states = await loadPlayerStates();
-
-    const validStates = states.filter(state => state.version === PLAYER_STATE_VERSION).map(state => state.state);
-    const skippedStates = states.length - validStates.length;
-
-    if (states.length === 0) {
-      logger.info('No persisted player state found, skipping restore');
+    const records = await loadPlayerStates();
+    const states = records.filter(record => record.version === 1 || record.version === PLAYER_STATE_VERSION);
+    result.total = states.length;
+    if (states.length === 0) return result;
+    if (!(await client.services.lavalinkManager.waitForReadyNode())) {
+      result.failed = states.length;
+      logger.warn('Lavalink readiness timed out; retaining player snapshots for the next restore attempt');
       return result;
     }
-
-    if (skippedStates > 0) {
-      logger.warn(`Skipped ${skippedStates} player state record(s) due to version mismatch.`);
-    }
-
-    result.total = validStates.length;
-    logger.info(`Restoring player state for ${result.total} guild(s)`);
-
-    for (const state of validStates) {
+    for (const record of states) {
+      const controller = new AbortController();
+      let timer: ReturnType<typeof setTimeout> | undefined;
       try {
-        const restored = await Promise.race([restoreQueueFromState(client, state, logger), sleep(RESTORE_TIMEOUT_MS)]);
-        if (restored === 'restored') {
+        const timeout = new Promise<'timeout'>(resolve => {
+          timer = setTimeout(() => {
+            controller.abort();
+            resolve('timeout');
+          }, RESTORE_TIMEOUT_MS);
+        });
+        const outcome = await Promise.race([restorePlaybackState(client, migratePlaybackState(record.state, logger), controller.signal), timeout]);
+        if (outcome === 'restored') {
           result.restored++;
-        } else if (restored === 'skipped') {
-          logger.debug(`Skipped restore for guild ${state.guildId}`);
-        } else {
-          result.failed++;
-          logger.warn(`Restore timed out or failed for guild ${state.guildId}`);
+          await deletePersistedPlayerState(record.guildId);
         }
+        if (outcome === 'timeout') result.failed++;
       } catch (error) {
         result.failed++;
-        logger.error(toError(error, `Failed to restore guild ${state.guildId}`));
+        logger.error(toError(error, `Failed to restore guild ${record.guildId}`));
+      } finally {
+        if (timer) clearTimeout(timer);
       }
     }
-
-    await clearPlayerStates();
-    logger.info(`Restore complete: ${result.restored}/${result.total} succeeded, ${result.failed} failed`);
   } catch (error) {
     logger.error(toError(error, 'Failed to restore player state'));
   }
-
   return result;
 }
 
-async function restoreQueueFromState(client: Client, state: PersistedQueueState, logger: ILogger): Promise<'restored' | 'skipped'> {
-  const nmClient = client as unknown as NMClient;
-
-  const guild = nmClient.guilds.cache.get(state.guildId);
-  if (!guild) {
-    logger.debug(`Guild ${state.guildId} not found in cache, skipping restore`);
-    return 'skipped';
-  }
-
-  const voiceChannel = nmClient.channels.cache.get(state.voiceChannelId);
-  const textChannel = nmClient.channels.cache.get(state.textChannelId);
-  if (!voiceChannel?.isVoiceBased() || !textChannel?.isSendable()) {
-    logger.debug(`Channels not found for guild ${state.guildId}, skipping restore`);
-    return 'skipped';
-  }
-
-  let queue: import('@/features/music/queue/Queue').Queue;
-  try {
-    queue = await nmClient.services.lavalinkManager.createQueue({
-      guildId: state.guildId,
-      voiceChannelId: state.voiceChannelId,
-      textChannelId: state.textChannelId,
-      shardId: guild.shardId,
-      volume: state.volume,
-    });
-  } catch (error) {
-    logger.error(toError(error, `Failed to create queue for guild ${state.guildId}`));
-    return 'skipped';
-  }
-
-  queue.set('isRestoring', true);
-
-  const requesterIds = new Set<string>();
-  if (state.currentTrack?.requesterId) requesterIds.add(state.currentTrack.requesterId);
-  for (const t of state.tracks) {
-    if (t.requesterId) requesterIds.add(t.requesterId);
-  }
-  for (const t of state.previous) {
-    if (t.requesterId) requesterIds.add(t.requesterId);
-  }
-
-  const requesterMap = new Map<string, Awaited<ReturnType<typeof nmClient.users.fetch>>>();
-  const fetchResults = await Promise.allSettled(
-    [...requesterIds].map(async id => {
-      const user = await nmClient.users.fetch(id);
-      return {id, user};
-    }),
+export async function restorePlaybackState(client: NMClient, state: PersistedPlaybackState, signal: AbortSignal): Promise<'restored' | 'skipped'> {
+  const manager = client.services.lavalinkManager;
+  const guild = client.guilds.cache.get(state.guildId);
+  const voice = client.channels.cache.get(state.voiceChannelId);
+  const text = client.channels.cache.get(state.textChannelId);
+  if (!guild || !voice?.isVoiceBased() || !text?.isSendable() || manager.getSession(state.guildId) || signal.aborted) return 'skipped';
+  const ids = state.mode === 'radio' ? [state.requesterId] : [state.currentTrack?.requesterId, state.autoplayRequesterId, ...state.tracks.map(t => t.requesterId), ...state.previous.map(t => t.requesterId)];
+  const users = new Map<string, Awaited<ReturnType<typeof client.users.fetch>>>();
+  await Promise.allSettled(
+    [...new Set(ids)]
+      .filter((id): id is string => Boolean(id))
+      .map(async id => {
+        users.set(id, await client.users.fetch(id));
+      }),
   );
-
-  for (const result of fetchResults) {
-    if (result.status === 'fulfilled') {
-      requesterMap.set(result.value.id, result.value.user);
-    }
-  }
-
-  const makeTrack = (persisted: {encoded: string; info: PersistedQueueState['tracks'][number]['info']; requesterId?: string}): QueueTrack => ({
-    encoded: persisted.encoded,
-    info: persisted.info,
-    pluginInfo: undefined,
-    requester: persisted.requesterId ? requesterMap.get(persisted.requesterId) : undefined,
-    playContext: {playContext: 'restore', requestChannelId: state.textChannelId},
-  });
-
-  queue.previous = state.previous.map(t => makeTrack(t));
-
-  const queueTracks = state.tracks.map(t => makeTrack(t));
-  if (queueTracks.length > 0) {
-    queue.add(queueTracks);
-  }
-
-  if (state.currentTrack) {
-    const currentTrackObj = makeTrack(state.currentTrack);
-
-    await queue.player.playTrack({track: {encoded: state.currentTrack.encoded}});
-    queue.setCurrent(currentTrackObj);
-    queue.playing = true;
-
-    if (state.currentTrack.position > 0) {
-      try {
-        await queue.player.seekTo(state.currentTrack.position);
-      } catch {}
-    }
-
-    await queue.player.setGlobalVolume(state.volume);
-
-    if (state.currentTrack.paused) {
-      await queue.player.setPaused(true);
-    }
-  } else {
-    await queue.player.setGlobalVolume(state.volume);
-    if (queueTracks.length > 0) {
-      await queue.play();
-    }
-  }
-
-  if (state.repeatMode === 'track') {
-    queue.setTrackRepeat(true);
-  } else if (state.repeatMode === 'queue') {
-    queue.setQueueRepeat(true);
-  }
-
-  if (state.autoplay) {
-    const autoplayUser = state.autoplayRequesterId ? requesterMap.get(state.autoplayRequesterId) : undefined;
-    queue.setAutoplay(true, autoplayUser);
-  }
-
-  if (state.autoShuffle) {
-    queue.setAutoShuffle(true);
-  }
-
-  queue.set('isRestoring', false);
-
-  const restoreVoiceChannel = nmClient.channels.cache.get(state.voiceChannelId);
-  if (restoreVoiceChannel?.isVoiceBased()) {
-    const nonBotMembers = restoreVoiceChannel.members.filter(m => !m.user.bot);
-    if (nonBotMembers.size === 0) {
-      await handleEmptyChannel(nmClient, state.guildId, guild, queue);
-      logger.info(`Restored queue for guild ${state.guildId} is in empty channel, pausing`);
-    }
-  }
-
-  if (textChannel?.isSendable()) {
+  if (signal.aborted) return 'skipped';
+  const regionKey = state.mode === 'radio' ? resolveRadioRegionKey(state.regionKey, state.stationId) : undefined;
+  const station = state.mode === 'radio' && regionKey ? findRadioStation(regionKey, state.stationId) : undefined;
+  const resolved = station ? await manager.loadRadio(station.url, state.mode === 'radio' && state.requesterId ? users.get(state.requesterId) : undefined) : undefined;
+  if (state.mode === 'radio' && (!station || resolved?.loadType !== LoadType.TRACK)) return 'skipped';
+  if (signal.aborted) return 'skipped';
+  return manager.runWithSessionLock(state.guildId, async scope => {
+    if (signal.aborted || scope.getSession()) return 'skipped';
+    const options = {guildId: state.guildId, voiceChannelId: state.voiceChannelId, textChannelId: state.textChannelId, shardId: guild.shardId, volume: state.volume};
+    const session = state.mode === 'radio' ? await scope.createRadioSession(options) : await scope.createQueue(options);
     try {
-      const isPaused = state.currentTrack?.paused ?? false;
-      const embed = new EmbedBuilder()
-        .setTitle('NM이 재시작되어 이전 재생 상태를 복구했어요.')
-        .setDescription(isPaused ? '일시정지 상태로 복구되었어요.' : isRadioTrack(queue.getCurrent()) ? '라디오를 이어서 재생할게요.' : '음악을 이어서 재생할게요.')
-        .setColor(COLORS.normal);
-
-      await textChannel.send({embeds: [embed]});
-    } catch {}
-  }
-
-  logger.info(`Successfully restored queue for guild ${state.guildId}`);
-  return 'restored';
+      signal.throwIfAborted();
+      if (state.mode === 'radio') {
+        const radio = scope.getRadioSession();
+        if (!radio || !station || !regionKey || resolved?.loadType !== LoadType.TRACK) throw new Error('Radio restore lost station');
+        const track: QueueTrack = {...resolved.data, info: {...resolved.data.info, title: station.name, author: station.provider, uri: station.url, isStream: true}, requester: state.requesterId ? users.get(state.requesterId) : undefined};
+        await radio.tune(regionKey, station, track);
+        signal.throwIfAborted();
+        if (state.paused) await radio.pause(true);
+      } else {
+        const queue = scope.getQueue();
+        if (!queue) throw new Error('Music restore lost queue');
+        queue.set('isRestoring', true);
+        const makeTrack = (track: PersistedTrack): QueueTrack => ({encoded: track.encoded, info: track.info, pluginInfo: undefined, requester: track.requesterId ? users.get(track.requesterId) : undefined, playContext: {playContext: 'restore', requestChannelId: state.textChannelId}});
+        queue.previous = state.previous.map(makeTrack);
+        queue.add(state.tracks.map(makeTrack));
+        queue.setTrackRepeat(state.repeatMode === 'track');
+        queue.setQueueRepeat(state.repeatMode === 'queue');
+        queue.setAutoplay(state.autoplay, state.autoplayRequesterId ? users.get(state.autoplayRequesterId) : undefined);
+        queue.setAutoShuffle(state.autoShuffle);
+        if (state.currentTrack) {
+          queue.setCurrent(makeTrack(state.currentTrack));
+          await queue.player.playTrack({track: {encoded: state.currentTrack.encoded}});
+          signal.throwIfAborted();
+          queue.playing = true;
+          if (state.currentTrack.position > 0 && !state.currentTrack.info.isStream) await queue.seek(state.currentTrack.position);
+          signal.throwIfAborted();
+          await queue.pause(state.currentTrack.paused);
+        } else if (queue.size()) await queue.play();
+        signal.throwIfAborted();
+        await queue.setVolume(state.volume);
+        queue.set('isRestoring', false);
+      }
+      signal.throwIfAborted();
+      if (voice.members.filter(member => !member.user.bot).size === 0) await handleEmptyChannel(client, state.guildId, guild, session);
+      signal.throwIfAborted();
+      await text
+        .send({
+          embeds: [
+            new EmbedBuilder()
+              .setTitle('NM이 재시작되어 이전 재생 상태를 복구했어요.')
+              .setDescription(session.mode === 'radio' ? '라디오를 다시 연결했어요.' : '음악을 이어서 재생할게요.')
+              .setColor(COLORS.normal),
+          ],
+        })
+        .catch(() => undefined);
+      signal.throwIfAborted();
+    } catch (error) {
+      await scope.destroySession(session.sessionId);
+      if (signal.aborted) return 'skipped';
+      throw error;
+    }
+    return 'restored';
+  });
 }

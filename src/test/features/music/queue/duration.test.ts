@@ -61,7 +61,7 @@ test('keeps finite pending duration when only the current track is live', async 
 test('shows live duration in /now remaining queue', async () => {
   // Given: the currently playing radio and pending radio both have unbounded lengths.
   const queue = createQueue(createTrack(true), [createTrack(true)]);
-  const client = Object.assign(new Client({intents: []}), {queues: new Map([['guild', queue]]), logger: {warn: () => undefined, error: () => undefined}});
+  const client = Object.assign(new Client({intents: []}), {queues: new Map([['guild', queue]]), services: {lavalinkManager: {getRadioSession: () => undefined}}, logger: {warn: () => undefined, error: () => undefined}});
   const post = spyOn(client.rest, 'post').mockResolvedValue({});
   const interaction: ChatInputCommandInteraction = Object.create(ChatInputCommandInteraction.prototype);
   Object.assign(interaction, {id: 'now-stream-duration', applicationId: 'application', token: 'test-token', client, guildId: 'guild', deferred: false, replied: false});

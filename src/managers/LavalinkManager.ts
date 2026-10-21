@@ -4,12 +4,15 @@ import {Connectors, type LavalinkResponse, LoadType, type Node, type NodeOption,
 
 import type {NMClient} from '@/client';
 import {Queue} from '@/features/music/queue/Queue';
-import {radioRegions} from '@/features/music/radio/radioStations';
 import {getMusicResolveQuery} from '@/features/music/track/queryPolicy';
+import {RadioSession} from '@/features/radio/RadioSession';
+import {radioRegions} from '@/features/radio/radioStations';
 import {registerLavalinkEvents, registerPlayerEvents} from '@/managers/lavalink';
 import type {ILogger} from '@/shared/logger';
 import type {Config} from '@/types/client';
 import type {CreateQueueOptions, QueueTrack} from '@/types/music';
+import type {PlaybackSession, SessionMutation} from '@/types/playback';
+import {registerRadioEvents} from './lavalink/radioEvents';
 
 /** 재시도 기본 지연 시간 (1초) */
 const RETRY_DELAY_MS = 1000;
@@ -20,6 +23,8 @@ export class LavalinkManager {
   private readonly logger: ILogger;
   private readonly config: Config;
   private readonly queues = new Map<string, Queue>();
+  private readonly radios = new Map<string, RadioSession>();
+  private readonly locks = new Map<string, Promise<void>>();
   private client: NMClient | null = null;
   constructor(client: Client, logger: ILogger, config: Config) {
     this.logger = logger;
@@ -56,9 +61,78 @@ export class LavalinkManager {
   }
 
   public async createQueue(options: CreateQueueOptions): Promise<Queue> {
+    return this.runWithSessionLock(options.guildId, scope => scope.createQueue(options));
+  }
+
+  public getSession(guildId: string): PlaybackSession | undefined {
+    return this.queues.get(guildId) ?? this.radios.get(guildId);
+  }
+  public getSessions(): ReadonlyMap<string, PlaybackSession> {
+    return new Map<string, PlaybackSession>([...this.queues, ...this.radios]);
+  }
+  public getRadioSession(guildId: string): RadioSession | undefined {
+    return this.radios.get(guildId);
+  }
+  public async runWithSessionLock<T>(guildId: string, action: (scope: SessionMutation) => Promise<T>): Promise<T> {
+    const previous = this.locks.get(guildId) ?? Promise.resolve();
+    let release: () => void = () => {};
+    const pending = new Promise<void>(resolve => {
+      release = resolve;
+    });
+    const tail = previous.then(() => pending);
+    this.locks.set(guildId, tail);
+    await previous;
+    const checkGuild = (options: CreateQueueOptions): void => {
+      if (options.guildId !== guildId) throw new Error('Session lock guild mismatch');
+    };
+    try {
+      return await action({
+        getSession: () => this.getSession(guildId),
+        getQueue: () => this.getQueue(guildId),
+        getRadioSession: () => this.getRadioSession(guildId),
+        createQueue: options => {
+          checkGuild(options);
+          return this.createQueueUnlocked(options);
+        },
+        createRadioSession: options => {
+          checkGuild(options);
+          return this.createRadioUnlocked(options);
+        },
+        destroySession: expected => this.destroySessionUnlocked(guildId, expected),
+      });
+    } finally {
+      release();
+      if (this.locks.get(guildId) === tail) this.locks.delete(guildId);
+    }
+  }
+
+  private async createQueueUnlocked(options: CreateQueueOptions): Promise<Queue> {
     const existing = this.queues.get(options.guildId);
     if (existing) return existing;
+    if (this.radios.has(options.guildId)) throw new Error('Radio session is active');
+    const player = await this.joinVoice(options);
+    const queue = new Queue({...options, player, shoukaku: this.shoukaku});
+    this.queues.set(options.guildId, queue);
+    if (this.client) registerPlayerEvents(queue, this.client);
+    return queue;
+  }
 
+  public async createRadioSession(options: CreateQueueOptions): Promise<RadioSession> {
+    return this.runWithSessionLock(options.guildId, scope => scope.createRadioSession(options));
+  }
+
+  private async createRadioUnlocked(options: CreateQueueOptions): Promise<RadioSession> {
+    const existing = this.radios.get(options.guildId);
+    if (existing) return existing;
+    if (this.queues.has(options.guildId)) throw new Error('Music session is active');
+    const player = await this.joinVoice(options);
+    const session = new RadioSession({...options, player, shoukaku: this.shoukaku});
+    this.radios.set(options.guildId, session);
+    if (this.client) registerRadioEvents(session, this.client);
+    return session;
+  }
+
+  private async joinVoice(options: CreateQueueOptions) {
     if (this.shoukaku.players.has(options.guildId) || this.shoukaku.connections.has(options.guildId)) {
       await this.shoukaku.leaveVoiceChannel(options.guildId);
       await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
@@ -77,20 +151,7 @@ export class LavalinkManager {
           mute: options.mute ?? false,
         });
 
-        const queue = new Queue({
-          shoukaku: this.shoukaku,
-          player,
-          guildId: options.guildId,
-          textChannelId: options.textChannelId,
-          voiceChannelId: options.voiceChannelId,
-          volume: options.volume,
-        });
-
-        this.queues.set(options.guildId, queue);
-        if (this.client) {
-          registerPlayerEvents(queue, this.client);
-        }
-        return queue;
+        return player;
       } catch (e) {
         lastError = e;
         const isTimeout = e instanceof Error && e.message.includes('voice connection is not established');
@@ -127,12 +188,21 @@ export class LavalinkManager {
   public async destroyQueue(guildId: string): Promise<void> {
     const queue = this.queues.get(guildId);
     if (!queue) return;
-
+    await this.destroySession(guildId, queue.sessionId);
+  }
+  public async destroySession(guildId: string, expectedSessionId: string): Promise<boolean> {
+    return this.runWithSessionLock(guildId, scope => scope.destroySession(expectedSessionId));
+  }
+  private async destroySessionUnlocked(guildId: string, expectedSessionId: string): Promise<boolean> {
+    const session = this.getSession(guildId);
+    if (!session || session.sessionId !== expectedSessionId) return false;
     try {
-      await queue.destroy();
+      await session.destroy();
     } finally {
       this.queues.delete(guildId);
+      this.radios.delete(guildId);
     }
+    return true;
   }
 
   public async search(query: string, requester?: User): Promise<LavalinkResponse | undefined> {
@@ -182,6 +252,25 @@ export class LavalinkManager {
 
   public getNode(): Node | undefined {
     return this.shoukaku.getIdealNode();
+  }
+
+  public async waitForReadyNode(timeoutMs = 15_000): Promise<Node | undefined> {
+    const available = this.getNode();
+    if (available) return available;
+    return new Promise(resolve => {
+      const finish = (node: Node | undefined): void => {
+        clearTimeout(timeout);
+        this.shoukaku.off('ready', check);
+        resolve(node);
+      };
+      const check = (): void => {
+        const node = this.getNode();
+        if (node) finish(node);
+      };
+      const timeout = setTimeout(() => finish(undefined), timeoutMs);
+      this.shoukaku.on('ready', check);
+      check();
+    });
   }
 
   public restoreNode(name: string): void {

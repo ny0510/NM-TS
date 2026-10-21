@@ -1,15 +1,15 @@
 import {ActionRowBuilder, type ChatInputCommandInteraction, ComponentType, EmbedBuilder, type HexColorString, MessageFlags, PermissionsBitField, SlashCommandBuilder, StringSelectMenuBuilder, type StringSelectMenuInteraction} from 'discord.js';
 import {LoadType, type Track} from 'shoukaku';
 import {z} from 'zod';
-import {createQueue, ensureSameVoiceChannel, ensureVoiceChannel} from '@/features/music/guard';
 import {handlePlaylistSearch} from '@/features/music/playlist/playlistSearchHandler';
 import {getEmbedMeta} from '@/features/music/track/embeds';
 import {slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
-import {safeReply} from '@/shared/discord/interactions';
+import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord/interactions';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/shared/formatting';
+import {requestPlaybackAction} from '@/shared/playback/switchHandler';
 import type {Command} from '@/types/client';
 import type {QueueTrack} from '@/types/music';
 
@@ -101,6 +101,7 @@ export const command = {
     });
 
     const filter = async (i: StringSelectMenuInteraction) => {
+      if (i.customId !== customId) return false;
       if (i.user.id !== interaction.user.id) {
         i.reply({
           embeds: [createErrorEmbed(client, '다른 사용자의 인터렉션이에요.', `${await slashCommandMention(interaction, 'search')} 명령어로 검색할 수 있어요.`)],
@@ -142,50 +143,54 @@ export const command = {
       const selectedTracks = i.values.map(value => tracks.find((track: Track) => (track.info.uri ?? track.info.identifier) === value)).filter((track): track is Track => Boolean(track));
       const queueTracks: QueueTrack[] = selectedTracks.map(track => ({...track, requester: interaction.user}));
 
-      const inVoice = await ensureVoiceChannel(interaction);
-      const inSameVoice = await ensureSameVoiceChannel(interaction);
-      if (!inVoice || !inSameVoice) return;
-
-      const queue = await createQueue(interaction);
-      if (!queue) return;
-
-      const results: {track: Track; success: boolean; error?: string}[] = [];
-      for (const track of queueTracks) {
-        try {
-          queue.add(track);
-          results.push({track, success: true});
-        } catch (e) {
-          const errorMessage = e instanceof Error && e.message ? e.message : '알 수 없는 오류';
-          results.push({track, success: false, error: errorMessage});
-        }
+      if (!(await safeDeferUpdate(i))) return;
+      if (!queueTracks.length) {
+        await safeReply(i, {embeds: [createErrorEmbed(client, '선택한 음악을 찾을 수 없어요.')], flags: MessageFlags.Ephemeral});
+        await safeEditReply(i, {components: []});
+        return;
       }
+      await requestPlaybackAction(i, 'music', async (currentInteraction, context, queueOptions) => {
+        const queue = context.getQueue() ?? (await context.createQueue(queueOptions));
 
-      if (!queue.playing && !queue.paused && queue.size()) await queue.play();
+        const results: {track: Track; success: boolean; error?: string}[] = [];
+        for (const track of queueTracks) {
+          try {
+            queue.add(track);
+            results.push({track, success: true});
+          } catch (e) {
+            const errorMessage = e instanceof Error && e.message ? e.message : '알 수 없는 오류';
+            results.push({track, success: false, error: errorMessage});
+          }
+        }
 
-      const tracksMeta = await getEmbedMeta(queueTracks, true, queue);
-      const [tracksColor, tracksFooterText] = [tracksMeta.colors, tracksMeta.footerText];
-      const addedCount = results.filter(result => result.success).length;
-      const description = results.length
-        ? results
-            .map(({track, success, error}) => {
-              return `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(track.info.title, 50), track.info.uri ?? '')}`;
-            })
-            .join('\n')
-        : '음악을 찾을 수 없어요.';
+        if (!queue.playing && !queue.paused && queue.size()) await queue.play();
 
-      const firstTrackThumbnail = selectedTracks[0]?.info.artworkUrl;
+        const tracksMeta = await getEmbedMeta(queueTracks, true, queue);
+        const [tracksColor, tracksFooterText] = [tracksMeta.colors, tracksMeta.footerText];
+        const addedCount = results.filter(result => result.success).length;
+        const description = results.length
+          ? results
+              .map(({track, success, error}) => {
+                return `${success ? '☑️' : `⚠️ (${error})`} ${hyperlink(truncateWithEllipsis(track.info.title, 50), track.info.uri ?? '')}`;
+              })
+              .join('\n')
+          : '음악을 찾을 수 없어요.';
 
-      return await i.update({
-        embeds: [
-          new EmbedBuilder()
-            .setTitle(addedCount > 0 ? `💿 선택한 ${results.length}곡 중 ${addedCount}곡을 대기열에 추가했어요.` : '⚠️ 선택한 곡을 대기열에 추가하지 못했어요.')
-            .setDescription(description)
-            .setThumbnail(firstTrackThumbnail || null)
-            .setFooter({text: tracksFooterText})
-            .setColor((tracksColor[0]?.hex?.() ?? COLORS.normal) as HexColorString),
-        ],
-        components: [],
+        const firstTrackThumbnail = selectedTracks[0]?.info.artworkUrl;
+
+        await safeReply(currentInteraction, {
+          embeds: [
+            new EmbedBuilder()
+              .setTitle(addedCount > 0 ? `💿 선택한 ${results.length}곡 중 ${addedCount}곡을 대기열에 추가했어요.` : '⚠️ 선택한 곡을 대기열에 추가하지 못했어요.')
+              .setDescription(description)
+              .setThumbnail(firstTrackThumbnail || null)
+              .setFooter({text: tracksFooterText})
+              .setColor((tracksColor[0]?.hex?.() ?? COLORS.normal) as HexColorString),
+          ],
+          components: [],
+        });
       });
+      await safeEditReply(i, {components: []});
     });
     collector?.on('end', disableComponents);
   },

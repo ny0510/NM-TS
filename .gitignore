@@ -6,7 +6,7 @@ magmastream
 shoukaku
 shoukaku/player-state.json
 data
-lavalink
+/lavalink
 .sisyphus
 
 # dependencies (bun install)
@@ -16,6 +16,7 @@ node_modules
 out
 dist
 *.tgz
+/assets/radio/*.zip
 
 # code coverage
 coverage

@@ -22,6 +22,8 @@ test('disconnects a timed-out Discord voice session before retrying', async () =
   Reflect.set(manager, 'shoukaku', shoukaku);
   Reflect.set(manager, 'logger', {warn: () => undefined});
   Reflect.set(manager, 'queues', new Map());
+  Reflect.set(manager, 'radios', new Map());
+  Reflect.set(manager, 'locks', new Map());
   Reflect.set(manager, 'client', null);
 
   await manager.createQueue({

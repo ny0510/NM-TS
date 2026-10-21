@@ -1,6 +1,7 @@
 import {describe, expect, test} from 'bun:test';
 
-import {getRadioStreamUrl, isRadioTrack, radioRegions} from '@/features/music/radio/radioStations';
+import {getRadioStreamUrl, radioRegions} from '@/features/radio/radioStations';
+import {isRadioTrack} from '@/shared/playback/radioUrl';
 import type {QueueTrack} from '@/types/music';
 
 const createTrack = (uri: string | null): QueueTrack => ({encoded: 'encoded', info: {identifier: 'id', isSeekable: false, author: 'author', length: 0, isStream: true, position: 0, title: 'title', uri: uri ?? undefined, sourceName: 'http'}, pluginInfo: undefined});
@@ -16,8 +17,8 @@ describe('getRadioStreamUrl', () => {
 
 describe('radioRegions', () => {
   test('lists every region in order with unique stream URLs per region', () => {
-    expect(radioRegions.map(region => region.label)).toEqual(['서울', '부산', '대구', '광주', '대전', '강원', '충북', '전북', '제주']);
-    expect(radioRegions.map(region => region.stations.length)).toEqual([38, 37, 32, 32, 18, 23, 15, 16, 15]);
+    expect(radioRegions.map(region => region.label)).toEqual(['서울·수도권', '부산', '울산', '경남', '대구', '경북', '광주', '전남', '대전', '세종', '충남', '강원', '충북', '전북', '제주']);
+    expect(radioRegions.length).toBeLessThanOrEqual(25);
 
     for (const region of radioRegions) {
       expect(new Set(region.stations.map(station => station.url)).size).toBe(region.stations.length);

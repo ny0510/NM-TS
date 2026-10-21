@@ -3,9 +3,9 @@ import {getDb} from '@/db';
 import {tracks, userFavorites} from '@/db/schema';
 import {upsertTrack} from '@/db/trackUpsert';
 import {extractTrackMeta} from '@/features/music/meta';
-import {isRadioTrack} from '@/features/music/radio/radioStations';
 import {toError} from '@/shared/errors';
 import {Logger} from '@/shared/logger';
+import {isRadioTrack} from '@/shared/playback/radioUrl';
 import type {QueueTrack} from '@/types/music';
 
 const logger = new Logger('FavoritesService');

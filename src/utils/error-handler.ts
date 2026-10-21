@@ -19,7 +19,7 @@ export const setupErrorHandlers = (client: NMClient): void => {
       client.logger.error(toError(error, 'Failed to save player state'));
     }
 
-    const queues = [...client.queues.values()];
+    const queues = [...client.services.lavalinkManager.getSessions().values()];
     await Promise.allSettled(
       queues.map(async queue => {
         const channel = client.channels.cache.get(queue.textChannelId);
@@ -36,7 +36,7 @@ export const setupErrorHandlers = (client: NMClient): void => {
       }),
     );
 
-    await Promise.allSettled(queues.map(queue => client.services.lavalinkManager.destroyQueue(queue.guildId)));
+    await Promise.allSettled(queues.map(queue => client.services.lavalinkManager.destroySession(queue.guildId, queue.sessionId)));
     await client.destroy();
     process.exit(0);
   };

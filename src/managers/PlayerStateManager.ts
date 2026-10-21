@@ -1,13 +1,13 @@
-import type {Client} from 'discord.js';
+import type {NMClient} from '@/client';
 import {clearAllPlayerStates, restoreAllPlayerStates} from '@/managers/playerState/restorer';
 import {saveAllPlayerStates} from '@/managers/playerState/serializer';
 import type {ILogger} from '@/shared/logger';
 
 export class PlayerStateManager {
-  private readonly client: Client;
+  private readonly client: NMClient;
   private readonly logger: ILogger;
 
-  constructor(client: Client, logger: ILogger) {
+  constructor(client: NMClient, logger: ILogger) {
     this.client = client;
     this.logger = logger;
   }

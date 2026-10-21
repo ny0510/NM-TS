@@ -15,7 +15,7 @@ export const event = {
 
     if (isBotStateChange(oldState, newState, client.user)) {
       if (oldState.channelId && !newState.channelId) {
-        const queue = client.queues.get(guildId);
+        const queue = client.services.lavalinkManager.getSession(guildId);
         if (queue) {
           await handleBotKicked(client, guild, guildId, queue);
         }
@@ -23,22 +23,21 @@ export const event = {
       return;
     }
 
-    const queue = client.queues.get(guildId);
+    const queue = client.services.lavalinkManager.getSession(guildId);
     if (!queue) return;
 
     const botVoiceChannel = guild.members.me?.voice?.channel;
     const queueVoiceChannelId = queue.voiceChannelId;
 
-    const affectedChannelId = newState.channelId || oldState.channelId;
-    if (affectedChannelId !== queueVoiceChannelId) return;
+    if (newState.channelId !== queueVoiceChannelId && oldState.channelId !== queueVoiceChannelId) return;
     if (!botVoiceChannel || botVoiceChannel.id !== queueVoiceChannelId) return;
 
     const members = getNonBotMembers(botVoiceChannel);
 
-    if (members?.size === 0) {
-      void handleEmptyChannel(client, guildId, guild, queue);
-    } else {
-      void handleMemberJoin(client, guildId, guild, queue);
-    }
+    await client.services.lavalinkManager.runWithSessionLock(guildId, async scope => {
+      if (scope.getSession() !== queue) return;
+      if (members?.size === 0) await handleEmptyChannel(client, guildId, guild, queue);
+      else await handleMemberJoin(client, guildId, guild, queue);
+    });
   },
 } satisfies Event<'voiceStateUpdate'>;

@@ -9,6 +9,7 @@ import {isInteractionProcessed, safeReply} from '@/shared/discord/interactions';
 import {checkPermissions} from '@/shared/discord/permissions';
 import PermissionTranslations from '@/shared/discord/permissions/locale/permission';
 import {toError} from '@/shared/errors';
+import {handlePlaybackSwitch} from '@/shared/playback/switchHandler';
 import type {Event} from '@/types/client';
 
 export const event = {
@@ -24,7 +25,9 @@ export const event = {
     }
 
     if (interaction.isButton()) {
-      if (interaction.customId === 'quick_add') {
+      if (interaction.customId.startsWith('playback:switch:')) {
+        await handlePlaybackSwitch(interaction);
+      } else if (interaction.customId === 'quick_add') {
         await handleQuickAddButton(interaction);
       } else if (interaction.customId.startsWith('control_')) {
         await handlePlayerControlsButtons(interaction);
