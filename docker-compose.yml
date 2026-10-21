@@ -27,11 +27,16 @@ services:
         max-file: '3'
 
   lavalink:
-    image: ghcr.io/lavalink-devs/lavalink:latest-alpine
+    build:
+      context: ./docker/radio-audio
+    image: nm-lavalink:4.2.2-radio
     container_name: lavalink
     restart: unless-stopped
     environment:
-      - _JAVA_OPTIONS=-Xmx2G
+      - _JAVA_OPTIONS=-Xmx2G -Dcom.sun.security.enableAIAcaIssuers=true -Dcom.sun.security.allowedAIALocations=http://secure.globalsign.com/cacert/gsgccr6alphasslca2025.crt
+      - LAVALINK_SERVER_TIMEOUTS_CONNECTTIMEOUTMS=10000
+      - LAVALINK_SERVER_TIMEOUTS_CONNECTIONREQUESTTIMEOUTMS=10000
+      - LAVALINK_SERVER_TIMEOUTS_SOCKETTIMEOUTMS=30000
       - TZ=Asia/Seoul
     volumes:
       - ./data/lavalink/application.yml:/opt/Lavalink/application.yml
