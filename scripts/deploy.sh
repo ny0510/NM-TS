@@ -15,10 +15,12 @@ export NM_IMAGE_TAG
 
 docker compose config --quiet
 docker compose pull nm migrate
-docker compose up -d --wait --no-recreate postgres lavalink
+docker compose build lavalink
+docker compose up -d --wait --no-recreate postgres ejs-api
 docker compose stop -t "${NM_STOP_TIMEOUT:-30}" nm
-docker compose run --rm migrate
-docker compose up -d --no-deps nm
+docker compose up -d --wait --no-build --no-deps lavalink
+docker compose run --rm --no-deps migrate
+docker compose up -d --no-build --no-deps nm
 docker compose ps nm postgres lavalink
 
 for _ in {1..30}; do
