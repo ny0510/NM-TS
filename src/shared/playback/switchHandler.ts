@@ -87,7 +87,7 @@ export async function handlePlaybackSwitch(interaction: ButtonInteraction): Prom
     return;
   }
   if (request.userId !== interaction.user.id || request.guildId !== interaction.guildId) {
-    await playbackError(interaction, '다른 사용자의 전환 요청이에요.');
+    await playbackError(interaction, '다른 사용자의 인터렉션이에요.');
     return;
   }
   pending.delete(nonce);

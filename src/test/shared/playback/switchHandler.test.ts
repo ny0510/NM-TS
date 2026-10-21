@@ -175,7 +175,7 @@ describe('mode switch confirmation', () => {
     const customId = await f.prompt();
     const foreign = f.makeInteraction(customId, 'someone-else');
     await handlePlaybackSwitch(foreign.interaction);
-    expect(JSON.stringify(foreign.reply.mock.calls)).toContain('다른 사용자의 전환 요청');
+    expect(JSON.stringify(foreign.reply.mock.calls)).toContain('다른 사용자의 인터렉션이에요.');
     expect(f.destroy).not.toHaveBeenCalled();
     await handlePlaybackSwitch(f.makeInteraction(customId).interaction);
     expect(f.execute).toHaveBeenCalledTimes(1);
