@@ -49,12 +49,12 @@ function fixture() {
   return {manager, player, calls, volumes};
 }
 
-test('radio starts at 100 and music without a previous volume uses its default', async () => {
+test('radio starts at 60 and music without a previous volume uses its default', async () => {
   const {manager, volumes} = fixture();
   const radio = await manager.createRadioSession({...options, volume: 20});
   await radio.tune('seoul', station, track('radio'));
-  expect(radio.volume).toBe(100);
-  expect(volumes.at(-1)).toBe(100);
+  expect(radio.volume).toBe(60);
+  expect(volumes.at(-1)).toBe(60);
   await manager.destroySession('guild', radio.sessionId);
   const music = await manager.createQueue({...options, volume: 20});
   music.add(track('music'));
@@ -70,7 +70,7 @@ test.each([0, 37])('music volume %i survives a radio switch and radio volume cha
   await manager.destroySession('guild', previous.sessionId);
   const radio = await manager.createRadioSession({...options, volume: 20});
   await radio.tune('seoul', station, track('radio'));
-  expect(volumes.at(-1)).toBe(100);
+  expect(volumes.at(-1)).toBe(60);
   await radio.setVolume(65);
   await radio.tune('seoul', station, track('next-radio'));
   expect(volumes.at(-1)).toBe(65);
@@ -239,7 +239,7 @@ test('radio restore resolves the station again and never seeks its old stream', 
   expect(resolved).toEqual([station.url]);
   expect(calls).toEqual(['join', 'fresh-encoding']);
   expect(manager.getRadioSession('guild')?.paused).toBe(true);
-  expect(manager.getRadioSession('guild')?.volume).toBe(100);
+  expect(manager.getRadioSession('guild')?.volume).toBe(60);
   expect(manager.getQueues().size).toBe(0);
 });
 

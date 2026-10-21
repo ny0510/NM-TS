@@ -127,7 +127,7 @@ export class LavalinkManager {
     if (existing) return existing;
     if (this.queues.has(options.guildId)) throw new Error('Music session is active');
     const player = await this.joinVoice(options);
-    const session = new RadioSession({...options, volume: 100, player, shoukaku: this.shoukaku});
+    const session = new RadioSession({...options, volume: 60, player, shoukaku: this.shoukaku});
     this.radios.set(options.guildId, session);
     if (this.client) registerRadioEvents(session, this.client);
     return session;
