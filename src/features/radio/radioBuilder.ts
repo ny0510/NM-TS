@@ -50,7 +50,8 @@ function stationMenu(stations: readonly RadioStation[], regionKey: string, kind:
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(menu);
 }
 
-export function buildRadioMessage(view: RadioViewState, active: RadioDisplay | undefined, config: ProgressBarConfig, expired = false) {
+export function buildRadioMessage(view: RadioViewState, active: RadioDisplay | undefined, config: ProgressBarConfig, expired = false, commandMention = '/radio') {
+  if (expired) return {embeds: [new EmbedBuilder().setTitle(`만료된 인터렉션이에요. ${commandMention} 명령어를 사용해 다시 확인해 주세요.`).setColor(COLORS.normal)], components: []};
   const region = radioRegions.find(item => item.key === view.regionKey) ?? radioRegions[0];
   if (!region) throw new Error('Radio catalog is empty');
   const station = active?.regionKey === region.key ? active.station : undefined;

@@ -105,6 +105,8 @@ services:
     image: ghcr.io/ny0510/nm:${NM_IMAGE_TAG:-latest}
     container_name: nm
     restart: unless-stopped
+    volumes:
+      - ./data/radio:/app/data/radio
     env_file:
       - .env
     environment:
@@ -120,8 +122,6 @@ services:
         condition: service_healthy
       lavalink:
         condition: service_healthy
-    volumes:
-      - ./data/shoukaku:/app/shoukaku
     logging:
       driver: 'json-file'
       options:

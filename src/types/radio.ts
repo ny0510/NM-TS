@@ -1,7 +1,6 @@
 export interface RadioStation {
   readonly id: string;
   readonly name: string;
-  readonly url: string;
   readonly provider: string;
   readonly band: 'fm' | 'other' | 'unknown';
   readonly frequencyKHz?: number;

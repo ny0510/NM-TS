@@ -1,17 +1,17 @@
 import {describe, expect, test} from 'bun:test';
 
-import {getRadioStreamUrl, radioRegions} from '@/features/radio/radioStations';
-import {isRadioTrack} from '@/shared/playback/radioUrl';
+import {radioRegions} from '@/features/radio/radioStations';
+import {getRadioStationId, getRadioTrackUri, isRadioTrack} from '@/shared/playback/radioUrl';
 import type {QueueTrack} from '@/types/music';
 
 const createTrack = (uri: string | null): QueueTrack => ({encoded: 'encoded', info: {identifier: 'id', isSeekable: false, author: 'author', length: 0, isStream: true, position: 0, title: 'title', uri: uri ?? undefined, sourceName: 'http'}, pluginInfo: undefined});
 
-describe('getRadioStreamUrl', () => {
-  test('builds radio.bsod.kr stream URLs in stn, ch, city order and omits missing parameters', () => {
-    expect(getRadioStreamUrl({stn: 'kbs', ch: '1radio'})).toBe('https://radio.bsod.kr/stream?stn=kbs&ch=1radio');
-    expect(getRadioStreamUrl({stn: 'mbc', ch: 'sfm', city: 'busan'})).toBe('https://radio.bsod.kr/stream?stn=mbc&ch=sfm&city=busan');
-    expect(getRadioStreamUrl({stn: 'tbn', city: 'jeju'})).toBe('https://radio.bsod.kr/stream?stn=tbn&city=jeju');
-    expect(getRadioStreamUrl({stn: 'kookbang'})).toBe('https://radio.bsod.kr/stream?stn=kookbang');
+describe('radio identity', () => {
+  test('decodes local URIs and legacy URLs without fetching', () => {
+    expect(getRadioStationId(getRadioTrackUri('kbs:1radio:default'))).toBe('kbs:1radio:default');
+    expect(getRadioStationId('https://radio.bsod.kr/stream?stn=kbs&ch=1radio')).toBe('kbs:1radio:default');
+    expect(getRadioStationId('https://radio.bsod.kr/stream?stn=tbn&city=jeju')).toBe('tbn:default:jeju');
+    expect(getRadioStationId('https://radio.bsod.kr/stream?stn=kookbang')).toBe('kookbang:default:default');
   });
 });
 
@@ -21,15 +21,15 @@ describe('radioRegions', () => {
     expect(radioRegions.length).toBeLessThanOrEqual(25);
 
     for (const region of radioRegions) {
-      expect(new Set(region.stations.map(station => station.url)).size).toBe(region.stations.length);
+      expect(new Set(region.stations.map(station => station.id)).size).toBe(region.stations.length);
       expect(region.stations.every(station => station.name && station.provider)).toBe(true);
     }
   });
 });
 
 describe('isRadioTrack', () => {
-  test('matches only radio.bsod.kr stream tracks', () => {
-    const stationUrl = radioRegions[0]?.stations[0]?.url ?? '';
+  test('matches local radio track identities', () => {
+    const stationUrl = getRadioTrackUri(radioRegions[0]?.stations[0]?.id ?? '');
 
     expect(isRadioTrack(createTrack(stationUrl))).toBe(true);
     expect(isRadioTrack(createTrack('https://www.youtube.com/watch?v=dQw4w9WgXcQ'))).toBe(false);

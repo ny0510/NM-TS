@@ -33,6 +33,12 @@ coverage
 .eslintcache
 *.tsbuildinfo
 
+data/*
+!data/radio/
+data/radio/*
+!data/radio/streams.json
+!data/radio/stations.json
+
 # Magmastream session data (재빌드 시 필요 없음)
 magmastream
 

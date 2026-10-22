@@ -2,7 +2,9 @@ import type {ChatInputCommandInteraction, ComponentType, Message} from 'discord.
 import {type LavalinkResponse, LoadType} from 'shoukaku';
 import {getClient} from '@/shared/discord/client';
 import {safeDeferUpdate, safeEditReply, safeFollowUp, safeReply} from '@/shared/discord/interactions';
+import {slashCommandMention} from '@/shared/discord/mention';
 import {toError} from '@/shared/errors';
+import {getRadioTrackUri} from '@/shared/playback/radioUrl';
 import {getPlaybackOptions, type PlaybackInteraction, playbackError} from '@/shared/playback/sessionGuard';
 import {requestPlaybackAction} from '@/shared/playback/switchHandler';
 import type {QueueTrack} from '@/types/music';
@@ -10,7 +12,7 @@ import {buildRadioMessage, type RadioViewState} from './radioBuilder';
 import {findRadioStation, getAdjacentStation, radioRegions} from './radioStations';
 
 const requests = new Map<string, symbol>();
-const RADIO_COLLECTOR_TIMEOUT = 5 * 60_000;
+const RADIO_COLLECTOR_TIMEOUT = 10 * 60_000;
 
 export async function handleRadio(interaction: ChatInputCommandInteraction): Promise<void> {
   const manager = getClient(interaction).services.lavalinkManager;
@@ -34,10 +36,11 @@ async function openRadioControls(interaction: PlaybackInteraction, followUpMessa
   const view: RadioViewState = {regionKey: initial?.regionKey ?? 'seoul'};
   let displayedSessionId = initial?.sessionId;
   let expired = false;
+  let commandMention = '/radio';
   const render = async () => {
     const active = manager.getRadioSession(guildId);
     displayedSessionId = active?.sessionId;
-    const payload = buildRadioMessage(view, active, client.config, expired);
+    const payload = buildRadioMessage(view, active, client.config, expired, commandMention);
     if (followUpMessage) await followUpMessage.edit(payload);
     else await safeEditReply(interaction, payload);
   };
@@ -76,7 +79,7 @@ async function openRadioControls(interaction: PlaybackInteraction, followUpMessa
       const isCurrent = () => requests.get(guildId) === token && manager.getSession(guildId)?.sessionId === previousSessionId;
       let response: LavalinkResponse | undefined;
       try {
-        response = await manager.loadRadio(station.url, selection.user);
+        response = await manager.loadRadio(station.id, selection.user);
       } catch (error) {
         if (isCurrent()) {
           client.logger.error(toError(error, 'Radio load failed'));
@@ -89,7 +92,7 @@ async function openRadioControls(interaction: PlaybackInteraction, followUpMessa
         await playbackError(selection, '라디오에 연결할 수 없어요. 잠시 후 다시 시도하거나 다른 채널을 선택해 주세요.');
         return;
       }
-      const track: QueueTrack = {...response.data, requester: selection.user, info: {...response.data.info, title: station.name, author: station.provider, uri: station.url, isStream: true, isSeekable: false}, playContext: {playContext: 'play', requestChannelId: selection.channelId}};
+      const track: QueueTrack = {...response.data, requester: selection.user, info: {...response.data.info, title: station.name, author: station.provider, uri: getRadioTrackUri(station.id), isStream: true, isSeekable: false}, playContext: {playContext: 'play', requestChannelId: selection.channelId}};
       await requestPlaybackAction(
         selection,
         'radio',
@@ -113,8 +116,13 @@ async function openRadioControls(interaction: PlaybackInteraction, followUpMessa
       await playbackError(selection, '라디오를 조작하는 중 오류가 발생했어요. 다시 시도해 주세요.');
     }
   });
-  collector.on('end', () => {
+  collector.on('end', async () => {
     expired = true;
-    void render();
+    try {
+      commandMention = await slashCommandMention(interaction, 'radio');
+      await render();
+    } catch (error) {
+      client.logger.error(toError(error, 'Failed to expire radio controls'));
+    }
   });
 }

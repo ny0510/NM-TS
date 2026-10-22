@@ -6,7 +6,9 @@ import type {NMClient} from '@/client';
 import {Queue} from '@/features/music/queue/Queue';
 import {getMusicResolveQuery} from '@/features/music/track/queryPolicy';
 import {RadioSession} from '@/features/radio/RadioSession';
-import {radioRegions} from '@/features/radio/radioStations';
+import {waitForRadioRequest} from '@/features/radio/radioRequest';
+import {findRadioStationById} from '@/features/radio/radioStations';
+import {resolveRadioStream} from '@/features/radio/radioStreamResolver';
 import {registerLavalinkEvents, registerPlayerEvents} from '@/managers/lavalink';
 import type {ILogger} from '@/shared/logger';
 import type {Config} from '@/types/client';
@@ -18,6 +20,7 @@ import {registerRadioEvents} from './lavalink/radioEvents';
 const RETRY_DELAY_MS = 1000;
 
 export class LavalinkManager {
+  private readonly radioStreamResolver = resolveRadioStream;
   private readonly shoukaku: Shoukaku;
   private readonly nodeOption: NodeOption;
   private readonly logger: ILogger;
@@ -213,19 +216,24 @@ export class LavalinkManager {
     return this.resolve(resolveQuery, requester);
   }
 
-  public async loadRadio(url: string, requester?: User): Promise<LavalinkResponse | undefined> {
-    if (!radioRegions.some(region => region.stations.some(station => station.url === url))) return undefined;
-    return this.resolve(url, requester);
+  public async loadRadio(stationId: string, requester?: User, signal?: AbortSignal): Promise<LavalinkResponse | undefined> {
+    signal?.throwIfAborted();
+    if (!findRadioStationById(stationId)) return undefined;
+    const stream = await waitForRadioRequest(this.radioStreamResolver(stationId, signal), signal);
+    signal?.throwIfAborted();
+    return stream ? this.resolve(stream, requester, signal) : undefined;
   }
 
-  private async resolve(query: string, requester?: User): Promise<LavalinkResponse | undefined> {
+  private async resolve(query: string, requester?: User, signal?: AbortSignal): Promise<LavalinkResponse | undefined> {
+    signal?.throwIfAborted();
     const node = this.shoukaku.getIdealNode();
     if (!node) {
       this.logger.error('No available Lavalink nodes for search');
       return undefined;
     }
 
-    const result = await node.rest.resolve(query);
+    const result = await waitForRadioRequest(node.rest.resolve(query), signal);
+    signal?.throwIfAborted();
     if (!result) return undefined;
 
     if (requester) {

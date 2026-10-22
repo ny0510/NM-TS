@@ -4,6 +4,7 @@ import type {Guild} from 'discord.js';
 import type {NMClient} from '@/client';
 import {handleMemberJoin} from '@/events/voiceStateUpdate/activityManager';
 import {radioRegions} from '@/features/radio/radioStations';
+import {createRadioStreamResolver} from '@/features/radio/radioStreamResolver';
 import {LavalinkManager} from '@/managers/LavalinkManager';
 import {registerRadioEvents} from '@/managers/lavalink/radioEvents';
 import {migratePlaybackState, restorePlaybackState} from '@/managers/playerState/restorer';
@@ -15,7 +16,7 @@ import type {PersistedQueueState} from '@/types/playerState';
 const selectedStation = radioRegions[0]?.stations[0];
 if (!selectedStation) throw new Error('Missing radio fixture');
 const station = selectedStation;
-const track = (encoded: string): QueueTrack => ({encoded, info: {identifier: encoded, title: station.name, author: station.provider, uri: station.url, length: 0, isStream: true, isSeekable: false, position: 0, sourceName: 'http'}, pluginInfo: undefined});
+const track = (encoded: string): QueueTrack => ({encoded, info: {identifier: encoded, title: station.name, author: station.provider, uri: `nm-radio:${station.id}`, length: 0, isStream: true, isSeekable: false, position: 0, sourceName: 'http'}, pluginInfo: undefined});
 const options = {guildId: 'guild', voiceChannelId: 'voice', textChannelId: 'text', shardId: 0};
 function fixture() {
   const calls: string[] = [];
@@ -46,7 +47,7 @@ function fixture() {
   };
   const manager: LavalinkManager = Object.create(LavalinkManager.prototype);
   Object.assign(manager, {shoukaku, queues: new Map(), radios: new Map(), locks: new Map(), musicVolumes: new Map(), client: null});
-  return {manager, player, calls, volumes};
+  return {manager, player, calls, volumes, shoukaku};
 }
 
 test('radio starts at 60 and music without a previous volume uses its default', async () => {
@@ -156,7 +157,7 @@ test('radio snapshot saves stable station identity without signed encoding or du
 test('legacy mixed radio snapshot migrates to dedicated radio', () => {
   const logger: ILogger = Object.create(null);
   Object.assign(logger, {warn: () => {}});
-  const state: PersistedQueueState = {...options, currentTrack: {...track('old'), position: 900, paused: true}, tracks: [track('pending')], previous: [], repeatMode: 'track', autoplay: true, autoShuffle: true, volume: 20, savedAt: 1};
+  const state: PersistedQueueState = {...options, currentTrack: {...track('old'), info: {...track('old').info, uri: 'https://radio.bsod.kr/stream?stn=kbs&ch=1radio'}, position: 900, paused: true}, tracks: [track('pending')], previous: [], repeatMode: 'track', autoplay: true, autoShuffle: true, volume: 20, savedAt: 1};
   const migrated = migratePlaybackState(state, logger);
   expect(migrated.mode).toBe('radio');
   expect('tracks' in migrated).toBe(false);
@@ -195,7 +196,7 @@ test('aborted restore waiting for voice join cleans its own session without star
   });
   const state: PersistedQueueState = {...options, currentTrack: {...track('music'), position: 0, paused: false}, tracks: [], previous: [], repeatMode: 'off', autoplay: false, autoShuffle: false, volume: 20, savedAt: 1};
   const abort = new AbortController();
-  const restoring = restorePlaybackState(client, state, abort.signal);
+  const restoring = restorePlaybackState(client, state, {signal: abort.signal});
   await Bun.sleep(1);
   abort.abort();
   finishJoin?.();
@@ -204,15 +205,29 @@ test('aborted restore waiting for voice join cleans its own session without star
   expect(calls).toEqual(['leave']);
 });
 
-test('radio restore resolves the station again and never seeks its old stream', async () => {
-  const {manager, player, calls} = fixture();
+test.each([false, true])('radio restore uses no bsod requests and never seeks its old stream (legacy: %s)', async legacy => {
+  const {manager, player, calls, shoukaku} = fixture();
   const client: NMClient = Object.create(null);
   const resolved: string[] = [];
+  const apiRequests: string[] = [];
   Object.assign(manager, {
-    loadRadio: async (url: string) => {
-      resolved.push(url);
-      return {loadType: 'track', data: track('fresh-encoding')};
-    },
+    radioStreamResolver: createRadioStreamResolver({
+      readApi: async url => {
+        apiRequests.push(url);
+        if (new URL(url).hostname === 'radio.bsod.kr') throw new TypeError('bsod is unavailable');
+        return JSON.stringify({channel_item: [{service_url: 'https://broadcast.example/live.m3u8'}]});
+      },
+    }),
+  });
+  Object.assign(shoukaku, {
+    getIdealNode: () => ({
+      rest: {
+        resolve: async (url: string) => {
+          resolved.push(url);
+          return {loadType: 'track', data: track('fresh-encoding')};
+        },
+      },
+    }),
   });
   Object.assign(player, {
     seekTo: async () => {
@@ -234,9 +249,13 @@ test('radio restore resolves the station again and never seeks its old stream', 
       },
     },
   });
-  const state = {mode: 'radio' as const, ...options, regionKey: 'seoul', stationId: station.id, volume: 20, paused: true, savedAt: 1};
-  expect(await restorePlaybackState(client, state, new AbortController().signal)).toBe('restored');
-  expect(resolved).toEqual([station.url]);
+  const logger: ILogger = Object.create(null);
+  Object.assign(logger, {warn: () => {}});
+  const oldState: PersistedQueueState = {...options, currentTrack: {...track('old'), info: {...track('old').info, uri: 'https://radio.bsod.kr/stream?stn=kbs&ch=1radio'}, position: 900, paused: true}, tracks: [], previous: [], repeatMode: 'off', autoplay: false, autoShuffle: false, volume: 20, savedAt: 1};
+  const state = legacy ? migratePlaybackState(oldState, logger) : {mode: 'radio' as const, ...options, regionKey: 'seoul', stationId: station.id, volume: 20, paused: true, savedAt: 1};
+  expect(await restorePlaybackState(client, state, {signal: new AbortController().signal})).toBe('restored');
+  expect(resolved).toEqual(['https://broadcast.example/live.m3u8']);
+  expect(apiRequests).toEqual(['https://cfpwwwapi.kbs.co.kr/api/v1/landing/live/channel_code/21']);
   expect(calls).toEqual(['join', 'fresh-encoding']);
   expect(manager.getRadioSession('guild')?.paused).toBe(true);
   expect(manager.getRadioSession('guild')?.volume).toBe(60);

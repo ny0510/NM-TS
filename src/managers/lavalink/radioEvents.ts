@@ -2,9 +2,28 @@ import {EmbedBuilder} from 'discord.js';
 import type {NMClient} from '@/client';
 import type {RadioSession} from '@/features/radio/RadioSession';
 import {COLORS} from '@/shared/discord/embedColors';
+import {type ILogger, Logger} from '@/shared/logger';
+import type {QueueTrack} from '@/types/music';
 
-export function registerRadioEvents(session: RadioSession, client: NMClient): void {
+const logger = new Logger('Lavalink');
+
+export function registerRadioEvents(session: RadioSession, client: NMClient, eventLogger: ILogger = logger): void {
   const manager = client.services.lavalinkManager;
+  const {guildId} = session;
+  const guildName = client.guilds?.cache.get(guildId)?.name ?? guildId;
+  const playerLabel = `Player ${guildName} (${guildId})`;
+  let activeTrack: QueueTrack | null = null;
+  eventLogger.info(`${playerLabel} created`);
+  session.onCleanup(() => {
+    if (activeTrack) eventLogger.info(`${playerLabel} track end. Track: ${activeTrack.info.title} (reason: stopped)`);
+    activeTrack = null;
+  });
+  session.player.on('start', data => {
+    if (manager.getSession(guildId) !== session) return;
+    const current = session.getCurrent();
+    activeTrack = current && (current.encoded === data.track.encoded || current.info.identifier === data.track.info.identifier) ? current : data.track;
+    eventLogger.info(`${playerLabel} track start. Track: ${activeTrack.info.title}`);
+  });
   const fail = async (encoded?: string, voiceDisconnected = false): Promise<void> => {
     const generation = session.getTuneGeneration();
     await manager
@@ -27,15 +46,26 @@ export function registerRadioEvents(session: RadioSession, client: NMClient): vo
       .catch(error => client.logger.error(error instanceof Error ? error : new Error(String(error))));
   };
   session.player.on('exception', data => {
+    if (manager.getSession(guildId) !== session) return;
+    eventLogger.error(new Error(`${playerLabel} track exception [${data.exception.severity}]: ${data.exception.message ?? 'Unknown Error'}`));
     if ('track' in data && typeof data.track === 'object' && data.track !== null && 'encoded' in data.track && typeof data.track.encoded === 'string') void fail(data.track.encoded);
   });
   session.player.on('stuck', data => {
+    if (manager.getSession(guildId) !== session) return;
+    eventLogger.warn(`${playerLabel} track stuck. Threshold: ${data.thresholdMs}ms`);
     void fail(data.track?.encoded);
   });
   session.player.on('end', data => {
+    if (manager.getSession(guildId) !== session) return;
+    const track = activeTrack && (activeTrack.encoded === data.track.encoded || activeTrack.info.identifier === data.track.info.identifier || data.reason === 'replaced') ? activeTrack : data.track;
+    eventLogger.info(`${playerLabel} track end. Track: ${track.info.title} (reason: ${data.reason})`);
+    if (track === activeTrack) activeTrack = null;
     if (data.reason !== 'replaced' && data.reason !== 'stopped') void fail(data.track?.encoded);
   });
   session.player.on('closed', data => {
+    if (manager.getSession(guildId) !== session) return;
+    if (data.code === 1000) eventLogger.debug(`${playerLabel} websocket closed normally (code: 1000)`);
+    else eventLogger.warn(`${playerLabel} websocket closed (code: ${data.code}, reason: ${data.reason})`);
     if (data.code === 4014) void fail(undefined, true);
   });
 }

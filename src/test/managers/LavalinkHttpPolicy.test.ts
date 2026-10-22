@@ -1,6 +1,7 @@
 import {expect, mock, test} from 'bun:test';
 import {LoadType} from 'shoukaku';
 import {radioRegions} from '@/features/radio/radioStations';
+import {createRadioStreamResolver} from '@/features/radio/radioStreamResolver';
 import {LavalinkManager} from '@/managers/LavalinkManager';
 
 function createManager() {
@@ -57,12 +58,15 @@ test.each([
 test('radio loading accepts only the registered station list', async () => {
   // Given: a known station and a forged radio URL.
   const {manager, resolve} = createManager();
-  const station = radioRegions[0]?.stations[0];
+  const station = radioRegions.flatMap(region => region.stations).find(item => item.id === 'kbs:1radio:default');
   if (!station) throw new TypeError('Missing radio station');
   // When: both URLs are offered to the radio-only loader.
-  await manager.loadRadio(station.url);
+  Object.assign(manager, {
+    radioStreamResolver: createRadioStreamResolver({readApi: async () => JSON.stringify({channel_item: [{service_url: 'https://broadcast.example/live.m3u8'}]})}),
+  });
+  await manager.loadRadio(station.id);
   await manager.loadRadio('https://radio.bsod.kr/stream?url=https://attacker.example');
   // Then: only the registered station is resolved.
   expect(resolve).toHaveBeenCalledTimes(1);
-  expect(resolve).toHaveBeenCalledWith(station.url);
+  expect(resolve).toHaveBeenCalledWith('https://broadcast.example/live.m3u8');
 });

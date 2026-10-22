@@ -98,6 +98,13 @@ test('/radio during music asks before opening controls; confirmation opens a sep
     expect(f.player.playTrack).toHaveBeenCalledTimes(1);
     expect(f.messageEdits).toHaveBeenCalledTimes(1);
     expect(f.radio()?.station).toBeDefined();
+    f.collector.stop('time');
+    await Bun.sleep(0);
+    const expired = f.messageEdits.mock.calls.at(-1)?.[0];
+    const embed = expired && typeof expired !== 'string' && 'embeds' in expired ? expired.embeds?.[0] : undefined;
+    expect(embed && 'toJSON' in embed ? embed.toJSON().title : embed?.title).toContain('만료된 인터렉션이에요.');
+    expect(expired).toMatchObject({components: []});
+    expect(f.radio()?.playing).toBe(true);
   } finally {
     f.collector.stop();
   }
@@ -112,10 +119,14 @@ test('tuning plays directly without music queue and retains the tuner; expiry le
     expect(f.collector.ended).toBe(false);
     expect(f.radio()?.station?.name).toBe(radioRegions[0]?.stations[0]?.name);
     f.collector.stop('time');
-    await Promise.resolve();
+    await Bun.sleep(0);
     expect(f.radio()?.playing).toBe(true);
     expect(f.shoukaku.leaveVoiceChannel).not.toHaveBeenCalled();
     expect(f.edits.mock.calls.at(-1)?.[1]).toMatchObject({components: []});
+    const expired = f.edits.mock.calls.at(-1)?.[1];
+    const embed = expired && typeof expired !== 'string' ? expired.embeds?.[0] : undefined;
+    expect(embed && 'toJSON' in embed ? embed.toJSON().title : embed?.title).toContain('만료된 인터렉션이에요.');
+    expect(embed && 'toJSON' in embed ? embed.toJSON().title : embed?.title).toContain('/radio');
   } finally {
     f.collector.stop();
   }

@@ -23,4 +23,4 @@ RUN mkdir -p lavalink/plugins shoukaku
 
 ENV NODE_ENV=production
 
-CMD ["bun", "run", "src/index.ts"]
+CMD ["sh", "scripts/docker-entrypoint.sh"]

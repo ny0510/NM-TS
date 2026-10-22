@@ -5,7 +5,7 @@
 magmastream
 shoukaku
 shoukaku/player-state.json
-data
+/data/*
 /lavalink
 .sisyphus
 

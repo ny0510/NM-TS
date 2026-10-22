@@ -49,8 +49,10 @@ test('reopens active station frequency and retains controls until view expiry', 
   expect(result.embeds[0]?.toJSON().title).toBe(`📻 ${station.name} (${formatFrequency(station)})`);
   expect(result.embeds[0]?.toJSON().description).not.toContain(formatFrequency(station));
   expect(result.components.length).toBeGreaterThan(0);
-  const expired = buildRadioMessage(view, active, progress, true);
+  const expired = buildRadioMessage(view, active, progress, true, '</radio:123>');
   expect(expired.components).toEqual([]);
+  expect(expired.embeds[0]?.toJSON().title).toBe('만료된 인터렉션이에요. </radio:123> 명령어를 사용해 다시 확인해 주세요.');
+  expect(expired.embeds[0]?.toJSON().description).toBeUndefined();
   expect(expired.embeds[0]?.toJSON().footer).toBeUndefined();
   expect(JSON.stringify(result.embeds[0]?.toJSON())).not.toContain('볼륨');
   expect(result.embeds[0]?.toJSON().description).not.toContain('방송국 위치');

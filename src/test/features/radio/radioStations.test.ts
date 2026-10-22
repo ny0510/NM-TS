@@ -1,15 +1,15 @@
 import {describe, expect, test} from 'bun:test';
 import {createHash} from 'node:crypto';
 
-import {findRadioStation, getAdjacentStation, getFmStations, isAllowedRadioUrl, radioRegions, resolveRadioRegionKey} from '@/features/radio/radioStations';
-import {isRadioTrack, isRadioUrl} from '@/shared/playback/radioUrl';
+import {findRadioStation, findRadioStationById, getAdjacentStation, getFmStations, radioRegions, resolveRadioRegionKey} from '@/features/radio/radioStations';
+import {getRadioTrackUri, isRadioTrack, isRadioUrl} from '@/shared/playback/radioUrl';
 import type {RadioRegion, RadioStation} from '@/types/radio';
 
 describe('radio catalog preservation and identity', () => {
   test('preserves all 226 region/stream entries from the pre-separation catalog', () => {
-    const urls = radioRegions.flatMap(region => region.stations.map(station => station.url)).sort();
+    const urls = radioRegions.flatMap(region => region.stations.map(station => station.id)).sort();
     expect(urls).toHaveLength(226);
-    expect(createHash('sha256').update(urls.join('\n')).digest('hex')).toBe('5510e0c1a7ea9246319d40e9534759110fc5c12dacf734177b9fb92b8fce605b');
+    expect(createHash('sha256').update(urls.join('\n')).digest('hex')).toBe('8d925949fad5a3a5b5c258defd596a045e1c9a00e19a4ab7ed0c5c1013a90b40');
     for (const region of radioRegions) {
       expect(new Set(region.stations.map(station => station.id)).size).toBe(region.stations.length);
       for (const station of region.stations) expect(findRadioStation(region.key, station.id)).toBe(station);
@@ -32,7 +32,7 @@ describe('radio catalog preservation and identity', () => {
     expect(findRadioStation('invalid', 'ebs:fm:default')).toBeUndefined();
     const seoul = findRadioStation('seoul', 'ebs:fm:default');
     const busan = findRadioStation('busan', 'ebs:fm:default');
-    expect(seoul?.url).toBe(busan?.url);
+    expect(seoul?.id).toBe(busan?.id);
     expect(seoul?.frequencyKHz).toBe(104500);
     expect(busan?.frequencyKHz).toBe(107700);
     expect(seoul?.locality).not.toBe(busan?.locality);
@@ -61,11 +61,11 @@ describe('radio catalog preservation and identity', () => {
 });
 
 describe('radio URL boundaries', () => {
-  test('requires exact catalog URLs for authorization', () => {
+  test('requires exact catalog IDs for authorization', () => {
     for (const region of radioRegions) {
       for (const station of region.stations) {
-        expect(isAllowedRadioUrl(station.url)).toBe(true);
-        expect(isRadioTrack({info: {uri: station.url}})).toBe(true);
+        expect(findRadioStationById(station.id)).toBeDefined();
+        expect(isRadioTrack({info: {uri: getRadioTrackUri(station.id)}})).toBe(true);
       }
     }
     for (const url of [
@@ -76,7 +76,7 @@ describe('radio URL boundaries', () => {
       'http://radio.bsod.kr/stream?stn=kbs&ch=1radio',
       'https://radio.bsod.kr.evil.example/stream?stn=kbs',
     ])
-      expect(isAllowedRadioUrl(url)).toBe(false);
+      expect(findRadioStationById(url)).toBeUndefined();
   });
 
   test('classification rejects lookalikes, credentials, arbitrary queries and missing URLs', () => {
@@ -88,7 +88,7 @@ describe('radio URL boundaries', () => {
   });
 });
 
-const station = (id: string, frequencyKHz?: number): RadioStation => ({id, name: id, url: id, provider: 'test', band: frequencyKHz === undefined ? 'unknown' : 'fm', frequencyKHz});
+const station = (id: string, frequencyKHz?: number): RadioStation => ({id, name: id, provider: 'test', band: frequencyKHz === undefined ? 'unknown' : 'fm', frequencyKHz});
 const low = station('low', 90000);
 const middleA = station('middle-a', 95000);
 const middleB = station('middle-b', 95000);

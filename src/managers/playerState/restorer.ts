@@ -1,28 +1,57 @@
 import {EmbedBuilder} from 'discord.js';
-import {LoadType} from 'shoukaku';
+import {type LavalinkResponse, LoadType} from 'shoukaku';
 import type {NMClient} from '@/client';
 import {handleEmptyChannel} from '@/events/voiceStateUpdate/activityManager';
 import {findRadioStation, radioRegions, resolveRadioRegionKey} from '@/features/radio/radioStations';
 import {COLORS} from '@/shared/discord/embedColors';
 import {toError} from '@/shared/errors';
 import type {ILogger} from '@/shared/logger';
+import {getRadioStationId, getRadioTrackUri} from '@/shared/playback/radioUrl';
 import type {QueueTrack} from '@/types/music';
 import {type PersistedPlaybackState, type PersistedTrack, PLAYER_STATE_VERSION} from '@/types/playerState';
 import {clearPlayerStates, deletePersistedPlayerState, loadPlayerStates} from './persistence';
 
 const RESTORE_TIMEOUT_MS = 3_000;
+type RadioPreparation = {readonly status: 'ready'; readonly response: LavalinkResponse | undefined} | {readonly status: 'failed'};
+interface RestoreContext {
+  readonly signal: AbortSignal;
+  readonly radio?: {readonly response: LavalinkResponse | undefined};
+}
+
+async function prepareRadioRestore(client: NMClient, states: readonly PersistedPlaybackState[], logger: ILogger): Promise<ReadonlyMap<string, RadioPreparation>> {
+  const stationIds = new Set<string>();
+  for (const state of states) {
+    if (state.mode !== 'radio') continue;
+    const station = findRadioStation(state.regionKey, state.stationId);
+    if (station) stationIds.add(station.id);
+  }
+  const signal = AbortSignal.timeout(8000);
+  const prepared = await Promise.all(
+    [...stationIds].map(async stationId => {
+      try {
+        const response = await client.services.lavalinkManager.loadRadio(stationId, undefined, signal);
+        return [stationId, {status: 'ready', response}] as const;
+      } catch (error) {
+        logger.error(toError(error, 'Radio restore preparation failed'));
+        return [stationId, {status: 'failed'}] as const;
+      }
+    }),
+  );
+  return new Map<string, RadioPreparation>(prepared);
+}
+
 export async function clearAllPlayerStates(): Promise<void> {
   await clearPlayerStates();
 }
 
 export function migratePlaybackState(state: PersistedPlaybackState, logger: ILogger): PersistedPlaybackState {
   if (state.mode === 'radio') return {...state, regionKey: resolveRadioRegionKey(state.regionKey, state.stationId)};
-  const radio = radioRegions.flatMap(region => region.stations.map(station => ({region, station}))).find(({station}) => station.url === state.currentTrack?.info.uri);
+  const radio = radioRegions.flatMap(region => region.stations.map(station => ({region, station}))).find(({station}) => station.id === getRadioStationId(state.currentTrack?.info.uri));
   if (radio) {
     if (state.tracks.length) logger.warn(`Discarding legacy mixed radio queue for ${state.guildId}`);
     return {mode: 'radio', guildId: state.guildId, voiceChannelId: state.voiceChannelId, textChannelId: state.textChannelId, volume: state.volume, paused: state.currentTrack?.paused ?? false, regionKey: radio.region.key, stationId: radio.station.id, requesterId: state.currentTrack?.requesterId, savedAt: state.savedAt};
   }
-  const isMusic = (track: PersistedTrack): boolean => !radioRegions.some(region => region.stations.some(station => station.url === track.info.uri));
+  const isMusic = (track: PersistedTrack): boolean => !radioRegions.some(region => region.stations.some(station => station.id === getRadioStationId(track.info.uri)));
   const tracks = state.tracks.filter(isMusic);
   const previous = state.previous.filter(isMusic);
   if (tracks.length !== state.tracks.length || previous.length !== state.previous.length) logger.warn(`Discarding legacy radio entries from music queue for ${state.guildId}`);
@@ -33,7 +62,7 @@ export async function restoreAllPlayerStates(client: NMClient, logger: ILogger):
   const result = {restored: 0, total: 0, failed: 0};
   try {
     const records = await loadPlayerStates();
-    const states = records.filter(record => record.version === 1 || record.version === PLAYER_STATE_VERSION);
+    const states = records.filter(record => record.version === 1 || record.version === PLAYER_STATE_VERSION).map(record => ({...record, state: migratePlaybackState(record.state, logger)}));
     result.total = states.length;
     if (states.length === 0) return result;
     if (!(await client.services.lavalinkManager.waitForReadyNode())) {
@@ -41,7 +70,19 @@ export async function restoreAllPlayerStates(client: NMClient, logger: ILogger):
       logger.warn('Lavalink readiness timed out; retaining player snapshots for the next restore attempt');
       return result;
     }
+    const preparedRadio = await prepareRadioRestore(
+      client,
+      states.map(record => record.state),
+      logger,
+    );
     for (const record of states) {
+      const {state} = record;
+      const station = state.mode === 'radio' ? findRadioStation(state.regionKey, state.stationId) : undefined;
+      const radio = station ? preparedRadio.get(station.id) : undefined;
+      if (radio?.status === 'failed') {
+        result.failed++;
+        continue;
+      }
       const controller = new AbortController();
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
@@ -51,7 +92,7 @@ export async function restoreAllPlayerStates(client: NMClient, logger: ILogger):
             resolve('timeout');
           }, RESTORE_TIMEOUT_MS);
         });
-        const outcome = await Promise.race([restorePlaybackState(client, migratePlaybackState(record.state, logger), controller.signal), timeout]);
+        const outcome = await Promise.race([restorePlaybackState(client, state, {signal: controller.signal, radio}), timeout]);
         if (outcome === 'restored') {
           result.restored++;
           await deletePersistedPlayerState(record.guildId);
@@ -70,7 +111,7 @@ export async function restoreAllPlayerStates(client: NMClient, logger: ILogger):
   return result;
 }
 
-export async function restorePlaybackState(client: NMClient, state: PersistedPlaybackState, signal: AbortSignal): Promise<'restored' | 'skipped'> {
+export async function restorePlaybackState(client: NMClient, state: PersistedPlaybackState, {signal, radio}: RestoreContext): Promise<'restored' | 'skipped'> {
   const manager = client.services.lavalinkManager;
   const guild = client.guilds.cache.get(state.guildId);
   const voice = client.channels.cache.get(state.voiceChannelId);
@@ -88,7 +129,8 @@ export async function restorePlaybackState(client: NMClient, state: PersistedPla
   if (signal.aborted) return 'skipped';
   const regionKey = state.mode === 'radio' ? resolveRadioRegionKey(state.regionKey, state.stationId) : undefined;
   const station = state.mode === 'radio' && regionKey ? findRadioStation(regionKey, state.stationId) : undefined;
-  const resolved = station ? await manager.loadRadio(station.url, state.mode === 'radio' && state.requesterId ? users.get(state.requesterId) : undefined) : undefined;
+  let resolved: LavalinkResponse | undefined;
+  if (station) resolved = radio ? radio.response : await manager.loadRadio(station.id, state.mode === 'radio' && state.requesterId ? users.get(state.requesterId) : undefined, signal);
   if (state.mode === 'radio' && (!station || resolved?.loadType !== LoadType.TRACK)) return 'skipped';
   if (signal.aborted) return 'skipped';
   return manager.runWithSessionLock(state.guildId, async scope => {
@@ -100,7 +142,7 @@ export async function restorePlaybackState(client: NMClient, state: PersistedPla
       if (state.mode === 'radio') {
         const radio = scope.getRadioSession();
         if (!radio || !station || !regionKey || resolved?.loadType !== LoadType.TRACK) throw new Error('Radio restore lost station');
-        const track: QueueTrack = {...resolved.data, info: {...resolved.data.info, title: station.name, author: station.provider, uri: station.url, isStream: true}, requester: state.requesterId ? users.get(state.requesterId) : undefined};
+        const track: QueueTrack = {...resolved.data, info: {...resolved.data.info, title: station.name, author: station.provider, uri: getRadioTrackUri(station.id), isStream: true}, requester: state.requesterId ? users.get(state.requesterId) : undefined};
         await radio.tune(regionKey, station, track);
         signal.throwIfAborted();
         if (state.paused) await radio.pause(true);

@@ -4,7 +4,7 @@
   "description": "고음질 무료 음악 봇, NM",
   "type": "module",
   "private": true,
-  "version": "2.14.4",
+  "version": "2.14.5",
   "scripts": {
     "preinstall": "npx only-allow bun",
     "start": "NODE_ENV=production bun run ./src/index.ts",
@@ -16,7 +16,8 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate --config drizzle.config.ts",
     "db:migrate": "drizzle-kit migrate --config drizzle.config.ts",
-    "db:migrate:once": "bun run db:migrate"
+    "db:migrate:once": "bun run db:migrate",
+    "radio:sync": "bun run scripts/sync-radio-streams.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
@@ -28,6 +29,7 @@
   "dependencies": {
     "@t3-oss/env-core": "^0.13.11",
     "@types/luxon": "^3.7.2",
+    "acorn": "^8.19.0",
     "chalk": "^6.0.0",
     "discord.js": "^14.26.4",
     "drizzle-kit": "^0.31.10",
