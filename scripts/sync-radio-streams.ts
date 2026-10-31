@@ -111,6 +111,30 @@ function fetchUrl(fn: AnyNode): string {
   return fail('Unsupported broadcaster API expression');
 }
 
+function ebsFallback(fn: AnyNode): string {
+  const match = initializer(fn, 'match');
+  if (match.type !== 'CallExpression' || match.callee.type !== 'MemberExpression' || match.callee.computed || match.callee.property.type !== 'Identifier' || match.callee.property.name !== 'match') fail('Unsupported EBS HTML extraction');
+  const regex = match.arguments[0];
+  if (regex?.type !== 'Literal' || !(regex.value instanceof RegExp) || regex.value.source !== String.raw`src:\s*'(https:\/\/liveotu\.ebs\.co\.kr\/[^']+)'` || regex.value.flags !== '') fail('Unsupported EBS stream pattern');
+  const returns = nodes(fn).filter(node => node.type === 'ReturnStatement' && node.argument?.type === 'ConditionalExpression');
+  const returned = returns[0];
+  const value = returned?.type === 'ReturnStatement' ? returned.argument : undefined;
+  if (
+    returns.length !== 1 ||
+    value?.type !== 'ConditionalExpression' ||
+    value.test.type !== 'Identifier' ||
+    value.test.name !== 'match' ||
+    value.consequent.type !== 'MemberExpression' ||
+    value.consequent.object.type !== 'Identifier' ||
+    value.consequent.object.name !== 'match' ||
+    !value.consequent.computed ||
+    value.consequent.property.type !== 'Literal' ||
+    value.consequent.property.value !== 1
+  )
+    fail('Unsupported EBS fallback expression');
+  return string(value.alternate);
+}
+
 function convert(root: AnyNode, provider: string, channel: string, city: string): RadioStreamDefinition {
   if (provider === 'kbs') {
     const channelCode = code(root, 'channelCodes', channel);
@@ -135,6 +159,7 @@ function convert(root: AnyNode, provider: string, channel: string, city: string)
   }
   if (provider === 'ifm' || (provider === 'cbs' && channel === 'sfm' && city === 'default')) return {type: 'direct', url: audioAlternative(initializer(stream, 'url'))};
   const url = fetchUrl(stream);
+  if (provider === 'ebs' && channel === 'fm' && city === 'default') return {type: 'ebs', url, fallbackUrl: ebsFallback(stream)};
   if (provider === 'afn') {
     const returns = nodes(stream).filter(node => node.type === 'ReturnStatement');
     const returned = returns[0];

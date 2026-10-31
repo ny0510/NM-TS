@@ -6,6 +6,7 @@ const definitionSchema = z.discriminatedUnion('type', [
   z.object({type: z.literal('direct'), url: radioStreamUrlSchema}),
   z.object({type: z.literal('text'), url: radioStreamUrlSchema}),
   z.object({type: z.literal('kbs'), url: radioStreamUrlSchema}),
+  z.object({type: z.literal('ebs'), url: radioStreamUrlSchema, fallbackUrl: radioStreamUrlSchema}),
   z.object({type: z.literal('mbc-bora'), url: radioStreamUrlSchema}),
   z.object({type: z.literal('busan-mbc'), url: radioStreamUrlSchema, dateCodes: z.string().length(10)}),
   z.object({type: z.literal('afn'), url: radioStreamUrlSchema, path: z.string().startsWith('/')}),

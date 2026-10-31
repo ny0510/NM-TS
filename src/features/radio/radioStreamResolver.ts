@@ -42,6 +42,11 @@ export function createRadioStreamResolver({readApi = readRadioText, now = () => 
         return busanMbcUrl(stream, now());
       case 'text':
         return radioStreamUrlSchema.parse(await read());
+      case 'ebs': {
+        const html = await read();
+        const url = /\bsrc\s*:\s*(['"])(https:\/\/liveotu\.ebs\.co\.kr\/[^'"\s<>]+)\1/.exec(html)?.[2];
+        return url ? radioStreamUrlSchema.parse(url.replaceAll('&amp;', '&')) : stream.fallbackUrl;
+      }
       case 'kbs':
         return kbsSchema.parse(JSON.parse(await read())).channel_item[0]?.service_url;
       case 'mbc-bora': {

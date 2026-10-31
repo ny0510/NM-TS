@@ -80,6 +80,44 @@ test('extracts MBC visual-radio JSONP without executing it', async () => {
   expect(await resolve('mbc:bora:default')).toBe('https://broadcast.example/bora.m3u8');
 });
 
+test.each(["'", '"'])('refreshes EBS signed addresses from HTML using %s quotes', async quote => {
+  let calls = 0;
+  const resolve = createRadioStreamResolver({
+    streams: {'ebs:fm:default': {type: 'ebs', url: 'https://www.ebs.co.kr/onair?channelCodeString=radio', fallbackUrl: 'https://ebsonair.ebs.co.kr/fallback.m3u8'}},
+    readApi: async () => `<script>src: ${quote}https://liveotu.ebs.co.kr/fm/playlist.m3u8?token=${++calls}&amp;key=test${quote}</script>`,
+  });
+
+  const results = await Promise.all([resolve('ebs:fm:default'), resolve('ebs:fm:default')]);
+
+  expect(results).toEqual(['https://liveotu.ebs.co.kr/fm/playlist.m3u8?token=1&key=test', 'https://liveotu.ebs.co.kr/fm/playlist.m3u8?token=2&key=test']);
+});
+
+test.each(['<html>no stream</html>', "src: 'https://liveotu.ebs.co.kr.evil.example/playlist.m3u8'"])('uses the configured EBS fallback when HTML has no official stream: %s', async html => {
+  const resolve = createRadioStreamResolver({
+    streams: {'ebs:fm:default': {type: 'ebs', url: 'https://www.ebs.co.kr/onair?channelCodeString=radio', fallbackUrl: 'https://ebsonair.ebs.co.kr/fallback.m3u8'}},
+    readApi: async () => html,
+  });
+
+  const result = await resolve('ebs:fm:default');
+
+  expect(result).toBe('https://ebsonair.ebs.co.kr/fallback.m3u8');
+});
+
+test('cancels EBS page loading without returning a fallback', async () => {
+  const controller = new AbortController();
+  const pending = Promise.withResolvers<string>();
+  const resolve = createRadioStreamResolver({
+    streams: {'ebs:fm:default': {type: 'ebs', url: 'https://www.ebs.co.kr/onair?channelCodeString=radio', fallbackUrl: 'https://ebsonair.ebs.co.kr/fallback.m3u8'}},
+    readApi: async () => pending.promise,
+  });
+  const resolving = resolve('ebs:fm:default', controller.signal);
+
+  controller.abort();
+
+  await expect(resolving).rejects.toThrow();
+  pending.resolve('');
+});
+
 test('combines the AFN API host with the configured stream path', async () => {
   const resolve = createRadioStreamResolver({readApi: async () => '<ip>first.example</ip><ip>last.example</ip>'});
 

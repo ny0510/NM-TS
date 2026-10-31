@@ -17,6 +17,7 @@ bun run radio:sync
 | `direct` | 고정 스트림 주소 사용 |
 | `text` | API가 반환한 스트림 주소 사용 |
 | `kbs` | 공식 API의 `channel_item[0].service_url` 사용 |
+| `ebs` | EBS 온에어 HTML에서 `liveotu.ebs.co.kr` 서명 주소를 추출하고, 없으면 `fallbackUrl` 사용 |
 | `mbc-bora` | JSONP 응답의 `BoraURL` 사용 |
 | `busan-mbc` | 한국 날짜를 `dateCodes`로 변환해 주소의 `{date}` 치환 |
 | `afn` | API가 반환한 호스트에 설정된 `path` 결합 |

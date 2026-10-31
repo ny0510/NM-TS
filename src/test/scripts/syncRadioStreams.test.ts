@@ -111,6 +111,34 @@ test('maps broadcaster APIs, audio selection, date templates and AFN paths from 
   expect(await readFile(setup.active, 'utf8')).toBe(setup.before);
 });
 
+test('converts EBS HTML extraction without executing upstream code or replacing active settings', async () => {
+  const setup = await fixture();
+  await replaceStream(
+    setup.source,
+    'ebs',
+    'fm',
+    'default',
+    String.raw`async () => {
+    try {
+      const response = await fetch("https://www.ebs.co.kr/onair?channelCodeString=radio", {headers: MOCK_HEADERS});
+      const html = await response.text();
+      const match = html.match(/src:\s*'(https:\/\/liveotu\.ebs\.co\.kr\/[^']+)'/);
+      return match ? match[1] : "https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8";
+    } catch (e) { return null; }
+  }`,
+  );
+
+  const result = await invoke('ebs-html', setup.source, setup.output);
+
+  expect(result.exitCode).toBe(0);
+  expect(parseRadioStreams(JSON.parse(await readFile(setup.output, 'utf8')))['ebs:fm:default']).toEqual({
+    type: 'ebs',
+    url: 'https://www.ebs.co.kr/onair?channelCodeString=radio',
+    fallbackUrl: 'https://ebsonair.ebs.co.kr/fmradiofamilypc/familypc1m/playlist.m3u8',
+  });
+  expect(await readFile(setup.active, 'utf8')).toBe(setup.before);
+});
+
 test.each(['malformed', 'missing-file', 'missing-station', 'invalid-url', 'unsupported-function'] as const)('fails atomically for %s source', async scenario => {
   // Given
   const setup = await fixture();
