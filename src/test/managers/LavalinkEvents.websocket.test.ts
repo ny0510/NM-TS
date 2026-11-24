@@ -86,8 +86,8 @@ test('real Bun Shoukaku websocket recovers after loopback shutdown and refused h
     expect(shoukaku.nodes.get('loopback')).not.toBe(original);
     expect(manager.getNode()).toBeDefined();
     expect(errors).toEqual([]);
-    expect(warnings.some(value => value.includes('Failed to connect'))).toBe(true);
-    expect(raw.some(value => value.includes('ErrorEvent'))).toBe(true);
+    expect(warnings).toContainEqual(expect.stringMatching(/^Node loopback reconnect failed: (?:WebSocket connection to 'ws:\/\/127\.0\.0\.1:\d+\/' failed: (?:Failed to connect|Connection refused)|connect ECONNREFUSED 127\.0\.0\.1:\d+ \[ECONNREFUSED\])$/));
+    expect(raw).toContainEqual(expect.stringMatching(/^(?:ErrorEvent: WebSocket connection to 'ws:\/\/127\.0\.0\.1:\d+\/' failed: (?:Failed to connect|Connection refused)|Error: connect ECONNREFUSED 127\.0\.0\.1:\d+)$/));
     console.info(JSON.stringify({scenario: 'loopback restart', rawErrors: raw, warnings, recovered: true}));
   } finally {
     stopping = true;
