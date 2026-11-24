@@ -6,6 +6,7 @@ import type {Command} from '@/types/client';
 
 export const command = {
   data: new SlashCommandBuilder().setName('favorites').setDescription('내 즐겨찾기 목록을 확인해요.'),
+  deferReplyOptions: {flags: MessageFlags.Ephemeral},
   async execute(interaction) {
     const favorites = await getUserFavorites(interaction.user.id);
 

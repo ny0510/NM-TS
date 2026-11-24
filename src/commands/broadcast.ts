@@ -2,6 +2,7 @@ import type {ChatInputCommandInteraction} from 'discord.js';
 import {codeBlock, EmbedBuilder, MessageFlags, SlashCommandBuilder, Team, User} from 'discord.js';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
+import {safeDeferReply, safeEditReply, safeReply} from '@/shared/discord/interactions/safeReply';
 import type {Command} from '@/types/client';
 
 export const command = {
@@ -10,6 +11,7 @@ export const command = {
     .setDescription('현재 재생중인 모든 서버에 공지사항을 보내요.')
     .addStringOption(option => option.setName('message').setDescription('✏️ 보낼 공지사항 내용').setRequired(true))
     .addBooleanOption(option => option.setName('preview').setDescription('👁️ 전송 전 임베드 미리보기').setRequired(false)),
+  deferReplyOptions: {flags: MessageFlags.Ephemeral},
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = getClient(interaction);
 
@@ -30,24 +32,24 @@ export const command = {
       isOwner = owner.members.some(m => m.user.id === interaction.user.id);
     }
 
-    if (!isOwner) return;
+    if (!isOwner) return await safeReply(interaction, {content: '봇 소유자만 사용할 수 있어요.', flags: MessageFlags.Ephemeral});
 
     const message = interaction.options.getString('message', true);
     const preview = interaction.options.getBoolean('preview') || false;
 
     const queues = Array.from(client.services.lavalinkManager.getSessions().values()).filter(q => q.playing);
     if (queues.length === 0) {
-      await interaction.reply({content: '현재 재생중인 서버가 없습니다.', flags: [MessageFlags.Ephemeral]});
+      await safeReply(interaction, {content: '현재 재생중인 서버가 없습니다.', flags: MessageFlags.Ephemeral});
       return;
     }
 
     if (preview) {
       const embed = new EmbedBuilder().setTitle('📢 공지사항 (미리보기)').setDescription(message).setColor(COLORS.normal);
-      await interaction.reply({embeds: [embed], flags: [MessageFlags.Ephemeral]});
+      await safeReply(interaction, {embeds: [embed], flags: MessageFlags.Ephemeral});
       return;
     }
 
-    await interaction.deferReply({flags: MessageFlags.Ephemeral});
+    if (!(await safeDeferReply(interaction, {flags: MessageFlags.Ephemeral}))) return;
 
     let success = 0;
     let fail = 0;
@@ -87,6 +89,6 @@ export const command = {
       resultEmbed.addFields({name: '실패한 서버 목록', value: failedText});
     }
 
-    await interaction.editReply({embeds: [resultEmbed]});
+    await safeEditReply(interaction, {embeds: [resultEmbed]});
   },
 } satisfies Command;

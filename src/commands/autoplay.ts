@@ -1,7 +1,7 @@
 import {type ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} from 'discord.js';
 import {validateMusicCommand} from '@/features/music/guard';
 import {COLORS} from '@/shared/discord/embedColors';
-import {safeReply} from '@/shared/discord/interactions';
+import {safeDeferReply, safeReply} from '@/shared/discord/interactions';
 import type {Command} from '@/types/client';
 
 export const command = {
@@ -18,7 +18,7 @@ export const command = {
       });
     }
 
-    await interaction.deferReply();
+    if (!(await safeDeferReply(interaction))) return;
     queue.setAutoplay(true, interaction.user);
 
     return await safeReply(interaction, {

@@ -30,6 +30,7 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
   const client = getClient(interaction);
   const guildId = interaction.guildId;
   if (!guildId) return;
+  if (!(await safeDeferUpdate(interaction))) return;
   const queue = client.queues.get(guildId);
 
   if (!queue) {
@@ -61,9 +62,6 @@ export async function handlePlayerControlsButtons(interaction: ButtonInteraction
     });
     return;
   }
-
-  const deferred = await safeDeferUpdate(interaction);
-  if (!deferred) return;
 
   await client.services.lavalinkManager.runWithSessionLock(guildId, async context => {
     if (context.getQueue() !== queue) {

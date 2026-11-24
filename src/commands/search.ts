@@ -7,7 +7,7 @@ import {slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
 import {createErrorEmbed} from '@/shared/discord/embeds';
-import {safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord/interactions';
+import {safeDeferReply, safeDeferUpdate, safeEditReply, safeReply} from '@/shared/discord/interactions';
 import {hyperlink, msToTime, truncateWithEllipsis} from '@/shared/formatting';
 import {requestPlaybackAction} from '@/shared/playback/switchHandler';
 import type {Command} from '@/types/client';
@@ -35,6 +35,7 @@ export const command = {
     .addStringOption(option => option.setName('searchplatform').setDescription('🌐 검색할 플랫폼을 선택해 주세요.').addChoices({name: '▶️ 유튜브', value: 'ytsearch'}, {name: '📜 유튜브 플레이리스트', value: 'ytplaylist'}, {name: '🎵 스포티파이', value: 'spsearch'}, {name: '☁️ 사운드클라우드', value: 'scsearch'})),
   permissions: [PermissionsBitField.Flags.Connect, PermissionsBitField.Flags.Speak],
   cooldown: 3,
+  deferReplyOptions: {flags: MessageFlags.Ephemeral},
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = getClient(interaction);
 
@@ -44,7 +45,7 @@ export const command = {
       return;
     }
 
-    await interaction.deferReply();
+    if (!(await safeDeferReply(interaction, {flags: MessageFlags.Ephemeral}))) return;
 
     const query = interaction.options.getString('query', true);
     const platformDisplayName = SEARCH_PLATFORMS[searchPlatform];
@@ -103,7 +104,7 @@ export const command = {
     const filter = async (i: StringSelectMenuInteraction) => {
       if (i.customId !== customId) return false;
       if (i.user.id !== interaction.user.id) {
-        i.reply({
+        await safeReply(i, {
           embeds: [createErrorEmbed(client, '다른 사용자의 인터렉션이에요.', `${await slashCommandMention(interaction, 'search')} 명령어로 검색할 수 있어요.`)],
           flags: MessageFlags.Ephemeral,
         });
@@ -111,7 +112,7 @@ export const command = {
       }
 
       if (!i.values || i.values.length === 0) {
-        i.reply({embeds: [createErrorEmbed(client, '재생할 음악을 선택해 주세요.')], flags: MessageFlags.Ephemeral});
+        await safeReply(i, {embeds: [createErrorEmbed(client, '재생할 음악을 선택해 주세요.')], flags: MessageFlags.Ephemeral});
         return false;
       }
 

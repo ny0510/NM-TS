@@ -5,7 +5,7 @@ import {handleQuickAddButton} from '@/features/music/button/quickAddBuilder';
 import {slashCommandMention} from '@/shared/discord';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
-import {isInteractionProcessed, safeReply} from '@/shared/discord/interactions';
+import {isInteractionProcessed, safeDeferReply, safeReply} from '@/shared/discord/interactions';
 import {checkPermissions} from '@/shared/discord/permissions';
 import PermissionTranslations from '@/shared/discord/permissions/locale/permission';
 import {toError} from '@/shared/errors';
@@ -65,52 +65,53 @@ export const event = {
     const command = client.commands.get(interaction.commandName);
 
     if (!command) return;
+    if (!(await safeDeferReply(interaction, command.deferReplyOptions))) return;
 
-    const isAdministrator = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ?? false;
+    try {
+      const isAdministrator = interaction.memberPermissions?.has(PermissionFlagsBits.Administrator) ?? false;
 
-    if (!isAdministrator && client.application && !client.application.owner) {
-      try {
-        await client.application.fetch();
-      } catch (error) {
-        if (!(error instanceof Error)) throw error;
-        client.logger.warn(`Failed to fetch application owner: ${error.message}`);
+      if (!isAdministrator && client.application && !client.application.owner) {
+        try {
+          await client.application.fetch();
+        } catch (error) {
+          if (!(error instanceof Error)) throw error;
+          client.logger.warn(`Failed to fetch application owner: ${error.message}`);
+        }
       }
-    }
 
-    const owner = client.application?.owner;
-    const isOwner = (owner instanceof User && owner.id === interaction.user.id) || (owner instanceof Team && owner.members.some(member => member.user.id === interaction.user.id));
+      const owner = client.application?.owner;
+      const isOwner = (owner instanceof User && owner.id === interaction.user.id) || (owner instanceof Team && owner.members.some(member => member.user.id === interaction.user.id));
 
-    if (!isAdministrator && !isOwner) {
-      const cooldownResult = client.services.cooldownManager.checkCooldown(command.data.name, interaction.user.id, command.cooldown);
+      if (!isAdministrator && !isOwner) {
+        const cooldownResult = client.services.cooldownManager.checkCooldown(command.data.name, interaction.user.id, command.cooldown);
 
-      if (cooldownResult.onCooldown) {
+        if (cooldownResult.onCooldown) {
+          return await safeReply(interaction, {
+            embeds: [
+              new EmbedBuilder()
+                .setTitle('잠시 후에 다시 시도해 주세요.')
+                .setDescription(`${await slashCommandMention(interaction, command.data.name)} 명령어는 \`${cooldownResult.timeLeft}초\` 후에 사용할 수 있어요.`)
+                .setColor(COLORS.error),
+            ],
+            flags: MessageFlags.Ephemeral,
+          });
+        }
+      }
+
+      const {result, missing} = await checkPermissions(interaction as ChatInputCommandInteraction, command);
+      if (!result) {
+        const missingPermissions = missing.map(permission => `+ ${PermissionTranslations[permission as PermissionsString]} (${permission})`).join('\n');
         return await safeReply(interaction, {
-          embeds: [
-            new EmbedBuilder()
-              .setTitle('잠시 후에 다시 시도해 주세요.')
-              .setDescription(`${await slashCommandMention(interaction, command.data.name)} 명령어는 \`${cooldownResult.timeLeft}초\` 후에 사용할 수 있어요.`)
-              .setColor(COLORS.error),
-          ],
+          embeds: [new EmbedBuilder().setTitle('명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.').setDescription(codeBlock('diff', missingPermissions)).setColor(COLORS.error)],
           flags: MessageFlags.Ephemeral,
         });
       }
-    }
 
-    const {result, missing} = await checkPermissions(interaction as ChatInputCommandInteraction, command);
-    if (!result) {
-      const missingPermissions = missing.map(permission => `+ ${PermissionTranslations[permission as PermissionsString]} (${permission})`).join('\n');
-      return await safeReply(interaction, {
-        embeds: [new EmbedBuilder().setTitle('명령어를 실행하기 위해 필요한 권한이 부족해요. 아래 권한을 추가해 주세요.').setDescription(codeBlock('diff', missingPermissions)).setColor(COLORS.error)],
-        flags: MessageFlags.Ephemeral,
-      });
-    }
-
-    try {
       await command.execute(interaction);
     } catch (e) {
       client.logger.error(toError(e, `Error executing command ${interaction.commandName}`));
 
-      if (!interaction.replied && !interaction.deferred) {
+      if (!interaction.replied) {
         if (client.config.IS_DEV_MODE) {
           await safeReply(interaction, {
             content: `명령어를 실행하는 도중 오류가 발생했어요.\n${codeBlock('js', `${e}`)}`,

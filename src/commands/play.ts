@@ -4,6 +4,7 @@ import {addTrackToQueue} from '@/features/music/track/trackAdder';
 import {getGoogleSuggestions} from '@/shared/autocomplete/googleSuggest';
 import {getClient} from '@/shared/discord/client';
 import {safeRespondAutocomplete} from '@/shared/discord/interactions/safeAutocomplete';
+import {safeDeferReply} from '@/shared/discord/interactions/safeReply';
 import type {Command} from '@/types/client';
 
 export const command = {
@@ -24,7 +25,7 @@ export const command = {
     if (!(await ensureVoiceChannel(interaction))) return;
     if (!(await ensureSameVoiceChannel(interaction))) return;
 
-    await interaction.deferReply();
+    if (!(await safeDeferReply(interaction))) return;
 
     const query = interaction.options.getString('query', true);
     const addFirst = interaction.options.getBoolean('add_first') ?? false;

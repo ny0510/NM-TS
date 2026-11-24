@@ -20,6 +20,7 @@ const logger = new Logger('QuickAdd');
 
 export async function handleQuickAddButton(interaction: ButtonInteraction): Promise<void> {
   const client = getClient(interaction);
+  if (!(await safeDeferReply(interaction, {flags: MessageFlags.Ephemeral}))) return;
 
   const userMember = interaction.guild?.members.cache.get(interaction.user.id);
   const voiceChannel = userMember?.voice.channel;
@@ -53,8 +54,6 @@ export async function handleQuickAddButton(interaction: ButtonInteraction): Prom
     return;
   }
 
-  const deferred = await safeDeferReply(interaction, {flags: MessageFlags.Ephemeral});
-  if (!deferred) return;
   if (!(await ensureSameVoiceChannel(interaction))) return;
 
   try {

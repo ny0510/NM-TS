@@ -2,6 +2,7 @@ import {type ChatInputCommandInteraction, EmbedBuilder, SlashCommandBuilder} fro
 import {DateTime} from 'luxon';
 import {getClient} from '@/shared/discord/client';
 import {COLORS} from '@/shared/discord/embedColors';
+import {safeDeferReply, safeEditReply} from '@/shared/discord/interactions/safeReply';
 import type {Command} from '@/types/client';
 
 export const command = {
@@ -10,12 +11,12 @@ export const command = {
   async execute(interaction: ChatInputCommandInteraction): Promise<void> {
     const client = getClient(interaction);
 
-    const start = DateTime.now();
-    await interaction.deferReply();
+    const start = DateTime.fromMillis(interaction.createdTimestamp);
+    if (!(await safeDeferReply(interaction))) return;
 
     const apiLatency = client.ws.ping;
 
-    await interaction.editReply({
+    await safeEditReply(interaction, {
       embeds: [
         new EmbedBuilder()
           .setTitle('🏓 당신은 퐁입니다')

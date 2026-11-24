@@ -1,4 +1,4 @@
-import type {AutocompleteInteraction, ChatInputCommandInteraction, ClientEvents, HexColorString, PermissionResolvable, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder} from 'discord.js';
+import type {AutocompleteInteraction, ChatInputCommandInteraction, ClientEvents, HexColorString, InteractionDeferReplyOptions, PermissionResolvable, SlashCommandBuilder, SlashCommandOptionsOnlyBuilder, SlashCommandSubcommandsOnlyBuilder} from 'discord.js';
 
 import type {CooldownManager} from '@/managers/CooldownManager';
 import type {LavalinkManager} from '@/managers/LavalinkManager';
@@ -9,6 +9,7 @@ export interface Command {
   data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder;
   permissions?: PermissionResolvable[];
   cooldown?: number;
+  deferReplyOptions?: InteractionDeferReplyOptions;
   execute(interaction: ChatInputCommandInteraction): Promise<void>;
   autocomplete?(interaction: AutocompleteInteraction): Promise<void>;
 }
