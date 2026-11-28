@@ -1,6 +1,6 @@
 # 라디오 스트림 설정
 
-방송국·주파수 목록은 `data/radio/stations.json`, 스트림 주소와 조회 방식은 `data/radio/streams.json`에서 관리합니다. 스트림 설정의 키는 방송국 ID이며, 현재 194개 항목을 포함합니다. 초기 정보는 [radio.bsod.kr 원본](https://github.com/BSofDeath/radio.bsod.kr/tree/main/functions/stream/url)을 참고했습니다.
+방송국·주파수 목록은 `data/radio/stations.json`, 스트림 주소와 조회 방식은 `data/radio/streams.json`에서 관리합니다. 스트림 설정의 키는 방송국 ID이며, 현재 194개 항목을 포함합니다. 초기 정보는 [radio.bsod.kr 원본](https://github.com/BSofDeath/radio.bsod.kr/tree/main/functions/api/template)을 참고했습니다.
 
 봇은 로컬 JSON만 읽습니다. GitHub 조회와 원본 JavaScript 분석은 아래 유지보수 명령에서만 수행합니다.
 

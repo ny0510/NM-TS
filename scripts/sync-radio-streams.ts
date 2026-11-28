@@ -8,7 +8,7 @@ import {z} from 'zod';
 import {parseRadioStreams, type RadioStreamDefinition} from '../src/features/radio/radioStreamSchema';
 
 const repository = 'BSofDeath/radio.bsod.kr';
-const sourcePath = 'functions/stream/url';
+const sourcePath = 'functions/api/template';
 const projectRoot = resolve(import.meta.dir, '..');
 const commonProviders = new Set(['ytn', 'ifm', 'obs', 'kookbang', 'arirang', 'befm', 'ggn']);
 const sourceName = (provider: string): string => (commonProviders.has(provider) ? 'common' : provider);
@@ -177,7 +177,7 @@ function convert(root: AnyNode, provider: string, channel: string, city: string)
 async function download(url: string): Promise<string> {
   const response = await request(url, {headers: {'user-agent': 'NM-radio-sync'}, signal: AbortSignal.timeout(20_000), headersTimeout: 20_000, bodyTimeout: 20_000});
   if (response.statusCode !== 200) {
-    await response.body.dump();
+    await response.body.text();
     fail(`Source request failed (${response.statusCode}): ${url}`);
   }
   return response.body.text();
@@ -186,7 +186,7 @@ async function download(url: string): Promise<string> {
 async function main(): Promise<void> {
   const {values} = parseArgs({args: Bun.argv.slice(2), options: {'source-dir': {type: 'string'}, output: {type: 'string'}, ref: {type: 'string'}, help: {type: 'boolean'}}, strict: true});
   if (values.help) {
-    console.log('bun run radio:sync [--ref COMMIT_OR_REF] [--source-dir functions/stream/url] [--output path/streams.proposed.json]');
+    console.log('bun run radio:sync [--ref COMMIT_OR_REF] [--source-dir functions/api/template] [--output path/streams.proposed.json]');
     return;
   }
   if (values['source-dir'] && values.ref) fail('--ref cannot be combined with --source-dir');

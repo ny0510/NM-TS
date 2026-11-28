@@ -11,7 +11,7 @@ export const readRadioText: RadioApiReader = async (url, signal) => {
   const timeout = AbortSignal.timeout(8000);
   const response = await request(url, {signal: signal ? AbortSignal.any([signal, timeout]) : timeout, headersTimeout: 8000, bodyTimeout: 8000});
   if (response.statusCode !== 200) {
-    await response.body.dump();
+    await response.body.text();
     throw new RadioRequestError(`Radio HTTP request returned ${response.statusCode}`);
   }
   return response.body.text();

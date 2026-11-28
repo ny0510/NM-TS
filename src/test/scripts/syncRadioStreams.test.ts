@@ -67,6 +67,53 @@ afterEach(async () => {
   await Promise.all(temporaryDirectories.splice(0).map(directory => rm(directory, {recursive: true, force: true})));
 });
 
+test.each([403, 404])('reports source HTTP %s and preserves configuration when downloading fails', async status => {
+  const setup = await fixture();
+  await writeFile(setup.output, 'existing proposal');
+  const server = Bun.serve({hostname: '127.0.0.1', port: 0, fetch: () => new Response('unavailable', {status})});
+  const preload = join(setup.directory, 'http-preload.ts');
+  await writeFile(preload, `import {mock} from 'bun:test'; import {request} from 'undici'; const realRequest = request; mock.module('undici', () => ({request: (_url, options) => realRequest(${JSON.stringify(server.url.toString())}, options)}));`);
+  try {
+    const child = Bun.spawn([process.execPath, 'run', `--preload=${preload}`, join(setup.directory, 'scripts/sync-radio-streams.ts'), '--output', setup.output], {cwd: setup.directory, stdout: 'pipe', stderr: 'pipe'});
+    const [stderr, stdout, exitCode] = await Promise.all([new Response(child.stderr).text(), new Response(child.stdout).text(), child.exited]);
+    expect({stderr, stdout, exitCode}).toMatchObject({exitCode: 1});
+    expect(stderr).toContain(`Source request failed (${status}): https://api.github.com/repos/BSofDeath/radio.bsod.kr/commits/HEAD`);
+    expect(await readFile(setup.active, 'utf8')).toBe(setup.before);
+    expect(await readFile(setup.output, 'utf8')).toBe('existing proposal');
+  } finally {
+    await server.stop(true);
+  }
+});
+
+test('downloads templates from the resolved commit and writes a proposal without changing active settings', async () => {
+  const setup = await fixture();
+  const sha = 'a'.repeat(40);
+  const server = Bun.serve({
+    hostname: '127.0.0.1',
+    port: 0,
+    fetch: request => {
+      const path = new URL(request.url).pathname;
+      if (path === '/repos/BSofDeath/radio.bsod.kr/commits/HEAD') return Response.json({sha});
+      const file = path.startsWith(`/BSofDeath/radio.bsod.kr/${sha}/functions/api/template/`) ? path.split('/').at(-1) : undefined;
+      return file ? new Response(Bun.file(join(setup.source, file))) : new Response('not found', {status: 404});
+    },
+  });
+  const preload = join(setup.directory, 'http-preload.ts');
+  await writeFile(preload, `import {mock} from 'bun:test'; import {request} from 'undici'; const realRequest = request; mock.module('undici', () => ({request: (url, options) => realRequest(new URL(new URL(url).pathname, ${JSON.stringify(server.url.toString())}), options)}));`);
+  try {
+    const child = Bun.spawn([process.execPath, 'run', `--preload=${preload}`, join(setup.directory, 'scripts/sync-radio-streams.ts'), '--output', setup.output], {cwd: setup.directory, stdout: 'pipe', stderr: 'pipe'});
+    const [stdout, stderr, exitCode] = await Promise.all([new Response(child.stdout).text(), new Response(child.stderr).text(), child.exited]);
+    expect({stderr, exitCode}).toEqual({stderr: '', exitCode: 0});
+    expect(JSON.parse(stdout).source).toEqual({repository: 'BSofDeath/radio.bsod.kr', commit: sha});
+    const proposed = parseRadioStreams(JSON.parse(await readFile(setup.output, 'utf8')));
+    expect(Object.keys(proposed)).toHaveLength(ids.length);
+    expect(proposed['ebs:fm:default']).toEqual({type: 'direct', url: 'https://fixture.example/ebs:fm:default.m3u8'});
+    expect(await readFile(setup.active, 'utf8')).toBe(setup.before);
+  } finally {
+    await server.stop(true);
+  }
+});
+
 test('creates a changed candidate from static sources without executing JavaScript or modifying active data', async () => {
   // Given
   const setup = await fixture();
